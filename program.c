@@ -21,9 +21,24 @@
 #define BKING 11
 #define LISTSIZE 125
 #define MOVESIZE 500
-#define RAND() (rand() & 0x7fff)
-        /*((u64)RAND()<<48) ^ ((u64)RAND()<<35) ^ ((u64)RAND()<<22) ^((u64)RAND()<< 9) ^ ((u64)RAND()>> 4);*/
+#define NN 312
+#define MM 156
+#define MATRIX_A 0xB5026F5AA96619E9ULL
+#define UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
+#define LM 0x7FFFFFFFULL /* Least significant 31 bits */
+#define TTSIZE 100000
+
+
+/* The array for the state vector */
+static unsigned long long mt[NN]; 
+/* mti==NN+1 means mt[NN] is not initialized */
+static int mti=NN+1; 
+
+unsigned long long int ZOBRISTTABLE[773];
+unsigned long long int CURRENTPOS;
+
 char KILLERTABLE[25][2][8];
+
 
 struct board_info{
     char board[8][8];
@@ -39,6 +54,17 @@ struct list{
     char move[8];
     int eval;
 };
+
+struct ttentry{
+    unsigned long long int zobrist_key;
+    char type;
+    char bestmove[8];
+    int eval;
+    short int depth_searched;
+};
+
+struct ttentry TT[TTSIZE];
+
 const int boardsize = sizeof(struct board_info);
 const int listsize = sizeof(struct list);
 const int movesize = sizeof(struct movelist);
@@ -97,37 +123,172 @@ short int kingtable2[8][8] = {
     {-30,-30,-10,-10,-10,-10,-20,-40},
     {-50,-30,-30,-30,-30,-30,-30,-50},
 };
+
+/* Random number generator code is taken from the Mersenne Twister http://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/VERSIONS/C-LANG/mt19937-64.c*/
+
+void init_genrand64(unsigned long long seed)
+{
+    mt[0] = seed;
+    for (mti=1; mti<NN; mti++) 
+        mt[mti] =  (6364136223846793005ULL * (mt[mti-1] ^ (mt[mti-1] >> 62)) + mti);
+}
+
+unsigned long long genrand64_int64(void)
+{
+    int i;
+    unsigned long long x;
+    static unsigned long long mag01[2]={0ULL, MATRIX_A};
+
+    if (mti >= NN) {
+        if (mti == NN+1) 
+            init_genrand64(5489ULL); 
+
+        for (i=0;i<NN-MM;i++) {
+            x = (mt[i]&UM)|(mt[i+1]&LM);
+            mt[i] = mt[i+MM] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
+        }
+        for (;i<NN-1;i++) {
+            x = (mt[i]&UM)|(mt[i+1]&LM);
+            mt[i] = mt[i+(MM-NN)] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
+        }
+        x = (mt[NN-1]&UM)|(mt[0]&LM);
+        mt[NN-1] = mt[MM-1] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
+
+        mti = 0;
+    }
+  
+    x = mt[mti++];
+
+    x ^= (x >> 29) & 0x5555555555555555ULL;
+    x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
+    x ^= (x << 37) & 0xFFF7EEE000000000ULL;
+    x ^= (x >> 43);
+
+    return x;
+}
+
+void init_by_array64(unsigned long long init_key[],
+		     unsigned long long key_length)
+{
+    unsigned long long i, j, k;
+    init_genrand64(19650218ULL);
+    i=1; j=0;
+    k = (NN>key_length ? NN : key_length);
+    for (; k; k--) {
+        mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 62)) * 3935559000370003845ULL))
+          + init_key[j] + j;
+        i++; j++;
+        if (i>=NN) { mt[0] = mt[NN-1]; i=1; }
+        if (j>=key_length) j=0;
+    }
+    for (k=NN-1; k; k--) {
+        mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 62)) * 2862933555777941757ULL))
+          - i;
+        i++;
+        if (i>=NN) { mt[0] = mt[NN-1]; i=1; }
+    }
+
+    mt[0] = 1ULL << 63;
+}
+
+void setzobrist(){
+    for (int i = 0; i < 773; i++){
+        ZOBRISTTABLE[i] = genrand64_int64();
+    }
+}
+
+void calc_pos(struct board_info *board){
+    CURRENTPOS = 0^ZOBRISTTABLE[772];
+    int i, n;
+    for (i = 0; i < 8; i++){
+        for (n = 0; n < 8; n++){
+            if (board->board[n][i] != BLANK){
+                CURRENTPOS ^= ZOBRISTTABLE[(board->board[n][i]<<6)+(n<<3)+i];
+            }
+        }
+    }
+}
+
+void insert(unsigned long long int position, int depth_searched, int eval, char type, char *bestmove){
+    int index = position%TTSIZE;
+    if (TT[index].zobrist_key != -1){
+        if (depth_searched > TT[index].depth_searched || type == '0'){
+            ;
+        }
+        else{
+        return;
+        }
+    }
+    TT[index].zobrist_key = position;
+    TT[index].depth_searched = depth_searched;
+    TT[index].eval = eval;
+    TT[index].type = type;
+    memcpy(TT[index].bestmove, bestmove, 8);
+}
+
+char lookup(unsigned long long int position, int depth_searched, int *eval){
+    int index = position%TTSIZE;
+    if (TT[index].zobrist_key == position && depth_searched == TT[index].depth_searched){
+        *eval = TT[index].eval;
+        return TT[index].type;
+    }
+    *eval = -1024;
+    return 'n';
+}
+
+void clearTT(){
+    int i; for (i = 0; i < TTSIZE; i++){
+        TT[i].zobrist_key = -1;
+    }
+}
+
+//to access zobrist number for say white knight on a6 we go zobristtable[(64*piece)+(file-1*8) + rank-1]
+//768-771 is castling
+//color key is 772
+
 void move(struct board_info *board, char *move, char color){
     if (isupper(move[0])){
         int v = (short int) move[1]-97, vv = atoi(&move[2])-1, w = (short int) move[4]-97, ww = atoi(&move[5])-1;
 
+        CURRENTPOS ^= ZOBRISTTABLE[(board->board[v][vv]<<6)+(v<<3)+vv];
+        CURRENTPOS ^= ZOBRISTTABLE[(board->board[v][vv]<<6)+(w<<3)+ww];
+
         if (strchr(move, 'x')){
+            CURRENTPOS ^= ZOBRISTTABLE[(board->board[w][ww]<<6)+(w<<3)+ww];
             board->pnbrqcount[(short int)color^1][(board->board[w][ww]-(color^1))/2]--;
         }
         board->board[w][ww] = board->board[v][vv];
         board->board[v][vv] = BLANK;
+
         if (strchr(move, 'K')){
+            CURRENTPOS ^= ZOBRISTTABLE[768+(color*2)];
+            CURRENTPOS ^= ZOBRISTTABLE[769+(color*2)];
             board->castling[color][0] = false, board->castling[color][1] = false;
             board->kingpos[color] = w*8 + ww;
         }
+
         if (strchr(move, 'R')){
             if (v == 'a'){
+                CURRENTPOS ^= ZOBRISTTABLE[768+(color*2)];
                 board->castling[color][0] = false;
             }
             else{
+                CURRENTPOS ^= ZOBRISTTABLE[769+(color*2)];
                 board->castling[color][1] = false;
             }
         }
     }
     else if (isalpha(move[0])){
         int v = (short int) move[0]-97, vv = atoi(&move[1])-1, w = (short int) move[3]-97, ww = atoi(&move[4])-1;
-
+        CURRENTPOS ^= ZOBRISTTABLE[(board->board[v][vv]<<6)+(v<<3)+vv];       
         if (strchr(move, 'x')){
             if (move[5] == 'e'){
+                CURRENTPOS ^= ZOBRISTTABLE[(board->board[w][vv]<<6)+(w<<3)+vv];
                 board->board[w][vv] = BLANK;
                 board->pnbrqcount[(short int)color^1][0]--;
             }
             else{
+                CURRENTPOS ^= ZOBRISTTABLE[(board->board[w][ww]<<6)+(w<<3)+ww];
                 board->pnbrqcount[(short int)color^1][(board->board[w][ww]-(color^1))/2]--;
             }
         }
@@ -153,6 +314,8 @@ void move(struct board_info *board, char *move, char color){
                 board->board[w][ww] = WBISHOP + color;
             }
         }
+
+        CURRENTPOS ^= ZOBRISTTABLE[(board->board[w][ww]<<6)+(w<<3)+ww];
     }
     else{
         int rank;
@@ -164,12 +327,24 @@ void move(struct board_info *board, char *move, char color){
         }
         board->castling[color][0] = false, board->castling[color][1] = false;
         if (move[3]){
+
+            CURRENTPOS ^= ZOBRISTTABLE[(board->board[0][rank]<<6)+(0<<3)+rank], CURRENTPOS ^= ZOBRISTTABLE[(board->board[4][rank]<<6)+(4<<3)+rank];
+            CURRENTPOS ^= ZOBRISTTABLE[(board->board[0][rank]<<6)+(3<<3)+rank], CURRENTPOS ^= ZOBRISTTABLE[(board->board[4][rank]<<6)+(2<<3)+rank];
+
             board->board[0][rank] = BLANK, board->board[4][rank] = BLANK, board->board[3][rank] = WROOK+color, board->board[2][rank] = WKING+color;
         }
         else{
-            board->board[0][rank] = BLANK, board->board[4][rank] = BLANK, board->board[3][rank] = WROOK+color, board->board[2][rank] = WKING+color;
+            
+            CURRENTPOS ^= ZOBRISTTABLE[(board->board[7][rank]<<6)+(0<<3)+rank], ZOBRISTTABLE[(board->board[4][rank]<<6)+(4<<3)+rank];
+            CURRENTPOS ^= ZOBRISTTABLE[(board->board[7][rank]<<6)+(4<<3)+rank], ZOBRISTTABLE[(board->board[4][rank]<<6)+(6<<3)+rank];
+
+            board->board[7][rank] = BLANK, board->board[4][rank] = BLANK, board->board[5][rank] = WROOK+color, board->board[6][rank] = WKING+color;
         }
+
+        CURRENTPOS ^= ZOBRISTTABLE[768+(color*2)];
+        CURRENTPOS ^= ZOBRISTTABLE[769+(color*2)];
     }
+    CURRENTPOS ^= ZOBRISTTABLE[772];
 }
 void move_add(struct board_info *board, struct movelist *movelst, int *key, char *move, char color){
     int k = *key;
@@ -593,7 +768,7 @@ void castle_q(struct board_info *board, struct list *list, int *key, struct move
     return;
 }
 int getpassantfile(struct movelist *movelst, int *key){
-    int k = *key-1;  
+    int k = *key;  
     if (!islower(movelst[k].move[0])){
         return -1;
     }
@@ -617,7 +792,7 @@ void en_passant(struct board_info *board, struct list *list, int *listkey, int *
         rank = 3, diff = -1;
     }
     if (board->board[file][rank] != WPAWN + (color^1)){
-        printf("an error occured %i %i %s\n", color, file, movelst[*movelistkey].move); //this should not happen
+        printf("an error occured %i %i %s\n", color, file, movelst[*movelistkey-1].move); //this should not happen
         printfull(board);
         exit(1);
         return;
@@ -1055,12 +1230,14 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
         move_add(&board2, movelst, key, list[i].move, color);
         list[i].eval = -quiesce(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1);
         if (list[i].eval >= beta){
+            movelst[*key].move[0] = '\0';
             *key = *key-1;
             return beta;
         }
         if (list[i].eval > alpha){
             alpha = list[i].eval;
         }
+        movelst[*key].move[0] = '\0';
         *key = *key-1;
         i++;
     }
@@ -1083,6 +1260,34 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         //printf("%i\n", -eval(board, color));
         return quiesce(board, movelst, key, -1000000, 1000000, 0, 6, color);
     }
+
+
+    int evl;
+    char type = lookup(CURRENTPOS, maxdepth, &evl);
+
+    bool needs_evl = true;
+
+    if (type != 'n'){
+        if (type == '0'){
+            //printfull(board);
+            //printf("%i %s\n", evl, TT[CURRENTPOS%TTSIZE].bestmove);
+            needs_evl = false;
+            return evl;
+        }
+            else if (type == '1'){ //a move that caused a beta cutoff
+                if (evl >= beta){
+                    //don't eval any further
+                    return beta;
+                }
+            }
+            else{ //a move that didn't raise alpha
+                if (evl < alpha){
+                    //don't evl
+                    return alpha;
+                }
+            }
+        }
+
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
     bool ismove = false;
@@ -1091,23 +1296,30 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     movelist(board, list, movelst, key, color);
     movescore(board, list, depth, bestmove, color);
     int i = 0;
-    while (list[i].move[0] != '\0'){
+    unsigned long long int original_pos = CURRENTPOS;
+    bool raisedalpha = false;
+
+    while (list[i].move[0] != '\0'){       
         selectionsort(list, i);
         struct board_info board2;
         memcpy(&board2, board, boardsize);
         move(&board2, list[i].move, color);    
         if (check_check(&board2, color)){
+            CURRENTPOS = original_pos;
             i++;
             continue;
         }
         ismove = true;
 
         move_add(&board2, movelst, key, list[i].move, color);
-        list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmove);
+        char bestmve[8];
+        bestmve[0] = '\0';
+        list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve);
         if (depth == 0){
             //printf("%s %i\n", list[i].move, list[i].eval);
         }
         if (list[i].eval >= beta){
+            insert(original_pos, maxdepth, beta, '1', bestmove);
             total++;
             if (betacount < 1){
                 betas++;
@@ -1124,21 +1336,27 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     memcpy(KILLERTABLE[depth][1], list[i].move, 8);
                 }
             }
+            movelst[*key].move[0] = '\0';
             *key = *key-1;
+            CURRENTPOS = original_pos;
             return beta;
         }
         betacount++;
         if (list[i].eval > alpha){
+            raisedalpha = true;
             alpha = list[i].eval;
             if (depth == 0){
                 memcpy(bestmove, list[i].move, 8);
             }
         }
+        movelst[*key].move[0] = '\0';
         *key = *key-1;
         if (firstmove && list[i].eval < alpha && depth == 0){
+            CURRENTPOS = original_pos;
             return alpha;
         }
         firstmove = false;
+        CURRENTPOS = original_pos;
         i++;
     }
 
@@ -1150,9 +1368,19 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             return 0;
         }
     }
+    //printfull(board);
+    if (raisedalpha){
+        insert(original_pos, maxdepth, alpha, '0', bestmove);
+    }
+    else{
+        char j[8];
+        j[0] = '\0';
+        insert(original_pos, maxdepth, alpha, '2', j);
+    }
     return alpha;
 }
 void iid(struct board_info *board, struct movelist *movelst, int maxdepth, int *key, char color, bool ismove){
+    clearTT();
     int alpha = -1000000, beta = 1000000;   
     char mve[8];
     for (int depth = 0; depth < maxdepth; depth++){
@@ -1178,11 +1406,16 @@ void iid(struct board_info *board, struct movelist *movelst, int maxdepth, int *
     printf("%f percent\n", ((float)betas*100)/total);
 }
 int main(void){
+    unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
+    init_by_array64(init, 4);
+
     struct board_info board;
     setfull(&board);
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
     struct movelist movelst[MOVESIZE];
+    setzobrist();
+    calc_pos(&board);
     
     int key;
     setmovelist(movelst, &key);   
@@ -1192,7 +1425,13 @@ int main(void){
     move_add(&board, movelst, &key, "Ng8-f6", BLACK); 
     move(&board, "e4-e5", WHITE);
     move_add(&board, movelst, &key, "e4-e5", WHITE);  
+    move(&board, "a7-a5", BLACK);
+    move_add(&board, movelst, &key, "a7-a5", BLACK);  
+    move(&board, "e5xf6", WHITE);
+    move_add(&board, movelst, &key, "e5xf6", WHITE);
     printfull(&board);
-    iid(&board, movelst, 5, &key, WHITE, false);
+    iid(&board, movelst, 7, &key, WHITE, false);
+
+
     return 0;
 }
