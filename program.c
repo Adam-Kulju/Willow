@@ -83,6 +83,16 @@ short int pawntable[8][8] = {
     {0, 10, -5,  0,  5, 10, 50,  0},
     {0,  5,  5,  0,  5, 10, 50,  0}
 };
+short int pawntable2[8][8] = {
+    {0, 20, 20, 25, 33, 45, 80, 0},
+    {0,  5,  5, 10, 17, 29, 50, 0},
+    {0, -5, -5,  0, 10, 25, 50, 0},
+    {0,-10,-10, -3,  2, 10, 50, 0},
+    {0,-10,-10, -3,  2, 10, 50, 0},
+    {0, -5, -5,  0, 10, 25, 50, 0},
+    {0,  5,  5, 10, 17, 29, 50, 0},
+    {0, 20, 20, 25, 33, 45, 80, 0}
+};
 short int knighttable[8][8] = {
     {-50,-40,-30,-30,-30,-30,-40,-50},
     {-40,-20,  5,  0,  5,  0,-20,-40},
@@ -1060,11 +1070,17 @@ int see(struct board_info *board, char *mve, char color){
 }
 
 
-int material(struct board_info *board){
+int material(struct board_info *board, bool *endgame){
     int wval = 0, bval = 0;
     for (int i = 0; i < 5; i++){
         wval += VALUES[i]*board->pnbrqcount[WHITE][i];
         bval += VALUES[i]*board->pnbrqcount[BLACK][i];
+    }
+    if (wval + bval > 2500){
+        *endgame = false;
+    } 
+    else{
+        *endgame = true;
     }
     if (board->pnbrqcount[WHITE][2] > 1){
         wval += 15;
@@ -1074,13 +1090,18 @@ int material(struct board_info *board){
     }
     return wval-bval;
 }
-int pstscore(struct board_info *board){
+int pstscore(struct board_info *board, bool endgame){
     int wscore = 0, bscore = 0;
     for (int n = 0; n < 8; n++){
         for (int i = 0; i < 8; i++){
             if (board->board[n][i]%2 == WHITE){
                 if (board->board[n][i] == WPAWN){
-                    wscore += pawntable[n][i];
+                    if (endgame){
+                        wscore += pawntable2[n][i];
+                    }
+                    else{
+                        wscore += pawntable[n][i];
+                    }
                 }
                 else if (board->board[n][i] == WBISHOP){
                     wscore += bishoptable[n][i];
@@ -1089,12 +1110,22 @@ int pstscore(struct board_info *board){
                     wscore += knighttable[n][i];
                 }
                 else if (board->board[n][i] == WKING){
-                    wscore += kingtable[n][i];
+                    if (endgame){
+                        wscore += kingtable[n][i];
+                    }
+                    else{
+                        wscore += kingtable2[n][i];
+                    }
                 }
             }
             else if (board->board[n][i]%2 == BLACK){
                 if (board->board[n][i] == BPAWN){
-                    bscore += pawntable[n][7-i];
+                    if (endgame){
+                        bscore += pawntable[n][7-i];
+                    }
+                    else{
+                        bscore += pawntable2[n][7-i];
+                    }
                 }
                 else if (board->board[n][i] == BBISHOP){
                     bscore += bishoptable[n][7-i];
@@ -1103,7 +1134,12 @@ int pstscore(struct board_info *board){
                     bscore += knighttable[n][7-i];
                 }
                 else if (board->board[n][i] == BKING){
-                    bscore += kingtable[n][7-i];
+                    if (endgame){
+                        bscore += kingtable[n][7-i];
+                    }
+                    else{
+                        bscore += kingtable2[n][7-i];
+                    }
                 }
             }
         }
@@ -1112,7 +1148,9 @@ int pstscore(struct board_info *board){
 }
 int eval(struct board_info *board, char color){
     evals++;
-    int evl = pstscore(board) + material(board);
+    bool endgame;
+    int evl = material(board, &endgame);
+    evl += pstscore(board, endgame);
     if (color == WHITE){
         return evl;
     }
