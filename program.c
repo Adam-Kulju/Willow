@@ -802,8 +802,9 @@ void en_passant(struct board_info *board, struct list *list, int *listkey, int *
         rank = 3, diff = -1;
     }
     if (board->board[file][rank] != WPAWN + (color^1)){
-        printf("an error occured %i %i %s\n", color, file, movelst[*movelistkey-1].move); //this should not happen
+        printf("an error occured %i %i %s\n", color, file, movelst[*movelistkey].move); //this should not happen
         printfull(board);
+
         exit(1);
         return;
     }
@@ -1160,7 +1161,8 @@ int eval(struct board_info *board, char color){
 }
 void movescore(struct board_info *board, struct list *list, int depth, char *firstmove, char color){
     int i = 0; while (list[i].move[0] != '\0'){
-        if (depth == 0 && !strcmp(list[i].move, firstmove)){
+        int evl;
+        if (lookup(CURRENTPOS, depth-1, &evl) == '0'){
             list[i].eval = 1000;
         }
         else if (strchr(list[i].move, 'x')){
@@ -1249,7 +1251,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     }
     char mve[8];
     mve[0] = '\0';
-    movescore(board, list, depth, mve, color);
+    movescore(board, list, 0, mve, color);
     int i = 0;
     bool ismove = false;
     while (list[i].move[0] != '\0'){
@@ -1268,14 +1270,14 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
         move_add(&board2, movelst, key, list[i].move, color);
         list[i].eval = -quiesce(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1);
         if (list[i].eval >= beta){
-            movelst[*key].move[0] = '\0';
+            movelst[*key-1].move[0] = '\0';
             *key = *key-1;
             return beta;
         }
         if (list[i].eval > alpha){
             alpha = list[i].eval;
         }
-        movelst[*key].move[0] = '\0';
+        movelst[*key-1].move[0] = '\0';
         *key = *key-1;
         i++;
     }
@@ -1332,7 +1334,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool firstmove = true;
     int betacount = 0;
     movelist(board, list, movelst, key, color);
-    movescore(board, list, depth, bestmove, color);
+    movescore(board, list, maxdepth, bestmove, color);
     int i = 0;
     unsigned long long int original_pos = CURRENTPOS;
     bool raisedalpha = false;
@@ -1374,7 +1376,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     memcpy(KILLERTABLE[depth][1], list[i].move, 8);
                 }
             }
-            movelst[*key].move[0] = '\0';
+            movelst[*key-1].move[0] = '\0';
             *key = *key-1;
             CURRENTPOS = original_pos;
             return beta;
@@ -1387,7 +1389,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 memcpy(bestmove, list[i].move, 8);
             }
         }
-        movelst[*key].move[0] = '\0';
+        movelst[*key-1].move[0] = '\0';
         *key = *key-1;
         if (firstmove && list[i].eval < alpha && depth == 0){
             CURRENTPOS = original_pos;
