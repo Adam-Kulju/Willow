@@ -436,8 +436,8 @@ void setfull(struct board_info *board){
 
 void setempty(struct board_info *board){
     char brd[8][8] = {
-        {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
-        {BLANK, BLANK, BLANK, BLANK, WPAWN, WKING, BLANK, BKING},
+        {BLANK, BLANK, BLANK, BLANK, WKING, BLANK, BLANK, BLANK},
+        {BLANK, BLANK, BLANK, BLANK, BLANK, WPAWN, BKING, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
@@ -452,7 +452,7 @@ void setempty(struct board_info *board){
     };
     memcpy(board->pnbrqcount, count, 10);
     board->castling[0][0] = false, board->castling[0][1] = false, board->castling[1][0] = false, board->castling[1][1] = false;
-    board->kingpos[0] = 13, board->kingpos[1] = 15;
+    board->kingpos[0] = 5, board->kingpos[1] = 14;
 }
 void setmovelist(struct movelist *movelst, int *key, char *fen){
     
@@ -938,7 +938,7 @@ int checkdraw2(struct movelist *movelst, int *key){
     int lmove = *key-1;
     int k = lmove-1;
     int rep = 0;
-    while (k >= 0){
+    while (k >= 1){
         if (!strcmp(movelst[k].fen, movelst[lmove].fen)){
             rep++;
             if (rep > 1){
@@ -1185,7 +1185,7 @@ void movescore(struct board_info *board, struct list *list, int depth, char *fir
     char ismatch = lookup(CURRENTPOS, depth-1, &evl);
     char mve[8];
     mve[0] = '\0';
-    if (ismatch == '0'){
+    if (ismatch == '0' || ismatch == '1'){
         memcpy(mve, TT[CURRENTPOS%TTSIZE].bestmove, 8);
     }
     int i = 0; while (list[i].move[0] != '\0'){
@@ -1312,7 +1312,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     return alpha;
 }
 
-int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depth, int maxdepth, char color, char bestmove[8]){
+int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depth, int maxdepth, char color, char bestmove[8], bool isnull){
     if (checkdraw1(board)){       
         return 0;
     }
@@ -1350,7 +1350,24 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
             }
         }
-
+    if (isnull == false){
+        bool ispiece = false;
+        for (int i = 1; i < 5; i++){
+            if (board->pbnrqcount[WHITE][i] > 0 || board->pbnrqcount[BLACK][i] > 0){
+                ispiece = true;
+            }
+        }
+        if (ispiece == true){
+            int staticevl = eval(board, color);
+            if (staticevl >= beta){
+                char n[8];
+                int nullmove = alphabeta(board, movelst, key, -beta, -alpha, depth+1, maxdepth-2, color^1, n, true);
+                if (nullmove >= beta){
+                    return beta;
+                }
+            }
+        }
+    }
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
     bool ismove = false;
@@ -1377,7 +1394,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         move_add(&board2, movelst, key, list[i].move, color);
         char bestmve[8];
         bestmve[0] = '\0';
-        list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve);
+        list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
         if (depth == 0){
             //printf("%s %i\n", list[i].move, list[i].eval);
         }
@@ -1385,7 +1402,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             memcpy(bestmove, list[i].move, 8);
             insert(original_pos, maxdepth, beta, '1', bestmove);
             total++;
-            if (betacount < 1){
+            if (betacount < 2){
                 betas++;
             }
             if (betacount > 15){
@@ -1448,17 +1465,17 @@ void iid(struct board_info *board, struct movelist *movelst, int maxdepth, int *
     for (int depth = 0; depth < maxdepth; depth++){
         clock_t time = clock();
         int aspiration = 25;
-        int evl = alphabeta(board, movelst, key, alpha, beta, 0, depth, color, mve);
+        int evl = alphabeta(board, movelst, key, alpha, beta, 0, depth, color, mve, false);
         while (evl == alpha || evl == beta){
             if (evl == alpha){
                 alpha -= aspiration;
                 aspiration *= 2;
-                evl = alphabeta(board, movelst, key, alpha, beta, 0, depth, color, mve);
+                evl = alphabeta(board, movelst, key, alpha, beta, 0, depth, color, mve, false);
             }
             else if (evl == beta){
                 beta += aspiration;
                 aspiration *= 2;
-                evl = alphabeta(board, movelst, key, alpha, beta, 0, depth, color, mve);            
+                evl = alphabeta(board, movelst, key, alpha, beta, 0, depth, color, mve, false);            
             }
         }
         clock_t time2 = clock()-time;
@@ -1472,7 +1489,8 @@ int main(void){
     init_by_array64(init, 4);
 
     struct board_info board;
-    setempty(&board);
+    setfull(&board);
+    //setempty(&board);
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
     struct movelist movelst[MOVESIZE];
@@ -1480,10 +1498,10 @@ int main(void){
     calc_pos(&board);
     
     int key;
-    //char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
-    char fen[65] =   "------------P--K------------------------------------------------\0";
+    char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
+    //char fen[65] =   "----K--------Pk-------------------------------------------------\0";
     setmovelist(movelst, &key, fen);   
-   /* move(&board, "e2-e4", WHITE);
+    move(&board, "e2-e4", WHITE);
     move_add(&board, movelst, &key, "e2-e4", WHITE);  
     move(&board, "Ng8-f6", BLACK);
     move_add(&board, movelst, &key, "Ng8-f6", BLACK); 
@@ -1492,10 +1510,8 @@ int main(void){
     move(&board, "a7-a5", BLACK);
     move_add(&board, movelst, &key, "a7-a5", BLACK);  
     move(&board, "e5xf6", WHITE);
-    move_add(&board, movelst, &key, "e5xf6", WHITE);*/
+    move_add(&board, movelst, &key, "e5xf6", WHITE);
     printfull(&board);
-    iid(&board, movelst, 16, &key, BLACK, false);
-
-
+    iid(&board, movelst, 8, &key, WHITE, false);
     return 0;
 }
