@@ -1,5 +1,5 @@
 # guineafish
-A chess engine I am currently working on, written in C (WORK IN PROGRESS)
+A chess engine I am currently working on, written in C (WORK IN PROGRESS) (currently fixing bugs)
 
 
 CURRENT STATE OF GUINEAFISH:
