@@ -45,6 +45,7 @@ struct board_info{
     char pnbrqcount[2][5];
     bool castling[2][2];
     char kingpos[2];
+    short int mobility[2];
 };
 struct movelist{
     char move[8];
@@ -432,6 +433,7 @@ void setfull(struct board_info *board){
     memcpy(board->pnbrqcount, count, 10);
     board->castling[0][0] = true, board->castling[0][1] = true, board->castling[1][0] = true, board->castling[1][1] = true;
     board->kingpos[0] = 32, board->kingpos[1] = 39;
+    board->mobility[0] = 0, board->mobility[1] = 0;
 }
 
 void setempty(struct board_info *board){
@@ -453,6 +455,7 @@ void setempty(struct board_info *board){
     memcpy(board->pnbrqcount, count, 10);
     board->castling[0][0] = false, board->castling[0][1] = false, board->castling[1][0] = false, board->castling[1][1] = false;
     board->kingpos[0] = 5, board->kingpos[1] = 14;
+    board->mobility[0] = 0, board->mobility[1] = 0;
 }
 void setmovelist(struct movelist *movelst, int *key, char *fen){
     
@@ -541,6 +544,7 @@ void knight_moves(struct list *list, struct board_info *board, int *key, char fi
         }
         i = rank + 3-abs(file-n);
         if (i > -1 && i < 8 && board->board[n][i]%2 != color){
+            board->mobility[color] += 2;
             if (board->board[n][i] == BLANK){
                 if (!needscapture){
                 piece_add(list, key, (char)file+97, rank+'0'+1, (char)n+97, i+'0'+1, '-', 'N');
@@ -552,6 +556,7 @@ void knight_moves(struct list *list, struct board_info *board, int *key, char fi
         }
         i = rank - (3-abs(n-file));
         if (i > -1 && i < 8 && board->board[n][i]%2 != color){
+            board->mobility[color] += 2;
             if (board->board[n][i] == BLANK){
                 if (!needscapture){
                 piece_add(list, key, (char)file+97, rank+'0'+1, (char)n+97, i+'0'+1, '-', 'N');
@@ -570,6 +575,7 @@ void bishop_moves(struct list *list, struct board_info *board, int *key, char fi
         for (numchange = -1; numchange < 2; numchange += 2){
             n = file + letterchange, i = rank + numchange;
             while (n > -1 && n < 8 && i > -1 && i < 8 && board->board[n][i]%2 != color){
+                board->mobility[color] += 1;
                 if (board->board[n][i] == BLANK){
                     if (!needscapture){
                     piece_add(list, key, (char)file+97, rank + '0' +1, (char)n+97, i + '0' + 1, '-', 'B');
@@ -594,6 +600,7 @@ void rook_moves(struct list *list, struct board_info *board, int *key, char file
             }
             n = file + letterchange, i = rank + numchange;
             while (n > -1 && n < 8 && i > -1 && i < 8 && board->board[n][i]%2 != color){
+                board->mobility[color] += 1;
                 if (board->board[n][i] == BLANK){
                     if (!needscapture){
                     piece_add(list, key, (char)file+97, rank + '0' +1, (char)n+97, i + '0' + 1, '-', 'R');
@@ -618,6 +625,7 @@ void queen_moves(struct list *list, struct board_info *board, int *key, char fil
             }
             n = file + letterchange, i = rank + numchange;
             while (n > -1 && n < 8 && i > -1 && i < 8 && board->board[n][i]%2 != color){
+                board->mobility[color] += 1;
                 if (board->board[n][i] == BLANK){
                     if (!needscapture){
                     piece_add(list, key, (char)file+97, rank + '0' +1, (char)n+97, i + '0' + 1, '-', 'Q');
@@ -838,6 +846,7 @@ void en_passant(struct board_info *board, struct list *list, int *listkey, int *
 }
 void movelist(struct board_info *board, struct list *list, struct movelist *movelst, int *mkey, char color){
     int key = 0;
+    board->mobility[color] = 0;
     for (int n = 0; n < 8; n++){
         for (int i = 0; i < 8; i++){
             if (board->board[n][i]%2 == color){
@@ -1131,14 +1140,6 @@ int pstscore(struct board_info *board, bool endgame){
                 else if (board->board[n][i] == WKNIGHT){
                     wscore += knighttable[n][i];
                 }
-                else if (board->board[n][i] == WKING){
-                    if (endgame){
-                        wscore += kingtable[n][i];
-                    }
-                    else{
-                        wscore += kingtable2[n][i];
-                    }
-                }
             }
             else if (board->board[n][i]%2 == BLACK){
                 if (board->board[n][i] == BPAWN){
@@ -1155,24 +1156,111 @@ int pstscore(struct board_info *board, bool endgame){
                 else if (board->board[n][i] == BKNIGHT){
                     bscore += knighttable[n][7-i];
                 }
-                else if (board->board[n][i] == BKING){
-                    if (endgame){
-                        bscore += kingtable[n][7-i];
-                    }
-                    else{
-                        bscore += kingtable2[n][7-i];
-                    }
+
+            }
+        }
+    }
+    wscore += kingtable[board->kingpos[0]/8][board->kingpos[0]%8];
+    bscore += kingtable[board->kingpos[1]/8][7-(board->kingpos[1]%8)];
+    return wscore-bscore;
+}
+
+int kingsafety(struct board_info *board){
+    int eval = 0;
+    int wkingfile = board->kingpos[0]/8, wkingrank = board->kingpos[0]%8;
+    for (int n = wkingfile - 2; n < wkingfile + 3 && n < 8; n++){
+        if (n < 0){
+            continue;
+        }
+        for (int i = wkingrank - 2; i < wkingrank + 3 && i< 8; i++){
+            if (i < 0){
+                continue;
+            }
+            if (board->board[n][i] == BLANK){
+                eval -= 1;
+            }
+                else{
+                switch (board->board[n][i]){
+                    case BPAWN:
+                    eval -= 2; break;
+                    case BLANK:
+                    eval -= 1; break;
+                    case BROOK:
+                    eval -= 5; break;
+                    case BQUEEN:
+                    eval -= 10; break;
+                    case BBISHOP:
+                    eval -= 3; break;
+                    case BKNIGHT:
+                    eval -= 3; break;
+                    case WPAWN:
+                    eval += 1; break;
+                    case WROOK:
+                    eval += 4; break;
+                    case WQUEEN:
+                    eval += 6; break;
+                    case WBISHOP:
+                    eval += 3; break;
+                    case WKNIGHT:
+                    eval += 3; break;
+                    default:
+                    break;
                 }
             }
         }
     }
-    return wscore-bscore;
+    int beval = 0;
+    int bkingfile = board->kingpos[1]/8, bkingrank = board->kingpos[1]%8;
+    for (int n = bkingfile - 2; n < bkingfile + 3 && n < 8; n++){
+        if (n < 0){
+            continue;
+        }
+        for (int i = bkingrank - 2; i < bkingrank + 3 && i < 8; i++){
+            if (i < 0){
+                continue;
+            }
+            if (board->board[n][i] == BLANK){
+                beval -= 1;
+            }
+            else{
+                switch (board->board[n][i]){
+                    case WPAWN:
+                    beval -= 2; break;
+                    case WROOK:
+                    beval -= 5; break;
+                    case WQUEEN:
+                    beval -= 10; break;
+                    case WBISHOP:
+                    beval -= 3; break;
+                    case WKNIGHT:
+                    beval -= 3; break;
+                    case BPAWN:
+                    beval += 1; break;
+                    case BROOK:
+                    beval += 4; break;
+                    case BQUEEN:
+                    beval += 6; break;
+                    case BBISHOP:
+                    beval += 3; break;
+                    case BKNIGHT:
+                    beval += 3; break;
+                    default:
+                    break;
+                }
+            }
+        }
+    }
+    return eval - beval;
 }
 int eval(struct board_info *board, char color){
     evals++;
     bool endgame;
     int evl = material(board, &endgame);
     evl += pstscore(board, endgame);
+    evl += (board->mobility[WHITE] - board->mobility[BLACK])*4;
+    if (!endgame){
+        evl += kingsafety(board);
+    }
     if (color == WHITE){
         return evl;
     }
@@ -1353,15 +1441,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     if (isnull == false){
         bool ispiece = false;
         for (int i = 1; i < 5; i++){
-            if (board->pbnrqcount[WHITE][i] > 0 || board->pbnrqcount[BLACK][i] > 0){
+            if (board->pnbrqcount[WHITE][i] > 0 || board->pnbrqcount[BLACK][i] > 0){
                 ispiece = true;
+                i = 5;
             }
         }
         if (ispiece == true){
             int staticevl = eval(board, color);
             if (staticevl >= beta){
                 char n[8];
-                int nullmove = alphabeta(board, movelst, key, -beta, -alpha, depth+1, maxdepth-2, color^1, n, true);
+                int nullmove = alphabeta(board, movelst, key, -beta, -alpha, depth+3, maxdepth, color^1, n, true);
                 if (nullmove >= beta){
                     return beta;
                 }
@@ -1394,7 +1483,15 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         move_add(&board2, movelst, key, list[i].move, color);
         char bestmve[8];
         bestmve[0] = '\0';
-        list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
+        if (raisedalpha == false && betacount > 3){
+            list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+3, maxdepth, color^1, bestmve, false);
+            if (list[i].eval > alpha){
+                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
+            }
+        }
+        else{
+            list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
+        }
         if (depth == 0){
             //printf("%s %i\n", list[i].move, list[i].eval);
         }
@@ -1503,14 +1600,18 @@ int main(void){
     setmovelist(movelst, &key, fen);   
     move(&board, "e2-e4", WHITE);
     move_add(&board, movelst, &key, "e2-e4", WHITE);  
-    move(&board, "Ng8-f6", BLACK);
-    move_add(&board, movelst, &key, "Ng8-f6", BLACK); 
-    move(&board, "e4-e5", WHITE);
-    move_add(&board, movelst, &key, "e4-e5", WHITE);  
-    move(&board, "a7-a5", BLACK);
-    move_add(&board, movelst, &key, "a7-a5", BLACK);  
-    move(&board, "e5xf6", WHITE);
-    move_add(&board, movelst, &key, "e5xf6", WHITE);
+    move(&board, "e7-e5", BLACK);
+    move_add(&board, movelst, &key, "e7-e5", BLACK); 
+    move(&board, "Ng1-f3", WHITE);
+    move_add(&board, movelst, &key, "Ng1-f3", WHITE);  
+    move(&board, "f7-f6", BLACK);
+    move_add(&board, movelst, &key, "f7-f6", BLACK);  
+    move(&board, "Nf3xe5", WHITE);
+    move_add(&board, movelst, &key, "Nf3xe5", WHITE);  
+    move(&board, "f6xe5", BLACK);
+    move_add(&board, movelst, &key, "f6xe5", BLACK); 
+    /*move(&board, "Qd1-h5", WHITE);
+    move_add(&board, movelst, &key, "Qd1-h5", WHITE);   */
     printfull(&board);
     iid(&board, movelst, 8, &key, WHITE, false);
     return 0;
