@@ -692,7 +692,6 @@ void pawn_moves(struct list *list, struct board_info *board, int *key, char file
 }
 bool check_check(struct board_info *board, char color){
     int kingfile = board->kingpos[color]/8, kingrank = board->kingpos[color]%8;
-    printf("%i %i\n", kingfile, kingrank);
     int letterchange, numchange;
     for (letterchange = -1; letterchange < 2; letterchange++){
         for (numchange = -1; numchange < 2; numchange++){           
@@ -1133,18 +1132,18 @@ int see(struct board_info *board, char *mve, char color){
 }
 
 
-int material(struct board_info *board, int *endgame){
+int material(struct board_info *board, int *kingdanger){
     int wval = 0, bval = 0;
     for (int i = 0; i < 5; i++){
         wval += VALUES[i]*board->pnbrqcount[WHITE][i];
         bval += VALUES[i]*board->pnbrqcount[BLACK][i];
     }
-    *endgame = (wval + bval - 100*board->pnbrqcount[WHITE][0] - 100*board->pnbrqcount[BLACK][0] - 2000)/40;
-    if (*endgame < 0){
-        *endgame = 0;
+    *kingdanger = (wval + bval - 100*board->pnbrqcount[WHITE][0] - 100*board->pnbrqcount[BLACK][0] - 2000)/40;
+    if (*kingdanger < 0){
+        *kingdanger = 0;
     }
-    if (*endgame > 40){
-        *endgame = 40;
+    if (*kingdanger > 40){
+        *kingdanger = 40;
     }
     if (board->pnbrqcount[WHITE][2] > 1){
         wval += 15;
@@ -1154,13 +1153,21 @@ int material(struct board_info *board, int *endgame){
     }
     return wval-bval;
 }
-int pstscore(struct board_info *board, int endgame){
+int pstscore(struct board_info *board, int kingdanger){
     int wscore = 0, bscore = 0;
+    bool wiso[8], biso[8];
     for (int n = 0; n < 8; n++){
+        bool wdblflag = false, bdblflag = false;
+        wiso[n] = false, biso[n] = false;
         for (int i = 0; i < 8; i++){
             if (board->board[n][i]%2 == WHITE){
                 if (board->board[n][i] == WPAWN){
-                    wscore += (endgame*pawntable2[n][i] + (40-endgame)*pawntable[n][i])/40;
+                    wiso[n] = true;
+                    wscore += (kingdanger*pawntable[n][i] + (40-kingdanger)*pawntable2[n][i])/40;
+                    if (wdblflag){
+                        wscore -= 15;
+                    }
+                    wdblflag = true;
                 }
                 else if (board->board[n][i] == WBISHOP){
                     wscore += bishoptable[n][i];
@@ -1171,7 +1178,12 @@ int pstscore(struct board_info *board, int endgame){
             }
             else if (board->board[n][i]%2 == BLACK){
                 if (board->board[n][i] == BPAWN){
-                    bscore += (endgame*pawntable2[n][7-i] + (40-endgame)*pawntable[n][7-i])/40;
+                    biso[n] = true;
+                    bscore += (kingdanger*pawntable[n][7-i] + (40-kingdanger)*pawntable2[n][7-i])/40;
+                    if (bdblflag){
+                        bscore -= 15;
+                    }
+                    bdblflag = true;
                 }
                 else if (board->board[n][i] == BBISHOP){
                     bscore += bishoptable[n][7-i];
@@ -1182,9 +1194,26 @@ int pstscore(struct board_info *board, int endgame){
 
             }
         }
+    if (n == 7){
+            if (wiso[7] && !wiso[6]){
+                wscore -= 15;
+            }
+            if (biso[7] && !biso[6]){
+                bscore -= 15;
+            }
+        }
+    else if (n != 0){
+            if (!wiso[n] && wiso[n-1] && (n == 1 || !wiso[n-2])){
+                wscore -= 15;
+            }
+            if (!biso[n] && biso[n-1] && (n == 1 || !biso[n-2])){
+                bscore -= 15;
+            }
+        }
     }
-    wscore += (endgame*kingtable2[board->kingpos[1]/8][board->kingpos[1]%8] + (40-endgame)*pawntable[board->kingpos[1]/8][board->kingpos[1]%8])/40;
-    bscore += (endgame*kingtable2[board->kingpos[1]/8][7-(board->kingpos[1]%8)] + (40-endgame)*pawntable[board->kingpos[1]/8][7-(board->kingpos[1]%8)])/40;
+    
+    wscore += (kingdanger*kingtable[board->kingpos[0]/8][board->kingpos[0]%8] + (40-kingdanger)*kingtable2[board->kingpos[0]/8][board->kingpos[0]%8])/40;
+    bscore += (kingdanger*kingtable[board->kingpos[1]/8][7-(board->kingpos[1]%8)] + (40-kingdanger)*kingtable2[board->kingpos[1]/8][7-(board->kingpos[1]%8)])/40;
     return wscore-bscore;
 }
 
@@ -1277,11 +1306,11 @@ int kingsafety(struct board_info *board){
 }
 int eval(struct board_info *board, char color){
     evals++;
-    int endgame; //0 represents full endgame, 40 represents complete middlegame
-    int evl = material(board, &endgame);
-    evl += pstscore(board, endgame);
+    int kingdanger; //0 represents full kingdanger, 40 represents complete middlegame
+    int evl = material(board, &kingdanger);
+    evl += pstscore(board, kingdanger);
     //evl += (board->mobility[WHITE] - board->mobility[BLACK])*4;
-    evl += (endgame*kingsafety(board))/40;
+    evl += (kingdanger*kingsafety(board))/40;
     if (color == WHITE){
         return evl;
     }
@@ -1519,7 +1548,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
         }
         if (depth == 0){
-            //printf("%s %i\n", list[i].move, list[i].eval);
+            printf("%s %i\n", list[i].move, list[i].eval);
         }
         if (list[i].eval >= beta){
             memcpy(bestmove, list[i].move, 8);
@@ -1691,7 +1720,7 @@ void game(int time){
 }
 
 int main(void){
-    //game(1);
+    //game(10);
     unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
     init_by_array64(init, 4);
 
@@ -1710,13 +1739,11 @@ int main(void){
     setmovelist(movelst, &key, fen);   
     move(&board, "Nb1-c3", WHITE);
     move_add(&board, movelst, &key, "Nb1-c3", WHITE);
-    move(&board, "Nc3-b5", WHITE);
-    move_add(&board, movelst, &key, "Nc3-b5", WHITE);   
-    move(&board, "Nb5xc7", WHITE);
-    move_add(&board, movelst, &key, "Nb5xc7", WHITE);     
+    move(&board, "e7-e5", BLACK);
+    move_add(&board, movelst, &key, "e7-e5", BLACK);
     printfull(&board);
-    printf("%i\n", check_check(&board, BLACK));
+    printf("%i\n", eval(&board, BLACK));
     exit(0);
-    iid_time(&board, movelst, 1, &key, BLACK, false);
+    iid(&board, movelst, 1, &key, BLACK, false);
     return 0;
 }
