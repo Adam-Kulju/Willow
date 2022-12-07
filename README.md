@@ -1,10 +1,2 @@
 # guineafish
-A chess engine I am currently working on, written in C (WORK IN PROGRESS) (tapered evals likely up next)
-
-
-CURRENT STATE OF GUINEAFISH:
-
-
-
-<img width="280" alt="Capture" src="https://user-images.githubusercontent.com/85965318/201218460-d19b6b4f-8b99-4325-a2aa-9db8e9a76ae0.PNG">
-
+A chess engine I am currently working on, written in C (WORK IN PROGRESS) (nearing completion on fully playable game, just need to do more testing + maybe make an actual graphics board)
