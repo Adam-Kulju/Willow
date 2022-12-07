@@ -207,6 +207,11 @@ void setzobrist(){
     for (int i = 0; i < 773; i++){
         ZOBRISTTABLE[i] = genrand64_int64();
     }
+    for (int i = 0; i < 64; i++){
+        for (int n = 0; n < 64; n++){
+            HISTORYTABLE[i][n] = 0;
+        }
+    }
 }
 
 void calc_pos(struct board_info *board){
@@ -1527,6 +1532,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool ispv = false;
     movescore(board, list, maxdepth, bestmove, color, &ispv);
     int i = 0;
+    while (list[i].move[0] != '\0'){  
+        //printf("%s %i\n", list[i].move, list[i].eval);
+        i++;
+    }
+    i = 0;
     unsigned long long int original_pos = CURRENTPOS;
     bool raisedalpha = false;
 
@@ -1546,6 +1556,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 firstmove = false;
                 CURRENTPOS = original_pos;
                 i++;
+                continue;
             }
         }
         move_add(&board2, movelst, key, list[i].move, color);
@@ -1559,7 +1570,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         else{            
             list[i].eval = -alphabeta(&board2, movelst, key, -alpha-1, -alpha, depth+1, maxdepth, color^1, bestmve, false);
             if (list[i].eval > alpha && list[i].eval < beta){
-                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
+                int temp = -alphabeta(&board2, movelst, key, -beta, -list[i].eval, depth+1, maxdepth, color^1, bestmve, false);
+                if (temp > list[i].eval){
+                    list[i].eval = temp;
+                }
                 }
             }
         }
@@ -1575,9 +1589,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
         }
 
-        if (depth == 0){
-            //printf("%s %i\n", list[i].move, list[i].eval);
-        }
+        /*if (depth == 0){
+            printf("%s %i\n", list[i].move, list[i].eval);
+        }*/
         if (list[i].eval >= beta){
             memcpy(bestmove, list[i].move, 8);
             insert(original_pos, maxdepth, beta, '1', bestmove);
@@ -1603,8 +1617,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     else{
                         pos = 1;
                     }
-                    HISTORYTABLE[((int)list[i].move[pos]-97)>>3 + atoi(&list[i].move[pos+1])-1]
-                    [((int)list[i].move[pos]-97)>>3 + atoi(&list[i].move[pos+1])-1] += (maxdepth-depth)*(maxdepth-depth);
+                    /*HISTORYTABLE[(((int)list[i].move[pos]-97)*8) + atoi(&list[i].move[pos+1])-1]
+                    [(((int)list[i].move[pos+3]-97)*8) + atoi(&list[i].move[pos+4])-1] += (maxdepth-depth)*(maxdepth-depth);
+
+                    printf("%s\n", list[i].move);
+                    printf("%i %i\n", (((int)list[i].move[pos]-97)*8) + atoi(&list[i].move[pos+1])-1,
+                    (((int)list[i].move[pos+3]-97)*8) + atoi(&list[i].move[pos+4])-1);*/
                 }
             }
             movelst[*key-1].move[0] = '\0';
@@ -1779,9 +1797,25 @@ int main(void){
     setmovelist(movelst, &key, fen);  
     move(&board, "e2-e4", WHITE);
     move_add(&board, movelst, &key, "e2-e4", WHITE); 
-    move(&board, "Ng8-f6", BLACK);
-    move_add(&board, movelst, &key, "Ng8-f6", BLACK); 
+    move(&board, "e7-e5", BLACK);
+    move_add(&board, movelst, &key, "e7-e5", BLACK); 
+    move(&board, "Ng1-f3", WHITE);
+    move_add(&board, movelst, &key, "Ng1-f3", WHITE); 
+    move(&board, "f7-f6", BLACK);
+    move_add(&board, movelst, &key, "f7-f6", BLACK); 
+    move(&board, "Nf3xe5", WHITE);
+    move_add(&board, movelst, &key, "Nf3xe5", WHITE); 
+    move(&board, "f6xe5", BLACK);
+    move_add(&board, movelst, &key, "f6xe5", BLACK); 
     printfull(&board);
     iid(&board, movelst, 10, &key, WHITE, false);
+    /*for (int i = 0; i < 64; i++){
+        for (int n = 0; n < 64; n++){
+            printf("%i %i %lu\n", n, i, HISTORYTABLE[i][n]);
+            if (HISTORYTABLE[i][n] != 0){
+                //printf("%i %i %lu\n", n, i, HISTORYTABLE[i][n]);
+            }
+        }
+    }*/
     return 0;
 }
