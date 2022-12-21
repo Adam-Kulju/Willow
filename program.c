@@ -1483,7 +1483,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     bool needs_evl = true;
 
-    if (type != 'n'){
+    if (type != 'n' && !isnull){
         if (type == '0'){
             //printfull(board);
             //printf("%i %s\n", evl, TT[CURRENTPOS%TTSIZE].bestmove);
@@ -1503,8 +1503,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
             }
         }
-    int staticevl = eval(board, color);    
-    if (isnull == false){
+     
+    if (isnull == false && type == 'n'){
         bool ispiece = false;
         for (int i = 1; i < 5; i++){
             if (board->pnbrqcount[WHITE][i] > 0 || board->pnbrqcount[BLACK][i] > 0){
@@ -1513,9 +1513,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
         }
         if (ispiece == true){
-            if (staticevl >= beta && !check_check(board, color)){
+            if (eval(board, color) >= beta && !check_check(board, color)){
                 char n[8];
-                int nullmove = alphabeta(board, movelst, key, -beta, -alpha, depth+1, maxdepth-1, color^1, n, true);
+                n[0] = '\0';
+                unsigned long long int a = CURRENTPOS;
+                CURRENTPOS ^= ZOBRISTTABLE[772];
+                int nullmove = -alphabeta(board, movelst, key, -beta, -alpha, depth+3, maxdepth, color^1, n, true);
+                CURRENTPOS = a;
                 if (nullmove >= beta){
                     return beta;
                 }
@@ -1551,7 +1555,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             continue;
         }
         ismove = true;
-        if (isnull == false && staticevl + 350 < alpha && depth == maxdepth && !strchr(list[i].move, 'x')){
+        if (depth == maxdepth && !strchr(list[i].move, 'x') &&  eval(board, color) < alpha){
             if (!check_check(&board2, color^1)){
                 firstmove = false;
                 CURRENTPOS = original_pos;
@@ -1563,9 +1567,17 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         char bestmve[8];
         bestmve[0] = '\0';   
 
-        if (ispv == true){
+        if (ispv == true && maxdepth-depth > 1){
             if (firstmove){
-                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
+                if (raisedalpha == false && betacount > 3 && !check_check(&board2, color) && !strchr(list[i].move, 'x')){
+                    list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+3, maxdepth, color^1, bestmve, false);
+                    if (list[i].eval > alpha){
+                    list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
+                    }
+                }
+                else{
+                    list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, bestmve, false);
+                }
             }
         else{            
             list[i].eval = -alphabeta(&board2, movelst, key, -alpha-1, -alpha, depth+1, maxdepth, color^1, bestmve, false);
@@ -1801,14 +1813,24 @@ int main(void){
     move_add(&board, movelst, &key, "e7-e5", BLACK); 
     move(&board, "Ng1-f3", WHITE);
     move_add(&board, movelst, &key, "Ng1-f3", WHITE); 
+    move(&board, "Ng8-f6", BLACK);
+    move_add(&board, movelst, &key, "Ng8-f6", BLACK); 
+    move(&board, "Bf1-c4", WHITE);
+    move_add(&board, movelst, &key, "Bf1-c4", WHITE); 
+    move(&board, "Nf6xe4", BLACK);
+    move_add(&board, movelst, &key, "Nf6xe4", BLACK); 
+    move(&board, "Nb1-c3", WHITE);
+    move_add(&board, movelst, &key, "Nb1-c3", WHITE); 
+    move(&board, "Ne4xc3", BLACK);
+    move_add(&board, movelst, &key, "Ne4xc3", BLACK); 
+    move(&board, "d2xc3", WHITE);
+    move_add(&board, movelst, &key, "d2xc3", WHITE);     
     move(&board, "f7-f6", BLACK);
     move_add(&board, movelst, &key, "f7-f6", BLACK); 
-    move(&board, "Nf3xe5", WHITE);
-    move_add(&board, movelst, &key, "Nf3xe5", WHITE); 
-    move(&board, "f6xe5", BLACK);
-    move_add(&board, movelst, &key, "f6xe5", BLACK); 
+    move(&board, "Qd1-d5", WHITE);
+    move_add(&board, movelst, &key, "Qd1-d5", WHITE); 
     printfull(&board);
-    iid(&board, movelst, 10, &key, WHITE, false);
+    iid(&board, movelst, 10, &key, BLACK, false);
     /*for (int i = 0; i < 64; i++){
         for (int n = 0; n < 64; n++){
             printf("%i %i %lu\n", n, i, HISTORYTABLE[i][n]);
