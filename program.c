@@ -26,7 +26,7 @@
 #define MATRIX_A 0xB5026F5AA96619E9ULL
 #define UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
 #define LM 0x7FFFFFFFULL /* Least significant 31 bits */
-#define TTSIZE 100000
+#define TTSIZE 1000000
 
 
 /* The array for the state vector */
@@ -63,6 +63,7 @@ struct ttentry{
     char bestmove[8];
     int eval;
     short int depth_searched;
+    short int rep;
 };
 
 struct ttentry TT[TTSIZE];
@@ -133,7 +134,7 @@ short int kingtable2[8][8] = {
     {-30,  0, 30, 40, 40, 30,  0,-20},
     {-30,  0, 20, 30, 30, 20,-10,-30},
     {-30,-30,-10,-10,-10,-10,-20,-40},
-    {-50,-30,-30,-30,-30,-30,-30,-50},
+    {-50,-30,-30,-30,-30,-30,-30,-50}
 };
 
 /* Random number generator code is taken from the Mersenne Twister http://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/VERSIONS/C-LANG/mt19937-64.c*/
@@ -388,6 +389,7 @@ void move(struct board_info *board, char *move, char color){
             CURRENTPOS ^= ZOBRISTTABLE[(board->board[0][rank]<<6)+(3<<3)+rank], CURRENTPOS ^= ZOBRISTTABLE[(board->board[4][rank]<<6)+(2<<3)+rank];
 
             board->board[0][rank] = BLANK, board->board[4][rank] = BLANK, board->board[3][rank] = WROOK+color, board->board[2][rank] = WKING+color;
+            board->kingpos[color] = 16+rank;
         }
         else{
             
@@ -395,6 +397,7 @@ void move(struct board_info *board, char *move, char color){
             CURRENTPOS ^= ZOBRISTTABLE[(board->board[7][rank]<<6)+(4<<3)+rank], ZOBRISTTABLE[(board->board[4][rank]<<6)+(6<<3)+rank];
 
             board->board[7][rank] = BLANK, board->board[4][rank] = BLANK, board->board[5][rank] = WROOK+color, board->board[6][rank] = WKING+color;
+            board->kingpos[color] = 48+rank;
         }
 
         CURRENTPOS ^= ZOBRISTTABLE[768+(color*2)];
@@ -483,7 +486,7 @@ void setfull(struct board_info *board){
 
 void setempty(struct board_info *board){
     char brd[8][8] = {
-        {BKING, BLANK, BLANK, BLANK, WKING, WQUEEN, BLANK, BLANK},
+        {BLANK, BLANK, BKING, BLANK, WKING, WROOK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
@@ -494,12 +497,12 @@ void setempty(struct board_info *board){
     };
     memcpy(board->board, brd, 64);
     char count[2][5] = {
-        {0, 0, 0, 0, 1},
+        {0, 0, 0, 1, 0},
         {0, 0, 0, 0, 0}
     };
     memcpy(board->pnbrqcount, count, 10);
     board->castling[0][0] = false, board->castling[0][1] = false, board->castling[1][0] = false, board->castling[1][1] = false;
-    board->kingpos[0] = 5, board->kingpos[1] = 0;
+    board->kingpos[0] = 4, board->kingpos[1] = 2;
     board->mobility[0] = 0, board->mobility[1] = 0;
 }
 void setmovelist(struct movelist *movelst, int *key, char *fen){
@@ -632,6 +635,7 @@ void rook_moves(struct list *list, struct board_info *board, int *key, char file
 void queen_moves(struct list *list, struct board_info *board, int *key, char file, char rank, char color, bool needscapture){
     int letterchange, numchange;
     int n, i;
+    int mobility = 0;
     for (letterchange = -1; letterchange < 2; letterchange += 1){
         for (numchange = -1; numchange < 2; numchange += 1){
             if (letterchange == 0 && numchange == 0){
@@ -639,7 +643,7 @@ void queen_moves(struct list *list, struct board_info *board, int *key, char fil
             }
             n = file + letterchange, i = rank + numchange;
             while (n > -1 && n < 8 && i > -1 && i < 8 && board->board[n][i]%2 != color){
-                board->mobility[color] += 1;
+                mobility++;
                 if (board->board[n][i] == BLANK){
                     if (!needscapture){
                     piece_add(list, key, (char)file+97, rank + '0' +1, (char)n+97, i + '0' + 1, '-', 'Q');
@@ -653,6 +657,9 @@ void queen_moves(struct list *list, struct board_info *board, int *key, char fil
             }
         }
     }    
+    if (mobility == 0){
+        board->mobility[color] -= 4;
+    }
 }
 void pawn_moves(struct list *list, struct board_info *board, int *key, char file, char rank, char color, bool needscapture){
     int srank, lrank, diff;
@@ -729,7 +736,7 @@ bool check_check(struct board_info *board, char color){
                             return true;
                         } break;
                         case WKING:
-                        if (abs(kingfile-n) == 1 && abs(kingrank-i) == 1){
+                        if (abs(kingfile-n) <= 1 && abs(kingrank-i) <= 1){
                             return true;
                         } break;
                         default:
@@ -803,7 +810,8 @@ void castle_q(struct board_info *board, struct list *list, int *key, struct move
     else{
         rank = 7;
     }
-    if (board->board[4][rank]-color != WKING+color || board->board[1][rank]-color != WROOK+color || board->board[2][rank] != BLANK || board->board[3][rank] != BLANK){
+    if (board->board[4][rank]-color != WKING+color || board->board[0][rank]-color != WROOK+color || 
+    board->board[1][rank] != BLANK || board->board[2][rank] != BLANK || board->board[3][rank] != BLANK){
         return;
     }
     if (check_check(board, color)){
@@ -949,8 +957,8 @@ void remove_illegal(struct board_info *board, struct list *list, char color){ //
 }
 
 bool checkdraw1(struct board_info *board){
-    if (board->pnbrqcount[0][0] || board->pnbrqcount[1][0] || board->pnbrqcount[0][3] || 
-        board->pnbrqcount[1][3] || board->pnbrqcount[0][4] || board->pnbrqcount[1][4]){
+    if (board->pnbrqcount[0][0] || board->pnbrqcount[0][3] || board->pnbrqcount[0][4] || 
+        board->pnbrqcount[1][0] || board->pnbrqcount[1][3] || board->pnbrqcount[1][4]){
         return false;
     }
     if (board->pnbrqcount[0][2] > 1 || board->pnbrqcount[0][2] > 1){
@@ -982,7 +990,8 @@ int checkdraw2(struct movelist *movelst, int *key){
 }
 int humanmove(struct board_info *board, struct movelist *movelst, int *key, char color){
     printfull(board);
-    if (checkdraw2(movelst, key) || checkdraw1(board)){
+    if (checkdraw2(movelst, key) == 2 || checkdraw1(board)){
+        printf("n\n");
         return 11;
     }
     struct list list[LISTSIZE];
@@ -991,7 +1000,7 @@ int humanmove(struct board_info *board, struct movelist *movelst, int *key, char
     remove_illegal(board, list, color);
     if (list[0].move[0] == '\0'){
         if (check_check(board, color)){
-            return 1000;
+            return -1000;
         }
         else{
             return 11;
@@ -1030,7 +1039,7 @@ int humanmove(struct board_info *board, struct movelist *movelst, int *key, char
 }
 
 int game_end(struct board_info *board, struct movelist *movelst, int *key, char color){  //checks if the side to MOVE (comp) has been mated or drawn
-    if (checkdraw2(movelst, key) || checkdraw1(board)){
+    if (checkdraw2(movelst, key) == 2 || checkdraw1(board)){
         return 11;
     }
     struct list list[LISTSIZE];
@@ -1223,9 +1232,18 @@ int pstscore(struct board_info *board, int kingdanger){
             }
         }
     }
+        if (board->pnbrqcount[1][0] == 0 && board->pnbrqcount[1][1] == 0 && board->pnbrqcount[1][2] == 0 &&
+        board->pnbrqcount[1][3] == 0 && board->pnbrqcount[1][4] == 0){
+            wscore = wscore + 100 - ((abs(board->kingpos[0]/8 - board->kingpos[1]/8) + abs(board->kingpos[0]%8 - board->kingpos[1]%8))*10);
+        }
+        wscore += (kingdanger*kingtable[board->kingpos[0]/8][board->kingpos[0]%8] + (40-kingdanger)*kingtable2[board->kingpos[0]/8][board->kingpos[0]%8])/40;
+        
+        if (board->pnbrqcount[0][0] == 0 && board->pnbrqcount[0][1] == 0 && board->pnbrqcount[0][2] == 0 &&
+        board->pnbrqcount[0][3] == 0 && board->pnbrqcount[0][4] == 0){
+            bscore = bscore + 100 - ((abs(board->kingpos[0]/8 - board->kingpos[1]/8) + abs(board->kingpos[0]%8 - board->kingpos[1]%8))*10);
+        }
+        bscore += (kingdanger*kingtable[board->kingpos[1]/8][7-(board->kingpos[1]%8)] + (40-kingdanger)*kingtable2[board->kingpos[1]/8][7-(board->kingpos[1]%8)])/40;
     
-    wscore += (kingdanger*kingtable[board->kingpos[0]/8][board->kingpos[0]%8] + (40-kingdanger)*kingtable2[board->kingpos[0]/8][board->kingpos[0]%8])/40;
-    bscore += (kingdanger*kingtable[board->kingpos[1]/8][7-(board->kingpos[1]%8)] + (40-kingdanger)*kingtable2[board->kingpos[1]/8][7-(board->kingpos[1]%8)])/40;
     return wscore-bscore;
 }
 
@@ -1272,7 +1290,7 @@ int kingsafety(struct board_info *board){
                     break;
                 }
             }
-            if (eval > 0){
+            if (eval > 0 && abs(wkingfile-n) <= 1 && abs(wkingrank-i) <= 1){
                 eval = eval * eval;
             }
             evals += eval;
@@ -1318,7 +1336,7 @@ int kingsafety(struct board_info *board){
                     break;
                 }
             }
-            if (beval > 0){
+            if (beval > 0 && abs(bkingfile-n) <= 1 && abs(bkingrank-i) <= 1){
                 beval = beval * beval;
             }
             bevals += beval;
@@ -1518,7 +1536,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     if (isnull == false && type == 'n'){
         bool ispiece = false;
         for (int i = 1; i < 5; i++){
-            if (board->pnbrqcount[WHITE][i] > 0 || board->pnbrqcount[BLACK][i] > 0){
+            if (board->pnbrqcount[color][i] > 0){
                 ispiece = true;
                 i = 5;
             }
@@ -1617,7 +1635,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }*/
         if (list[i].eval >= beta){
             memcpy(bestmove, list[i].move, 8);
-            insert(original_pos, maxdepth, beta, '1', bestmove);
+            if (rep==0){
+                insert(original_pos, maxdepth, beta, '1', bestmove);
+            }
             total++;
             if (betacount < 2){
                 betas++;
@@ -1680,12 +1700,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
     //printfull(board);
     if (raisedalpha){
+        if (rep == 0){
         insert(original_pos, maxdepth, alpha, '0', bestmove);
+        }
     }
     else{
         char j[8];
         j[0] = '\0';
+        if (rep == 0){
         insert(original_pos, maxdepth, alpha, '2', j);
+        }
     }
     return alpha;
 }
@@ -1761,18 +1785,20 @@ void game(int time){
     unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
     init_by_array64(init, 4);
     struct board_info board;
-    setfull(&board);    
+    //setfull(&board);    
+    setempty(&board);
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
     struct movelist movelst[MOVESIZE];
     setzobrist();
     calc_pos(&board);    
     int key;
-    char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
-    //char fen[65] =   "k---K--------R--------------------------------------------------\0";
+    //char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
+    char fen[65] =   "--k-K--------R--------------------------------------------------\0";
     setmovelist(movelst, &key, fen);   
     char color, temp;
     int game_end_flag = 0;
+    printfull(&board);
     printf("What color would you like to play as? (W/B): ");
     scanf("%c", &temp);
     printf("%c\n", temp);
@@ -1786,7 +1812,6 @@ void game(int time){
         iid_time(&board, movelst, time, &key, WHITE, true);
     }
     while (game_end_flag == 0){
-        printf("%i %i %i %i\n", board.castling[0][0], board.castling[0][1], board.castling[1][0], board.castling[1][1]);
         game_end_flag = humanmove(&board, movelst, &key, color);
         if (game_end_flag != 0){
             break;
@@ -1799,16 +1824,26 @@ void game(int time){
         printf("COMPUTER MOVING: \n");
         iid_time(&board, movelst, time, &key, color^1, true);
     }
+    if (game_end_flag == 11){
+        printf("Draw!\n");
+    }
+    else if (game_end_flag == 1000){
+        printf("You won! Congratulations!\n");
+    }
+    else{
+        printf("You lost. Better luck next time!\n");
+    }
 }
 
 int main(void){
-    //game(1);
+    game(1);
+    exit(0);
     unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
     init_by_array64(init, 4);
 
     struct board_info board;
-    setfull(&board);
-    //setempty(&board);
+    //setfull(&board);
+    setempty(&board);
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
     struct movelist movelst[MOVESIZE];
@@ -1816,27 +1851,11 @@ int main(void){
     calc_pos(&board);
     
     int key;
-    char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
-    //char fen[65] =   "k---KQ----------------------------------------------------------\0";
+    //char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
+    char fen[65] =   "--k-KR----------------------------------------------------------\0";
     setmovelist(movelst, &key, fen);  
-    /*move(&board, "e2-e4", WHITE);
-    move_add(&board, movelst, &key, "e2-e4", WHITE); 
-    move(&board, "e7-e5", BLACK);
-    move_add(&board, movelst, &key, "e7-e5", BLACK); 
-    move(&board, "Ng1-f3", WHITE);
-    move_add(&board, movelst, &key, "Ng1-f3", WHITE); 
-    move(&board, "f7-f6", BLACK);
-    move_add(&board, movelst, &key, "f7-f6", BLACK);
-    move(&board, "Nf3xe5", WHITE);
-    move_add(&board, movelst, &key, "Nf3xe5", WHITE);     
-    move(&board, "f6xe5", BLACK);
-    move_add(&board, movelst, &key, "f6xe5", WHITE);  
-/*    move(&board, "f7-f6", BLACK);
-    move_add(&board, movelst, &key, "f7-f6", BLACK); 
-    move(&board, "Qd1-d5", WHITE);
-    move_add(&board, movelst, &key, "Qd1-d5", WHITE); */
-    printfull(&board);
-    iid(&board, movelst, 10, &key, WHITE, false);
+ 
+    iid(&board, movelst, 10, &key, BLACK, false);
     /*for (int i = 0; i < 64; i++){
         for (int n = 0; n < 64; n++){
             printf("%i %i %lu\n", n, i, HISTORYTABLE[i][n]);
