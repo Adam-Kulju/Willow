@@ -486,11 +486,11 @@ void setfull(struct board_info *board){
 
 void setempty(struct board_info *board){
     char brd[8][8] = {
-        {BLANK, BLANK, BKING, BLANK, WKING, WROOK, BLANK, BLANK},
+        {WROOK, WKING, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
-        {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
+        {BLANK, BLANK, BLANK, BLANK, BKING, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK},
         {BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK}
@@ -502,7 +502,7 @@ void setempty(struct board_info *board){
     };
     memcpy(board->pnbrqcount, count, 10);
     board->castling[0][0] = false, board->castling[0][1] = false, board->castling[1][0] = false, board->castling[1][1] = false;
-    board->kingpos[0] = 4, board->kingpos[1] = 2;
+    board->kingpos[0] = 1, board->kingpos[1] = 36;
     board->mobility[0] = 0, board->mobility[1] = 0;
 }
 void setmovelist(struct movelist *movelst, int *key, char *fen){
@@ -1490,7 +1490,9 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
         *key = *key-1;
         i++;
     }
-    
+    if (incheck && !ismove){
+        return -100000;
+    }
     return alpha;
 }
 
@@ -1534,14 +1536,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
      
     if (isnull == false && type == 'n'){
-        bool ispiece = false;
+        bool ispiecew = false, ispieceb = false;
         for (int i = 1; i < 5; i++){
-            if (board->pnbrqcount[color][i] > 0){
-                ispiece = true;
-                i = 5;
+            if (board->pnbrqcount[WHITE][i] > 0){
+                ispiecew = true;
+            }
+            if (board->pnbrqcount[BLACK][i] > 0){
+                ispieceb = true;
             }
         }
-        if (ispiece == true){
+        if (ispiecew && ispieceb){
             if (eval(board, color) >= beta && !check_check(board, color)){
                 char n[8];
                 n[0] = '\0';
@@ -1786,15 +1790,15 @@ void game(int time){
     init_by_array64(init, 4);
     struct board_info board;
     //setfull(&board);    
-    setempty(&board);
+    setfull(&board);
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
     struct movelist movelst[MOVESIZE];
     setzobrist();
     calc_pos(&board);    
     int key;
-    //char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
-    char fen[65] =   "--k-K--------R--------------------------------------------------\0";
+    char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
+    //char fen[65] =   "RK----------------------------------k---------------------------\0";
     setmovelist(movelst, &key, fen);   
     char color, temp;
     int game_end_flag = 0;
@@ -1836,7 +1840,7 @@ void game(int time){
 }
 
 int main(void){
-    game(1);
+    game(10);
     exit(0);
     unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
     init_by_array64(init, 4);
