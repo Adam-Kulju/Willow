@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include <stdlib.h>
+#include <stdlib.h>     
 #include <string.h>
 #include <time.h>
 #define WHITE 0
@@ -51,6 +51,7 @@ struct board_info{
 struct movelist{
     char move[8];
     char fen[65];
+    struct board_info boardstate;
 };
 struct list{
     char move[8];
@@ -266,18 +267,16 @@ void clearTT(){
 void printfull(struct board_info *board){
     int i, n;
     for (i = 7; i > -1; i--){
+
+        printf("+---+---+---+---+---+---+---+---+\n");
         for (n = 0; n < 8; n++){
+        printf("| ");
             if (board->board[n][i] == BLANK){
-                printf("-- ");
+                printf("  ");
             }
             else{
-                if (board->board[n][i]%2){
-                    printf("B");
-                }
-                else{
-                    printf("W");
-                }
-                switch(board->board[n][i]-(board->board[n][i]%2)){
+
+                switch(board->board[n][i]){
                     case WPAWN:
                     printf("P "); break;
                     case WKNIGHT:
@@ -288,14 +287,26 @@ void printfull(struct board_info *board){
                     printf("R "); break;
                     case WQUEEN:
                     printf("Q "); break;
-                    default:
+                    case WKING:
                     printf("K "); break;
+                    case BPAWN:
+                    printf("p "); break;
+                    case BKNIGHT:
+                    printf("n "); break;
+                    case BBISHOP:
+                    printf("b "); break;
+                    case BROOK:
+                    printf("r "); break;
+                    case BQUEEN:
+                    printf("q "); break;
+                    default:
+                    printf("k "); break;
                 }
             }
         }
-        printf("\n");
+        printf("|\n");
     }
-    printf("\n");
+    printf("+---+---+---+---+---+---+---+---+\n\n");
 }
 void move(struct board_info *board, char *move, char color){
 
@@ -1024,10 +1035,20 @@ int humanmove(struct board_info *board, struct movelist *movelst, int *key, char
                 return 10;
             }
         }
+        else if (!strcmp(mve, "takeback")){
+            if (*key < 3){
+                printf("Not enough moves played to take back.\n");
+            }
+            else{
+                printf("move taken back.\n");
+            return 300;
+            }
+        }
         else{
             int i = 0; while (list[i].move[0] != '\0'){
                 if (!strcmp(mve, list[i].move)){
                     move(board, mve, color);
+                    memcpy(&movelst[*key].boardstate, board, boardsize);
                     move_add(board, movelst, key, mve, color);
                     return 0;
                 }
@@ -1781,6 +1802,7 @@ void iid_time(struct board_info *board, struct movelist *movelst, int maxtime, i
     }
     if (ismove){
         move(board, mve, color);
+        memcpy(&movelst[*key].boardstate, board, boardsize);
         move_add(board, movelst, key, mve, color);
     }
 }
@@ -1800,6 +1822,7 @@ void game(int time){
     char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
     //char fen[65] =   "RK----------------------------------k---------------------------\0";
     setmovelist(movelst, &key, fen);   
+    memcpy(&movelst[0].boardstate, &board, boardsize);
     char color, temp;
     int game_end_flag = 0;
     printfull(&board);
@@ -1815,11 +1838,23 @@ void game(int time){
     if (color == BLACK){
         iid_time(&board, movelst, time, &key, WHITE, true);
     }
+
     while (game_end_flag == 0){
+
         game_end_flag = humanmove(&board, movelst, &key, color);
         if (game_end_flag != 0){
-            break;
-        }        
+            if (game_end_flag == 300){
+                memcpy(&board, &movelst[key-3].boardstate, boardsize);
+                movelst[key-1].move[0] = '\0', movelst[key-2].move[0] = '\0';
+                key -= 2;
+                game_end_flag = 0;
+                continue;
+            }
+            else{
+                break;
+            }
+        }     
+
         game_end_flag = game_end(&board, movelst, &key, color^1);
         if (game_end_flag != 0){
             break;
@@ -1840,14 +1875,14 @@ void game(int time){
 }
 
 int main(void){
-    game(10);
+    game(1);
     exit(0);
     unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
     init_by_array64(init, 4);
 
     struct board_info board;
-    //setfull(&board);
-    setempty(&board);
+    setfull(&board);
+    //setempty(&board);
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
     struct movelist movelst[MOVESIZE];
@@ -1855,10 +1890,11 @@ int main(void){
     calc_pos(&board);
     
     int key;
-    //char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
-    char fen[65] =   "--k-KR----------------------------------------------------------\0";
+    char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
+    //char fen[65] =   "--k-KR----------------------------------------------------------\0";
     setmovelist(movelst, &key, fen);  
- 
+    printfull(&board);
+    exit(0);
     iid(&board, movelst, 10, &key, BLACK, false);
     /*for (int i = 0; i < 64; i++){
         for (int n = 0; n < 64; n++){
