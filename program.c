@@ -4,6 +4,7 @@
 #include <stdlib.h>     
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #define WHITE 0
 #define BLACK 1
 #define BLANK -1
@@ -264,12 +265,24 @@ void clearTT(){
 //to access zobrist number for say white knight on a6 we go zobristtable[(64*piece)+(file-1*8) + rank-1]
 //768-771 is castling
 //color key is 772
-void printfull(struct board_info *board){
+void printfull(struct board_info *board, char color){
     int i, n;
-    for (i = 7; i > -1; i--){
+    int until, diff; if (color == WHITE){
+        i = 7, until = -1, diff = -1;
+    }
+    else{
+        i = 0, until = 8, diff = 1;
+    }
+    int nstart, nuntil, ndiff; if (color == WHITE){
+        nstart = 0, nuntil = 8, ndiff = 1;
+    }
+    else{
+        nstart = 7, nuntil = -1, ndiff = -1;
+    }
+    for (; i != until; i += diff){
 
         printf("+---+---+---+---+---+---+---+---+\n");
-        for (n = 0; n < 8; n++){
+        for (n = nstart; n != nuntil; n += ndiff){
         printf("| ");
             if (board->board[n][i] == BLANK){
                 printf("  ");
@@ -789,7 +802,7 @@ void castle_k(struct board_info *board, struct list *list, int *key, struct move
         rank = 7;
     }
 
-    if (board->board[4][rank]-color != WKING+color || board->board[7][rank]-color != WROOK+color || board->board[5][rank] != BLANK || board->board[6][rank] != BLANK){
+    if (board->board[4][rank]-color != WKING || board->board[7][rank]-color != WROOK || board->board[5][rank] != BLANK || board->board[6][rank] != BLANK){
         return;
     }
     if (check_check(board, color)){
@@ -798,10 +811,12 @@ void castle_k(struct board_info *board, struct list *list, int *key, struct move
     struct board_info board2;
     memcpy(board2.board, board->board, 64);
     board2.board[4][rank] = BLANK, board2.board[5][rank] = WKING+color;
+    board2.kingpos[color] = board->kingpos[color] + 8;
     if (check_check(&board2, color)){
         return;
     }
     board2.board[5][rank] = BLANK, board2.board[6][rank] = WKING+color;
+    board->kingpos[color] += 8;
     if (check_check(&board2, color)){
         return;
     }
@@ -821,7 +836,7 @@ void castle_q(struct board_info *board, struct list *list, int *key, struct move
     else{
         rank = 7;
     }
-    if (board->board[4][rank]-color != WKING+color || board->board[0][rank]-color != WROOK+color || 
+    if (board->board[4][rank]-color != WKING || board->board[0][rank]-color != WROOK || 
     board->board[1][rank] != BLANK || board->board[2][rank] != BLANK || board->board[3][rank] != BLANK){
         return;
     }
@@ -831,10 +846,12 @@ void castle_q(struct board_info *board, struct list *list, int *key, struct move
     struct board_info board2;
     memcpy(board2.board, board->board, 64);
     board2.board[4][rank] = BLANK, board2.board[3][rank] = WKING+color;
+    board2.kingpos[color] = board->kingpos[color] - 8;
     if (check_check(&board2, color)){
         return;
     }
     board2.board[3][rank] = BLANK, board2.board[2][rank] = WKING+color;
+    board->kingpos[color] -= 8;
     if (check_check(&board2, color)){
         return;
     }
@@ -870,7 +887,7 @@ void en_passant(struct board_info *board, struct list *list, int *listkey, int *
     }
     if (board->board[file][rank] != WPAWN + (color^1)){
         printf("an error occured %i %i %s\n", color, file, movelst[*movelistkey].move); //this should not happen
-        printfull(board);
+        printfull(board, color);
 
         exit(1);
         return;
@@ -903,7 +920,7 @@ void movelist(struct board_info *board, struct list *list, struct movelist *move
                     king_moves(list, board, &key, n, i, color, false); break;
                     default:
                     printf("error reading board\n");
-                    printfull(board);
+                    printfull(board, color);
                     exit(1);
                 }
             }
@@ -936,7 +953,7 @@ void movelistq(struct board_info *board, struct list *list, struct movelist *mov
                     king_moves(list, board, &key, n, i, color, true); break;
                     default:
                     printf("error reading board\n");
-                    printfull(board);
+                    printfull(board, color);
                     exit(1);
                 }
             }
@@ -1000,7 +1017,7 @@ int checkdraw2(struct movelist *movelst, int *key){
     return rep;
 }
 int humanmove(struct board_info *board, struct movelist *movelst, int *key, char color){
-    printfull(board);
+    printfull(board, color);
     if (checkdraw2(movelst, key) == 2 || checkdraw1(board)){
         printf("n\n");
         return 11;
@@ -1825,7 +1842,9 @@ void game(int time){
     memcpy(&movelst[0].boardstate, &board, boardsize);
     char color, temp;
     int game_end_flag = 0;
-    printfull(&board);
+    printfull(&board, WHITE);
+    printf("Welcome to WILLOW!\n");
+    sleep(1);
     printf("What color would you like to play as? (W/B): ");
     scanf("%c", &temp);
     printf("%c\n", temp);
@@ -1840,7 +1859,7 @@ void game(int time){
     }
 
     while (game_end_flag == 0){
-
+        printf("%i %i %i\n", board.castling[BLACK][0], board.castling[BLACK][1], check_check(&board, BLACK));
         game_end_flag = humanmove(&board, movelst, &key, color);
         if (game_end_flag != 0){
             if (game_end_flag == 300){
@@ -1859,7 +1878,7 @@ void game(int time){
         if (game_end_flag != 0){
             break;
         }
-        printfull(&board);
+        printfull(&board, color);
         printf("COMPUTER MOVING: \n");
         iid_time(&board, movelst, time, &key, color^1, true);
     }
@@ -1893,8 +1912,8 @@ int main(void){
     char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
     //char fen[65] =   "--k-KR----------------------------------------------------------\0";
     setmovelist(movelst, &key, fen);  
-    printfull(&board);
-    exit(0);
+    printfull(&board, BLACK);
+    
     iid(&board, movelst, 10, &key, BLACK, false);
     /*for (int i = 0; i < 64; i++){
         for (int n = 0; n < 64; n++){
