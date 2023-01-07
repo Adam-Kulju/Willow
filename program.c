@@ -950,7 +950,7 @@ void castle_q(struct board_info *board, struct list *list, int *key, struct move
     return;
 }
 int getpassantfile(struct movelist *movelst, int *key){
-    int k = *key;  
+    int k = *key-1;  
     if (!islower(movelst[k].move[0])){
         return -1;
     }
@@ -973,11 +973,11 @@ void en_passant(struct board_info *board, struct list *list, int *listkey, int *
     else{
         rank = 3, diff = -1;
     }
-    if (board->board[file][rank] != WPAWN + (color^1)){
-        printf("an error occured %i %i %s\n", color, file, movelst[*movelistkey].move); //this should not happen
+    if (board->board[file][rank] != WPAWN + (color^1)){ //almost always because it tried to en passant after a null move
+        /*printf("an error occured %i %i %i %s\n", color, file, rank, movelst[*movelistkey-1].move);
         printfull(board, color);
 
-        exit(1);
+        exit(1);*/
         return;
     }
     if (file < 7 && board->board[file+1][rank] == WPAWN + color){
@@ -2015,8 +2015,8 @@ void game(int time){
 }
 
 int main(void){
-    game(5);
-    exit(0);
+    //game(5);
+    //exit(0);
     unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
     init_by_array64(init, 4);
 
@@ -2036,23 +2036,16 @@ int main(void){
     clearTT();
 
 
-    iid(&board, movelst, 12, &key, WHITE, false);
-    //printf("%i %i %f\n", total, betas, (float)betas*100/(float)total);
-printf("\n");
-    move(&board, "e2-e4", WHITE);
-    move_add(&board, movelst, &key, "e2-e4", WHITE);
-    move(&board, "e7-e5", BLACK);
-    move_add(&board, movelst, &key, "e7-e5", BLACK);
-
-    iid(&board, movelst, 12, &key, WHITE, false);
-
     printf("\n");
+    move(&board, "h2-h4", WHITE);
+    move_add(&board, movelst, &key, "h2-h4", WHITE);
+    move(&board, "h7-h6", BLACK);
+    move_add(&board, movelst, &key, "h7-h6", BLACK);
 
-    move(&board, "Nb1-c3", WHITE);
-    move_add(&board, movelst, &key, "Nb1-c3", WHITE);
-    move(&board, "Nb8-c6", BLACK);
-    move_add(&board, movelst, &key, "Nb8-c6", BLACK);
-
+    move(&board, "h4-h5", WHITE);
+    move_add(&board, movelst, &key, "h4-h5", WHITE);
+    move(&board, "g7-g5", BLACK);
+    move_add(&board, movelst, &key, "g7-g5", BLACK);
     iid(&board, movelst, 12, &key, WHITE, false);
 
     printf("%i %i %f\n", total, betas, (float)betas*100/(float)total);    
