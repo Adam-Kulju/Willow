@@ -80,124 +80,64 @@ const int VALUES2[5] = {94, 281, 297, 512,  936};
 long int evals;
 int betas, total;
 short int pawntable[8][8] = {
-     {0,-35,-26,-27,-14, -6, 98, 0},
-     {0, -1, -4, -2, 13, 7, 134, 0},
-     {0,-20, -4, -5,  6, 26, 61, 0},
-     {0,-23,-10, 12, 21, 31, 95, 0},
-     {0,-15,  3, 17, 23, 65, 68, 0},
-     {0, 24,  3,  6, 12, 56,126, 0},
-     {0, 38, 33, 10, 17, 25, 34, 0},
-    { 0,-22,-12,-25,-23,-20,-11, 0}
+     {0,  5,  5,  0,  5, 10, 50,  0},
+     {0, 10, -5,  0,  5, 10, 50,  0},
+     {0, 10, 10,  0, 10, 20, 50,  0},
+     {0,-25,  0, 25, 27, 40, 60,  0},
+     {0,-25,  0, 25, 27, 40, 60,  0},
+    {0, 10, 10,  0, 10, 20, 50,  0},
+    {0, 10, -5,  0,  5, 10, 50,  0},
+    {0,  5,  5,  0,  5, 10, 50,  0}
 };
 short int pawntable2[8][8] = {
-    {0, 13,  4, 13, 32, 94,178, 0},
-    {0,  8,  7,  9, 24,100,173, 0},
-    {0,  8, -6, -3, 13, 85,158, 0},
-    {0, 10,  1, -7,  5, 67,134, 0},
-    {0, 13,  0, -7, -2, 56,147, 0},
-    {0,  0, -5, -8,  4, 53,132, 0},
-    {0,  2, -1,  3, 17, 82,165, 0},
-    {0, -7, -8, -1, 17, 84,187, 0}
+    {0, 20, 20, 25, 33, 45, 80, 0},
+    {0,  5,  5, 10, 17, 29, 50, 0},
+    {0, -5, -5,  0, 10, 25, 50, 0},
+    {0,-10,-10, -3,  2, 10, 50, 0},
+    {0,-10,-10, -3,  2, 10, 50, 0},
+    {0, -5, -5,  0, 10, 25, 50, 0},
+    {0,  5,  5, 10, 17, 29, 50, 0},
+    {0, 20, 20, 25, 33, 45, 80, 0}
 };
 short int knighttable[8][8] = {
-    {-105,-29,-23,-13, -9,-47,-73,-167},
-    { -21,-53, -9,  4, 17, 60,-41, -89},
-    { -58,-12, 12, 16, 19, 37, 72, -49},
-    { -33, -3, 10, 23, 53, 65, 36, -49},
-    { -17, -1, 19, 28, 37, 84, 23, -49},
-    { -28, 18, 17, 19, 69,129, 62, -97},
-    { -19,-14, 25, 21, 18, 73,  7, -49},
-    { -23,-19,-16, -8, 22, 44,-17,-107}
-};
-short int knighttable2[8][8] = {
-    { -29,-42,-23,-18,-17,-24,-25, -58},
-    { -51,-20, -3, -6,  3,-20, -8, -38},
-    { -23,-10, -1, 16, 22, 10,-25, -13},
-    { -15, -5, 15, 25, 22,  9, -2, -28},
-    { -22, -2, 10, 16, 22, -1, -9, -31},
-    { -18,-20, -3, 17, 11, -9,-25, -27},
-    { -50,-23,-20,  4,  8,-19,-24, -63},
-    { -64,-44,-22,-18,-18,-41,-52,- 99}    
+    {-50,-40,-30,-30,-30,-30,-40,-50},
+    {-35,-20,  5,  0,  5,  0,-20,-40},
+    {-20,  0, 10, 15, 15, 10,  0,-30},
+    {-30,  5, 15, 20, 20, 15,  0,-30},
+    {-30,  5, 15, 20, 20, 15,  0,-30},
+    {-20,  0, 10, 15, 15, 10,  0,-30},
+    {-35,-20,  5,  0,  5,  0,-20,-40},
+    {-50,-30,-30,-30,-30,-30,-40,-50}
 };
 short int bishoptable[8][8] = {
-    {-33,  4,  0, -6, -4,-16,-26,-29},
-    { -3, 15, 15, 13,  5, 37, 16,  4},
-    {-14, 16, 15, 13, 19, 43,-18,-82},
-    {-21,  0, 15, 26, 50, 40,-13,-37},
-    {-13,  7, 14, 34, 37, 35, 30,-25},
-    {-12, 21, 27, 12, 37, 50, 59,-42},
-    {-39, 33, 18, 10,  7, 37, 18,  7},
-    {-21,  1, 10,  4, -2, -2,-47, -8}
-};
-short int bishoptable2[8][8] = {
-    {-23,-14,-12, -6, -3,  2, -8,-14},
-    { -9,-18, -3,  3,  9, -8, -4,-21},
-    {-23, -7,  8, 13, 12,  0,  7,-11},
-    { -5, -1, 10, 19,  9, -1,-12, -8},
-    { -9,  4, 13,  7, 14, -2, -3, -7},
-    {-16, -9,  3, 10, 10,  6,-13, -9},
-    { -5,-15, -7, -3,  3,  0, -4,-17},
-    {-17,-27,-15, -9,  2,  4,-14,-24}
-};
-short int rooktable[8][8] = {
-    {-19,-44,-45,-36,-24, -5, 27, 32},
-    {-13,-16,-25,-26,-11, 19, 32, 42},
-    {  1,-20,-16,-12,  7, 26, 58, 32},
-    { 17, -9,-17, -1, 26, 36, 62, 51},
-    { 16, -1,  3,  9, 24, 17, 80, 63},
-    {  7, 11,  0, -7, 35, 45, 67,  9},
-    {-37, -6, -5,  6, -8, 61, 26, 31},
-    {-26,-71,-33,-23,-20, 16, 44, 43}    
-};
-short int rooktable2[8][8] = {
-    { -9, -6, -4,  3,  4,  7, 11, 13},
-    {  2, -6,  0,  5,  3,  7, 13, 10},
-    {  3,  0, -5,  8, 13,  7, 13, 18},
-    { -1,  2, -1,  4,  1,  5, 11, 15},
-    { -5, -9, -7, -5,  2,  4, -3, 12},
-    {-13, -9,-12, -6,  1, -3,  3, 12},
-    {  4,-11, -8, -8, -1, -5,  8,  8},
-    {-20, -3,-16,-11,  2, -3,  3,  5}    
-};
-short int queentable[8][8] = {
-    { -1,-35,-14, -9,-27,-13,-24,-28},
-    {-18, -8,  2,-26,-27,-17,-39,  0},
-    { -9, 11,-11, -9,-16,  7, -5, 29},
-    { 10,  2, -2,-10,-16,  8,  1, 12},
-    {-15,  8, -5, -2, -1, 29,-16, 59},
-    {-25, 15,  2, -4, 17, 56, 57, 44},
-    {-31, -3, 14,  3, -2, 47, 28, 43},
-    {-50,  1,  5, -3,  1, 57, 54, 45}       
-};
-short int queentable2[8][8] = {
-    {-33,-22,-16,-18,  3,-20,-17, -9},
-    {-28,-23,-27, 28, 22,  6, 20, 22},
-    {-22,-30, 15, 19, 24,  9, 32, 22},
-    {-43,-16,  6, 47, 45, 49, 41, 27},
-    { -5,-16,  9, 31, 57, 47, 58, 27},
-    {-32,-23, 17, 34, 40, 35, 25, 19},
-    {-20,-36, 10, 39, 57, 19, 30, 10},
-    {-41,-32,  5, 32, 36,  9,  0, 20}       
+    {-20,-10,-10,-10,-10,-10,-10,-20},
+    {-10,  5, 10,  0,  5,  0,  0,-10},
+    {-40,  0, 10, 10,  5,  5,  0,-10},
+    {-10,  0, 10, 10, 10, 10,  0,-10},
+    {-10,  0, 10, 10, 10, 10,  0,-10},
+    {-40,  0, 10, 10,  5,  5,  0,-10},
+    {-10,  5, 10,  0,  5,  0,  0,-10},
+    {-20,-10,-10,-10,-10,-10,-10,-20}
 };
 short int kingtable[8][8] = {
-    {-15,  1,-14,-49,-17, -9, 29,-65},
-    { 36,  7,-14, -1,-20, 24, -1, 23},
-    { 12, -8,-22,-27,-12,  2,-20, 16},
-    {-54,-64,-46,-39,-27,-16, -7,-15},
-    {  8,-43,-44,-46,-30,-20, -8,-56},
-    {-28,-16,-30,-44,-25,  6, -4,-34},
-    { 24,  9,-15,-33,-14, 22,-38,  2},
-    { 14,  8,-27,-51,-36,-22,-29, 13}
+    { 20, 20,-10,-20,-30,-30,-30,-30},
+    { 30, 20,-20,-30,-40,-40,-40,-40},
+    { 10,  0,-20,-40,-50,-50,-50,-50},
+    {  0, -5,-20,-40,-50,-50,-50,-50},
+    {  0, -5,-20,-40,-50,-50,-50,-50},
+    { 10,  0,-20,-40,-50,-50,-50,-50},
+    { 30, 20,-20,-30,-40,-40,-40,-40},
+    { 20, 20,-10,-20,-30,-30,-30,-30}
 };
 short int kingtable2[8][8] = {
-    {-53,-27,-19,-18, -8, 10,-12,-74},
-    {-34,-11, -3, -4, 22, 17, 17,-35},
-    {-21,  4, 11, 21, 24, 23, 14,-18},
-    {-11, 13, 21, 24, 27, 15, 17,-18},
-    {-28, 14, 23, 27, 26, 20, 17,-11},
-    {-14,  4, 16, 23, 33, 45, 38, 15},
-    {-24, -5,  7,  9, 26, 44, 23,  4},
-    {-43,-17, -9,-11,  3, 13, 11,-17}
+    {-50,-30,-30,-30,-30,-30,-30,-50},
+    {-30,-30,-10,-10,-10,-10,-20,-40},
+    {-30,  0, 20, 30, 30, 20,-10,-30},
+    {-30,  0, 30, 40, 40, 30,  0,-20},
+    {-30,  0, 30, 40, 40, 30,  0,-20},
+    {-30,  0, 20, 30, 30, 20,-10,-30},
+    {-30,-30,-10,-10,-10,-10,-20,-40},
+    {-50,-30,-30,-30,-30,-30,-30,-50}
 };
 
 /* Random number generator code is taken from the Mersenne Twister http://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/VERSIONS/C-LANG/mt19937-64.c*/
@@ -1315,9 +1255,8 @@ int material(struct board_info *board, int *kingdanger){
     return wval-bval;
 }
 
-int pstscore(struct board_info *board, int kingdanger){
+int pstscore(struct board_info *board, int kingdanger, bool wiso[8], bool biso[8]){
     int wscore = 0, bscore = 0;
-    bool wiso[8], biso[8];
     for (int n = 0; n < 8; n++){
         bool wdblflag = false, bdblflag = false;
         wiso[n] = false, biso[n] = false;
@@ -1377,25 +1316,28 @@ int pstscore(struct board_info *board, int kingdanger){
         board->pnbrqcount[1][3] == 0 && board->pnbrqcount[1][4] == 0){
             wscore = wscore + 100 - ((abs(board->kingpos[0]/8 - board->kingpos[1]/8) + abs(board->kingpos[0]%8 - board->kingpos[1]%8))*10);
         }
+        else{
         wscore += (kingdanger*kingtable[board->kingpos[0]/8][board->kingpos[0]%8] + (24-kingdanger)*kingtable2[board->kingpos[0]/8][board->kingpos[0]%8])/24;
+        }
         
         if (board->pnbrqcount[0][0] == 0 && board->pnbrqcount[0][1] == 0 && board->pnbrqcount[0][2] == 0 &&
         board->pnbrqcount[0][3] == 0 && board->pnbrqcount[0][4] == 0){
             bscore = bscore + 100 - ((abs(board->kingpos[0]/8 - board->kingpos[1]/8) + abs(board->kingpos[0]%8 - board->kingpos[1]%8))*10);
         }
+        else{
         bscore += (kingdanger*kingtable[board->kingpos[1]/8][7-(board->kingpos[1]%8)] + (24-kingdanger)*kingtable2[board->kingpos[1]/8][7-(board->kingpos[1]%8)])/24;
-    
+        }
     return wscore-bscore;
 }
 
-int kingsafety(struct board_info *board){
+int kingsafety(struct board_info *board, bool wiso[8], bool biso[8]){
     int evals = 0;
     int wkingfile = board->kingpos[0]/8, wkingrank = board->kingpos[0]%8;
-    for (int n = wkingfile - 2; n < wkingfile + 3 && n < 8; n++){
+    for (int n = wkingfile - 1; n < wkingfile + 2 && n < 8; n++){
         if (n < 0){
             continue;
         }
-        for (int i = wkingrank - 2; i < wkingrank + 3 && i < 8; i++){
+        for (int i = wkingrank - 2; i <= wkingrank + 3 && i < 8; i++){
             if (i < 0){
                 continue;
             }
@@ -1414,7 +1356,10 @@ int kingsafety(struct board_info *board){
                     case BKNIGHT:
                     eval += 3; break;
                     case WPAWN:
-                    eval -= 1; break;
+                    eval -= 1; 
+                    if (abs(wkingrank-i) <= 1){
+                        eval -= 4;
+                    }  break;
                     case WROOK:
                     eval -= 4; break;
                     case WQUEEN:
@@ -1435,14 +1380,12 @@ int kingsafety(struct board_info *board){
     }
     int bevals = 0;
     int bkingfile = board->kingpos[1]/8, bkingrank = board->kingpos[1]%8;
-    for (int n = bkingfile - 2; n < bkingfile + 3 && n < 8; n++){
+    for (int n = bkingfile - 1; n < bkingfile + 2 && n < 8; n++){
         if (n < 0){
             continue;
         }
-        for (int i = bkingrank - 2; i < bkingrank + 3 && i < 8; i++){
-            if (i < 0){
-                continue;
-            }
+        for (int i = bkingrank - 3; i <= bkingrank + 2 && i < 8; i++){
+            if (i < 0){continue;}
             int beval = 0;
                 switch (board->board[n][i]){
                     case BLANK:
@@ -1458,7 +1401,10 @@ int kingsafety(struct board_info *board){
                     case WKNIGHT:
                     beval += 3; break;
                     case BPAWN:
-                    beval -= 1; break;
+                    beval -= 1; 
+                    if (abs(bkingrank-i) <= 1){
+                        beval -= 4;
+                    }  break; break;
                     case BROOK:
                     beval -= 4; break;
                     case BQUEEN:
@@ -1477,16 +1423,49 @@ int kingsafety(struct board_info *board){
             bevals += beval;
         }
     }
+    int bpenalty = 1, wpenalty = 1;
+    if (!wiso[wkingfile]){ //if there's no friendly pawn on the king's rank!! very bad!!
+        wpenalty++;
+        if (!biso[wkingfile]){
+            wpenalty++; //yeah you're screwed if it's a completely open file lol
+        }
+    }
+    if ((wkingfile == 0 && !wiso[1]) || (wkingfile == 7 && !wiso[6]) || (wkingfile > 0 && wkingfile < 7 && !wiso[wkingfile-1] && !wiso[wkingfile+1])){
+        wpenalty++;
+    }
+    if (!biso[bkingfile]){
+        bpenalty++;
+        if (!wiso[bkingfile]){
+            bpenalty++;
+        }
+    }
+    if ((bkingfile == 0 && !biso[1]) || (bkingfile == 7 && !biso[6]) || (bkingfile > 0 && bkingfile < 7 &&!biso[bkingfile-1] && !biso[bkingfile+1])){
+        bpenalty++;
+    }
+
+    if (wpenalty >= 3 && evals < 5){
+        evals = 15; //if it really is safe then the lack of kingdanger will tamp this down.
+    }
+    else{
+        evals *= wpenalty;
+    }
+
+    if (bpenalty >= 3 && bevals < 5){
+        bevals = 15;
+    }
+    else{
+        bevals *= bpenalty;
+    }
     return -(evals - bevals);
 }
 int eval(struct board_info *board, char color){
     evals++;
     int kingdanger = 0; //0 represents full kingdanger, 40 represents complete middlegame
     int evl = material(board, &kingdanger);
-    evl += pstscore(board, kingdanger);
-
+    bool wiso[8], biso[8];
+    evl += pstscore(board, kingdanger, wiso, biso);
     evl += (board->mobility[WHITE] - board->mobility[BLACK])*4;
-    evl += (kingdanger*kingsafety(board))/24;
+    evl += (kingdanger*kingsafety(board, wiso, biso))/24;
 
     if (color == WHITE){
         return evl;
@@ -2015,8 +1994,8 @@ void game(int time){
 }
 
 int main(void){
-    //game(5);
-    //exit(0);
+    game(5);
+    exit(0);
     unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
     init_by_array64(init, 4);
 
