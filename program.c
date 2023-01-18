@@ -1766,7 +1766,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     bool needs_evl = true;
 
-    if (!ispv && TT[CURRENTPOS & _mask].depth_searched - TT[CURRENTPOS & _mask].depth >= maxdepth-depth){
+    if (type != 'n' && !ispv && TT[CURRENTPOS & _mask].depth_searched - TT[CURRENTPOS & _mask].depth >= maxdepth-depth){
             if (type == '0'){
                 if (evl >= beta){
                     return beta;
