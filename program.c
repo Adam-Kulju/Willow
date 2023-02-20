@@ -1930,7 +1930,7 @@ void movescore(struct board_info *board, struct list *list, int depth, char colo
 }
 int quiesce(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depth, int maxdepth, char color, bool incheck){
     long long unsigned int original_pos = CURRENTPOS;
-    int stand_pat = eval1(board, color);
+    int stand_pat = eval(board, color);
     if (depth > maxdepth || stand_pat == TIMEOUT){
         return stand_pat;
     }
@@ -1958,7 +1958,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     }
 
 
-    movescore1(board, list, 0, color, true, 'n', false);
+    movescore(board, list, 0, color, true, 'n', false);
 
     int i = 0;
     bool ismove = false;
@@ -2002,7 +2002,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
                 continue;
             }
         }
-        list[i].eval = -quiesce1(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, ischeck);
+        list[i].eval = -quiesce(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, ischeck);
         if (abs(list[i].eval) == TIMEOUT){
             movelst[*key-1].move[0] = '\0';
             *key = *key-1;
@@ -2073,11 +2073,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
 
     if (depthleft <= 0){
-        int b = quiesce1(board, movelst, key, -1000000, 1000000, 0, 10, color, incheck);       
+        int b = quiesce(board, movelst, key, -1000000, 1000000, 0, 10, color, incheck);       
         return b;        
     } 
     if (depthleft < 5){
-        evl = eval1(board, color);
+        evl = eval(board, color);
     }    
     else{
         evl = 0;
@@ -2104,8 +2104,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             if (!incheck /*&& eval(board, color) >= beta*/){
                 unsigned long long int a = CURRENTPOS;
                 CURRENTPOS ^= ZOBRISTTABLE[772];
-                int R = 3 + (depthleft)/8;
-                int nullmove = -alphabeta1(board, movelst, key, -beta, -beta+1, depthleft-1-R, depth+2, color^1, true, false, false);
+                int R = 3 + (depthleft/8);
+                int nullmove = -alphabeta(board, movelst, key, -beta, -beta+1, depthleft-1-R, depth+2, color^1, true, false, false);
                 CURRENTPOS = a;
                 if (abs(nullmove) == TIMEOUT){
                     return TIMEOUT;
@@ -2125,7 +2125,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int betacount = 0;
     movelist(board, list, movelst, key, color);
     //remove_illegal(board, list, color);
-    movescore1(board, list, depth, color, false, type, ispv);
+    movescore(board, list, depth, color, false, type, ispv);
     int i = 0;
     unsigned long long int original_pos = CURRENTPOS;
     bool raisedalpha = false;
@@ -2185,7 +2185,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         if (ispv == true && firstmove){
 
-                list[i].eval = -alphabeta1(&board2, movelst, key, -beta, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
+                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
                 if (abs(list[i].eval) == TIMEOUT){
                                 movelst[*key-1].move[0] = '\0';
                 *key = *key-1;
@@ -2203,7 +2203,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             else{
                 R = (int)round(log(depthleft)*log(betacount+1)/1.95);
             }
-            list[i].eval = -alphabeta1(&board2, movelst, key, -alpha-1, -alpha, depthleft-1-R, depth+1, color^1, false, false, ischeck);
+            list[i].eval = -alphabeta(&board2, movelst, key, -alpha-1, -alpha, depthleft-1-R, depth+1, color^1, false, false, ischeck);
                 if (abs(list[i].eval) == TIMEOUT){
                                 movelst[*key-1].move[0] = '\0';
             *key = *key-1;
@@ -2213,7 +2213,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
 
             if (list[i].eval > alpha && R){
-                list[i].eval = -alphabeta1(&board2, movelst, key, -alpha-1, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
+                list[i].eval = -alphabeta(&board2, movelst, key, -alpha-1, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
                 if (abs(list[i].eval) == TIMEOUT){
                                 movelst[*key-1].move[0] = '\0';
             *key = *key-1;
@@ -2225,7 +2225,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (list[i].eval > alpha && ispv){
 
-                    list[i].eval = -alphabeta1(&board2, movelst, key, -beta, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
+                    list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
                         if (abs(list[i].eval) == TIMEOUT){
                                 movelst[*key-1].move[0] = '\0';
             *key = *key-1;
@@ -2482,10 +2482,8 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
             }         
 
                 if ((float)(clock()-start_time)/CLOCKS_PER_SEC > maxtime){
-                    eval = beta+1;
+                    evl = beta+1;
                 }
-                   
-                }   
 
 
             }
@@ -2497,7 +2495,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
                 }
                 break;
                 }
-                
+
         clock_t time2 = clock()-start_time;
         g = evl;  
         memcpy(pvmove, currentmove, 8);
