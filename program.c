@@ -39,6 +39,7 @@
 #define LIKELYDRAW -111110
 clock_t start_time;
 float maximumtime;
+float coldturkey;
 bool isattacker;
 char attacksw;
 char attacksb;
@@ -1881,12 +1882,11 @@ int kingsafety(struct board_info *board, char wbackwards[8], char bbackwards[8])
     }
     return (wval-bval)*2/3; //this weight needs to be calibrated
 }
-int eval(struct board_info *board, char color){
-    
+int eval(struct board_info *board, char color){   
     evals++;
     if (evals%10000 == 0){
         clock_t rightnow = clock() - start_time;
-        if (rightnow/CLOCKS_PER_SEC > maximumtime){
+        if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey-0.1){ //you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
         if (InputPending()){
@@ -2440,8 +2440,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     /*if (*key < 5 && opening_book(board, movelst, key, color)){
         return 1;
     }*/
-    int phase;
-    maximumtime = maxtime*2;
+    maximumtime = maxtime*3;
     clearTT(false);
     clearPV();
     //if (*key % 5 == 0){
@@ -2465,7 +2464,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
 
             if (evl == alpha){
                 char temp[8];
-                printf("info depth %i score cp %i nodes %li time %i pv %s\n ", depth, alpha, evals, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, uci_move(currentmove, temp, color));
+                printf("info depth %i score cp %i nodes %li time %i pv %s\n ", depth, alpha, evals, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, uci_move(pvmove, temp, color));
                 alpha -= aspiration;
                 aspiration *= 2;
                 evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, true, incheck);
@@ -2509,10 +2508,9 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
 
         clock_t time2 = clock()-start_time;
         g = evl;  
+        char temp;
         memcpy(pvmove, currentmove, 8);
-            char temp[8];
-            //printf("depth %i: %s %.2f %li moves searched %f seconds\n", depth, uci_move(currentmove, temp, color), (float)g/100, evals, ((float)clock()-start_time)/CLOCKS_PER_SEC);
-            printf("info depth %i score cp %i nodes %li currmove %s time %i pv ", depth, g, evals, uci_move(currentmove, temp, color), (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
+        printf("info depth %i score cp %i nodes %li time %i pv ", depth, g, evals, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
 
         for (int i = 0; i < depth && pvstack[i][0] != '\0'; i++){
             char temp[8];
@@ -2520,7 +2518,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         }
         printf("\n");
         fflush(stdin);
-        if ((float)time2/CLOCKS_PER_SEC > maxtime || depth > 45){                      
+        if ((float)time2/CLOCKS_PER_SEC > maxtime*0.7 || depth > 45){                      
             break;
         }
          if (depth > 5){
@@ -2529,7 +2527,8 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         }   
     
     }
-    printf("bestmove %s ponder %s\n", currentmove, pvstack[1]);
+    char temp[8];
+    printf("bestmove %s ponder %s\n", uci_move(currentmove, temp, color), pvstack[1]);
         
        
 
@@ -2748,7 +2747,7 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
         return 1;
     }
   if (!strcmp(command, "uci")) {
-    printf("id name Willow 2.5 ");
+    printf("id name Willow 2.5\n");
     printf("id author Adam Kulju\n");
     // send options
 
@@ -2757,7 +2756,17 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
     if (!strcmp(command, "isready")){
         printf("readyok\n");
     }
-    if (!strcmp(command, "ucinewgame")) {;}
+    if (!strcmp(command, "ucinewgame")) {
+        clearTT(true);
+        clearKiller();
+        clearHistory();
+        for (int i = 0; i < MOVESIZE; i++){
+            movelst[i].halfmoves = 0;
+            movelst[i].fen = 0;
+            movelst[i].move[0] = '\0';
+        }
+        *key = 1;
+        }
 
     if (!strcmp(command, "quit")){
         exit(0);
@@ -2793,11 +2802,66 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
         float time;
         if (strstr(command, "infinite")){
             time = 1000000;
+            coldturkey = 1000000;
         }
         else if (strstr(command, "movetime")){
             time = atoi(command+12)/1000;
+            coldturkey = time+100;
+        }
+
+        else if (strstr(command, "wtime")){ //this will be for a game
+            int k = 9;
+            
+            if (*color == BLACK){
+                while (!isblank(command[k])){
+                    k++;
+                }
+                while (isblank(command[k])){
+                    k++;
+                }
+                while (!isblank(command[k])){
+                    k++;
+                }
+                while (isblank(command[k])){
+                    k++;
+                }              //we need to skip past the "1000 btime part"
+            }
+            int milltime = atoi(&command[k]);
+            coldturkey = (float)milltime/1000;
+            int movesleft = MAX(20, 60-(*key/2));
+            time = ((float)milltime/(1000*movesleft)) * 1.5;
+            if (strstr(command, "winc")){
+                while (command[k] != 'w'){
+                    k++;
+                } //brings it to the "winc" part
+
+                while (!isblank(command[k])){
+                    k++;
+                }
+                while (isblank(command[k])){
+                    k++;
+                }               //skips past the "winc" part to the numbers
+
+                if (*color == BLACK){
+                    while (!isblank(command[k])){
+                        k++;
+                    }
+                    while (isblank(command[k])){
+                        k++;
+                    }
+                    while (!isblank(command[k])){
+                        k++;
+                    }
+                    while (isblank(command[k])){
+                        k++;
+                    }           //if we're playing as black, we need to skip again to past "binc". it's usually the same, but eventually it might not be so always good to plan ahead.
+                }
+                milltime = atoi(&command[k]);
+                time += (float)(milltime/1000) * 0.8;
+            }
         }
         iid_time(board, movelst, time, key, *color, false);
+        printf("%f %f\n", time, coldturkey);
     }
     //fflush(hstdin);
     return 0;
@@ -2888,39 +2952,5 @@ void game(int time){
 int main(void){
     init();
     com();
-    exit(1);
-    game(10);
-    exit(0);
-    unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
-    init_by_array64(init, 4);
-    setzobrist();    
-    FILE *fp;
-    fp = fopen("openings.txt", "r");
-    if (fp == NULL){exit(1);}
-    char buffer[2560];
-    int a = 0;
-    clock_t start = clock();
-    struct board_info board;
-    struct movelist movelst[MOVESIZE];
-    int key;
-    setfull(&board);
-    setmovelist(movelst, &key);
-    move(&board, "e2-e4", WHITE);
-    move_add(&board, movelst, &key, "e2-e4", WHITE);
-    move(&board, "c7-c5", BLACK);
-    move_add(&board, movelst, &key, "c7-c5", BLACK);
-    move(&board, "Ng1-f3", WHITE);
-    move_add(&board, movelst, &key, "Ng1-f3", WHITE);
-    move(&board, "Nb8-c6", BLACK);
-    move_add(&board, movelst, &key, "Nb8-c6", BLACK);
-    move(&board, "d2-d4", WHITE);
-    move_add(&board, movelst, &key, "d2-d4", WHITE);
-    move(&board, "c5xd4", BLACK);
-    move_add(&board, movelst, &key, "c5xd4", BLACK);
-    move(&board, "Nf3xd4", WHITE);
-    move_add(&board, movelst, &key, "Nf3xd4", WHITE);
-    move(&board, "e7-e5", BLACK);
-    move_add(&board, movelst, &key, "e7-e5", BLACK);
-    iid_time(&board, movelst, 10, &key, WHITE, false);
     return 0;
 } 
