@@ -5,6 +5,8 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <Windows.h>
+#include <io.h>
 #define WHITE 0
 #define BLACK 1
 #define BLANK -1
@@ -35,19 +37,6 @@
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAXPHASE 24
 #define LIKELYDRAW -111110
-#ifdef _WIN32
-#include <Windows.h>
-#include <io.h>
-#else
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
-
-#ifdef _WIN32
-int pipe;
-HANDLE hstdin;
-#endif
 clock_t start_time;
 float maximumtime;
 float coldturkey;
@@ -368,7 +357,7 @@ void calc_pos(struct board_info *board){
 void insert(unsigned long long int position, int depthleft, int eval, char type, char *bestmove){
     int index = position & _mask;
     if (TT[index].zobrist_key == position && TT[index].depth >= depthleft && TT[index].age < 2){
-        return;
+        //return;
     }
     TT[index].zobrist_key = position;
     TT[index].depth = depthleft;
@@ -1360,24 +1349,16 @@ char* move_to_uci(char *uci, char *temp, char color, struct board_info *board){
         }
     return temp;
 }
-
-#ifdef _WIN32
 int pipe;
 HANDLE hstdin;
-#endif
-int InputPending()
-/* http://talkchess.com/forum3/viewtopic.php?p=943992#p943992 */
-{  // checks for waiting input in pipe
-#ifdef _WIN32
-  int init; HANDLE inp; DWORD cnt = 0;
-  if(!init) inp = GetStdHandle(STD_INPUT_HANDLE);
-  if (!PeekNamedPipe(inp, NULL, 0, NULL, &cnt, NULL)){exit(1);}
-#else
-  int cnt;
-  if (ioctl(0, FIONREAD, &cnt)) return 1;
-#endif
-  return cnt;
-}
+
+     int InputPending()
+     {  // checks for waiting input in pipe
+	int init; HANDLE inp; DWORD cnt = 0;
+	if(!init) inp = GetStdHandle(STD_INPUT_HANDLE);
+	if (!PeekNamedPipe(inp, NULL, 0, NULL, &cnt, NULL)){exit(1);}
+	return cnt;
+    }
 
 
 char *getsafe(char *buffer, int count)
@@ -1398,7 +1379,6 @@ char *getsafe(char *buffer, int count)
 
 
 int init(){
-#ifdef _WIN32
     unsigned int dw;
     hstdin = GetStdHandle(STD_INPUT_HANDLE);
     pipe = !GetConsoleMode(hstdin, &dw);
@@ -1410,7 +1390,6 @@ int init(){
         setvbuf(stdin,NULL,_IONBF,0);
         setvbuf(stdout,NULL,_IONBF,0);
     }
-#endif
     printf("Willow 2.5, by Adam Kulju\n");
     return 0;
 }
@@ -2462,7 +2441,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         return 1;
     }*/
     maximumtime = maxtime*3;
-    clearTT(false);
+    //clearTT(false);
     clearPV();
     //if (*key % 5 == 0){
         clearHistory();
@@ -2974,4 +2953,4 @@ int main(void){
     init();
     com();
     return 0;
-} 
+}  
