@@ -1349,14 +1349,17 @@ char* move_to_uci(char *uci, char *temp, char color, struct board_info *board){
         }
     return temp;
 }
+
 int pipe;
 HANDLE hstdin;
 
      int InputPending()
      {  // checks for waiting input in pipe
-	int init; HANDLE inp; DWORD cnt = 0;
+	static int init; static HANDLE inp; DWORD cnt;
 	if(!init) inp = GetStdHandle(STD_INPUT_HANDLE);
-	if (!PeekNamedPipe(inp, NULL, 0, NULL, &cnt, NULL)){exit(1);}
+    if (!PeekNamedPipe(inp, NULL, 0, NULL, &cnt, NULL)){
+        exit(0);
+    }
 	return cnt;
     }
 
@@ -1379,7 +1382,7 @@ char *getsafe(char *buffer, int count)
 
 
 int init(){
-    unsigned int dw;
+    DWORD dw;
     hstdin = GetStdHandle(STD_INPUT_HANDLE);
     pipe = !GetConsoleMode(hstdin, &dw);
 
@@ -1390,6 +1393,11 @@ int init(){
         setvbuf(stdin,NULL,_IONBF,0);
         setvbuf(stdout,NULL,_IONBF,0);
     }
+    DWORD n;
+    if (!PeekNamedPipe(hstdin, NULL, 0, NULL, &n, NULL)){
+        exit(0);
+    }
+
     printf("Willow 2.5, by Adam Kulju\n");
     return 0;
 }
@@ -1889,7 +1897,7 @@ int eval(struct board_info *board, char color){
         if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey-0.1){ //you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
-        if (InputPending()){
+        if (InputPending() > 0){
             int a = com_uci(board, (struct movelist *) 0, (int *) 0, WHITE);
             if (a == 1){
                 return TIMEOUT;
@@ -2455,6 +2463,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     int g;
     int depth;
     char pvmove[8];
+    char pvreply[8];
     //printf("%i %s %s\n", *key, movelst[*key-1].fen, movelst[*key-1].move);
     for (depth = 1; ; depth++){        
         int aspiration = 25;       
@@ -2510,6 +2519,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         g = evl;  
         char temp;
         memcpy(pvmove, currentmove, 8);
+        memcpy(pvreply, pvstack[1], 8);
         printf("info depth %i score cp %i nodes %li time %i pv ", depth, g, evals, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
 
         for (int i = 0; i < depth && pvstack[i][0] != '\0'; i++){
@@ -2527,8 +2537,8 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         }   
     
     }
-    char temp[8];
-    printf("bestmove %s ponder %s\n", uci_move(currentmove, temp, color), pvstack[1]);
+    char temp[8], temp2[8];
+    printf("bestmove %s ponder %s\n", uci_move(currentmove, temp, color), uci_move(pvreply, temp2, color));
         
        
 
@@ -2948,9 +2958,8 @@ void game(int time){
 }
 
 
-
 int main(void){
     init();
     com();
     return 0;
-}  
+} 
