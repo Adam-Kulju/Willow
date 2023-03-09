@@ -1344,7 +1344,7 @@ char* move_to_uci(char *uci, char *temp, char color, struct board_info *board){
         if (board->board[uci[2]-97][atoi(&uci[3])-1] != BLANK){
             temp[pos+2] = 'x';
         }
-        if (pos == 0 && (color == WHITE && ((uci[2]-97)*8) + atoi(&uci[3])-2 == board->epsquare) || (color == BLACK && ((uci[2]-97)*8) + atoi(&uci[3]) == board->epsquare)){
+        if (pos == 0 && ((color == WHITE && ((uci[2]-97)*8) + atoi(&uci[3])-2 == board->epsquare) || (color == BLACK && ((uci[2]-97)*8) + atoi(&uci[3]) == board->epsquare))){
             temp[pos+2] = 'x'; temp[5] = 'e'; temp[6] = 'p'; temp[7] = '\0';
         }
     return temp;
@@ -1395,7 +1395,7 @@ int init(){
     }
     DWORD n;
     if (!PeekNamedPipe(hstdin, NULL, 0, NULL, &n, NULL)){
-        exit(0);
+        //exit(0);
     }
 
     printf("Willow 2.5, by Adam Kulju\n");
@@ -1894,7 +1894,7 @@ int eval(struct board_info *board, char color){
     evals++;
     if (evals%10000 == 0){
         clock_t rightnow = clock() - start_time;
-        if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey-0.1){ //you MOVE if you're down to 0.1 seconds!
+        if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey-0.2){ //you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
         if (InputPending() > 0){
@@ -2450,6 +2450,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     }*/
     maximumtime = maxtime*3;
     //clearTT(false);
+    start_time = clock();
     clearPV();
     //if (*key % 5 == 0){
         clearHistory();
@@ -2458,7 +2459,6 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     currentmove[0] = '\0';
     int alpha = -1000000, beta = 1000000;   
     long int totalevls = 0;
-    start_time = clock();
     bool incheck = check_check(board, color);
     int g;
     int depth;
@@ -2489,18 +2489,12 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
             else if (evl == beta){
                 char temp[8];
                 printf("info depth %i score cp %i nodes %li time %i pv %s\n ", depth, beta, evals, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, uci_move(currentmove, temp, color));
-                if ((float)(clock()-start_time)/CLOCKS_PER_SEC > maxtime){
-                    g = beta+1; break;
-                }
-
+                memcpy(pvmove, currentmove, 8);
                 beta += aspiration;
                 aspiration *= 2;
                 evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, true, incheck);   
-                        if (abs(evl) == TIMEOUT){
-                if (currentmove[0] == '\0'){
-                    memcpy(currentmove, pvmove, 8);
-                    depth--;
-                }
+            if (abs(evl) == TIMEOUT){
+                memcpy(currentmove, pvmove, 8);
                 break;
             }         
 
@@ -2528,7 +2522,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         }
         printf("\n");
         fflush(stdin);
-        if ((float)time2/CLOCKS_PER_SEC > maxtime*0.7 || depth > 45){                      
+        if ((float)time2/CLOCKS_PER_SEC > maxtime*0.65 || depth > 45){                      
             break;
         }
          if (depth > 5){
@@ -2538,9 +2532,9 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     
     }
     char temp[8], temp2[8];
-    printf("bestmove %s ponder %s\n", uci_move(currentmove, temp, color), uci_move(pvreply, temp2, color));
-        
-       
+    printf("bestmove %s ponder %s\n", uci_move(currentmove, temp, color), pvreply);
+    
+    
 
     if (ismove){
         move(board, currentmove, color);
@@ -2806,7 +2800,6 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
 
             *color ^= 1;            
         }
-        //printfull(board, *color);
     }
     if (strstr(command, "go")){
         float time;
@@ -2838,7 +2831,7 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
             }
             int milltime = atoi(&command[k]);
             coldturkey = (float)milltime/1000;
-            int movesleft = MAX(20, 60-(*key/2));
+            int movesleft = MAX(20, 70-(*key/2));
             time = ((float)milltime/(1000*movesleft)) * 1.5;
             if (strstr(command, "winc")){
                 while (command[k] != 'w'){
@@ -2867,11 +2860,13 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
                     }           //if we're playing as black, we need to skip again to past "binc". it's usually the same, but eventually it might not be so always good to plan ahead.
                 }
                 milltime = atoi(&command[k]);
-                time += (float)(milltime/1000) * 0.8;
+                if ((float)milltime/250 < coldturkey){ //if you're not already literally running on increment
+                time += (float)milltime/1000 * 0.7;
+                printf("%f\n", time);
+                }
             }
         }
         iid_time(board, movelst, time, key, *color, false);
-        printf("%f %f\n", time, coldturkey);
     }
     //fflush(hstdin);
     return 0;
