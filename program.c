@@ -52,6 +52,7 @@ char passed[2][8];
 unsigned long long int ZOBRISTTABLE[773];
 unsigned long long int CURRENTPOS;
 char KILLERTABLE[50][2][8];
+char COUNTERMOVES[6][64][8];
 unsigned long int HISTORYTABLE[2][64][64];
 char pvstack[5000][8];
 int pvptr = 0;
@@ -400,8 +401,8 @@ void clearHistory(){
     int n, i;
         for (int i = 0; i < 64; i++){
         for (int n = 0; n < 64; n++){
-            HISTORYTABLE[WHITE][i][n] = 0;
-            HISTORYTABLE[BLACK][i][n] = 0;
+            HISTORYTABLE[WHITE][i][n] /= 4;
+            HISTORYTABLE[BLACK][i][n] /= 4;
         }
     }
 }
@@ -1157,37 +1158,12 @@ void movelistq(struct board_info *board, struct list *list, struct movelist *mov
     }    
     en_passant(board, list, &key, mkey, movelst, color);
 }
-
-void remove_illegal(struct board_info *board, struct list *list, char color){ //for human moves
-    long long unsigned int original_pos = CURRENTPOS;
-    int key = 0; while (list[key].move[0] != '\0'){
-        struct board_info board2;
-        memcpy(board2.board, board->board, 64);
-        memcpy(board2.kingpos, board->kingpos, 2);
-        
-        move(&board2, list[key].move, color);
-        
-        if (check_check(&board2, color)){    
-            int temp = key;
-            while (list[key].move[0] != '\0'){
-                memcpy(list[key].move, list[key+1].move, 8);
-                key++;
-            }
-            key = temp;
-        }
-        else{
-            key++;
-        }
-    }
-    CURRENTPOS = original_pos;
-}
-
 bool checkdraw1(struct board_info *board){
     if (board->pnbrqcount[0][0] || board->pnbrqcount[0][3] || board->pnbrqcount[0][4] || 
         board->pnbrqcount[1][0] || board->pnbrqcount[1][3] || board->pnbrqcount[1][4]){
         return false;
     }
-    if (board->pnbrqcount[0][2] > 1 || board->pnbrqcount[0][2] > 1){
+    if (board->pnbrqcount[0][2] > 1 || board->pnbrqcount[1][2] > 1){
         return false;
     }
     if (board->pnbrqcount[0][1] > 2 || board->pnbrqcount[1][1] > 2){
@@ -1217,58 +1193,6 @@ int checkdraw2(struct movelist *movelst, int *key){
     }
     return rep;
 }
-int humanmove(struct board_info *board, struct movelist *movelst, int *key, char color){
-    printfull(board, color);
-    if (checkdraw2(movelst, key) == 2 || checkdraw1(board)){
-        printf("n\n");
-        return 11;
-    }
-    struct list list[LISTSIZE];
-    list[0].move[0] = '\0';
-    movelist(board, list, movelst, key, color);
-    remove_illegal(board, list, color);
-    if (list[0].move[0] == '\0'){
-        if (check_check(board, color)){
-            return -1000;
-        }
-        else{
-            return 11;
-        }
-    }
-    while (true){
-        char mve[8];
-        printf("Enter the move to play: ");
-        if (scanf("%7s", mve)){char c; while ((c = fgetc(stdin)) != '\n' && c != EOF);}
-        if (!strcmp(mve, "h")){
-            int i = 0; while (list[i].move[0] != '\0'){
-                printf("%s\n", list[i].move);
-                i++;
-            }
-            printf("\n");
-        }
-        else if (!strcmp(mve, "r")){
-            printf("Are you sure you want to resign? (y) for yes: ");
-            if(scanf("%7s", mve)){char c; while ((c = fgetc(stdin)) != '\n' && c != EOF);}
-            if (!strcmp(mve, "y")){
-                return 10;
-            }
-        }
-        else{
-            int i = 0; while (list[i].move[0] != '\0'){
-                if (!strcmp(mve, list[i].move)){
-                    move(board, mve, color);
-                    //memcpy(&movelst[*key].boardstate, board, boardsize);
-                    move_add(board, movelst, key, mve, color);
-                    return 0;
-                }
-                i++;
-            }
-            printf("Move %s is illegal\n", mve);
-        }
-    }
-}
-
-
 char* uci_move(char *move, char *temp, char color){
     if (move[0] == '0'){
         
@@ -1309,12 +1233,12 @@ char* uci_move(char *move, char *temp, char color){
 }
 
 char* move_to_uci(char *uci, char *temp, char color, struct board_info *board){
-    if ((color == WHITE && board->board[4][0] == WKING) || (color == BLACK && board->board[4][7] == BKING)){
-    if (uci[0] == 'e' && (uci[1] == '1' || uci[1] == '8') && uci[2] == 'g'){
+    if ((color == WHITE && board->board[4][0] == WKING  && uci[1] == '1') || (color == BLACK && board->board[4][7] == BKING && uci[1] == '8')){
+    if (uci[2] == 'g' && uci[0] == 'e'){
         strcpy(temp, "0-0\0");
         return temp;
     }
-    else if (uci[0] == 'e' && (uci[1] == '1' || uci[1] == '8') && uci[2] == 'c'){
+    else if (uci[2] == 'c' && uci[0] == 'e'){
         strcpy(temp, "0-0-0\0");
         return temp;
     }
@@ -1395,31 +1319,11 @@ int init(){
     }
     DWORD n;
     if (!PeekNamedPipe(hstdin, NULL, 0, NULL, &n, NULL)){
-        //exit(0);
+        exit(0);
     }
 
-    printf("Willow 2.5, by Adam Kulju\n");
+    printf("Willow 2.6, by Adam Kulju\n");
     return 0;
-}
-
-
-
-int game_end(struct board_info *board, struct movelist *movelst, int *key, char color){  //checks if the side to MOVE (comp) has been mated or drawn
-    struct list list[LISTSIZE];
-    list[0].move[0] = '\0';
-    movelist(board, list, movelst, key, color);
-    remove_illegal(board, list, color);
-    if (list[0].move[0] != '\0'){
-        return 0;
-    }    
-    else{
-        if (check_check(board, color)){
-            return 1000;
-        }
-        else{
-            return 11;
-        }
-    }
 }
 
 char safecapture(struct board_info *board, int file, int rank, char color){
@@ -1479,7 +1383,7 @@ char safecapture(struct board_info *board, int file, int rank, char color){
     return flag;
 }
 
-int see(struct board_info *board, char *mve, char color, bool isque){
+int see(struct board_info *board, char *mve, char color){
 
     int i;
     int attacker, victim;
@@ -1536,7 +1440,7 @@ int see(struct board_info *board, char *mve, char color, bool isque){
         return (victim-(attacker/100));
     }
 
-    return 150+((victim-attacker)/1000);
+    return 160+((victim-attacker)/1000);
 }
 
 void selectionsort(struct list *list, int k){
@@ -1891,20 +1795,6 @@ int kingsafety(struct board_info *board, char wbackwards[8], char bbackwards[8])
     return (wval-bval)*2/3; //this weight needs to be calibrated
 }
 int eval(struct board_info *board, char color){   
-    evals++;
-    if (evals%10000 == 0){
-        clock_t rightnow = clock() - start_time;
-        if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey-0.2){ //you MOVE if you're down to 0.1 seconds!
-            return TIMEOUT;
-        }
-        if (InputPending() > 0){
-            int a = com_uci(board, (struct movelist *) 0, (int *) 0, WHITE);
-            if (a == 1){
-                return TIMEOUT;
-            }
-        }
-
-    }
     attacksw = 0, attacksb = 0;
     king_attack_count[WHITE] = 0, king_attack_count[BLACK] = 0;
     int phase = 0; //0 represents full phase, 40 represents complete middlegame
@@ -1976,30 +1866,52 @@ int eval(struct board_info *board, char color){
         return -evl + TEMPO;
     }
 }
-void movescore(struct board_info *board, struct list *list, int depth, char color, bool isque, char type, bool ispv){
+void movescore(struct board_info *board, struct list *list, int depth, char color, char type, bool ispv, char *lastmove){
     int evl;
     char mve[8];
     mve[0] = '\0';
+    int cpos;
+    int position = -1;
+    if (depth > 0 && isalpha(lastmove[0])){
+            
+            int pos = 1;
+            switch(lastmove[0]){
+                case 'K':
+                cpos = 5; break;
+                case 'Q':
+                cpos = 4; break;
+                case 'R':
+                cpos = 3; break;
+                case 'B':
+                cpos = 2; break;
+                case 'N':
+                cpos = 1; break;
+                default:
+                cpos = 0; pos = 0; break;                
+            }        
+         position = ((lastmove[pos+3]-97)*8) + atoi(&lastmove[pos+4])-1;
+    }
     int i = 0; while (list[i].move[0] != '\0'){
         int evl;
 
-         if ((type == '0' || type == '1') && !strcmp(TT[CURRENTPOS & _mask].bestmove, list[i].move)){            
+         if ((type != 'n') && !strcmp(TT[CURRENTPOS & _mask].bestmove, list[i].move)){            
             list[i].eval = 10000;
-        }
-        else if (ispv && (!strcmp(list[i].move, pvstack[depth]))){    
-            list[i].eval = 9999;
         }
         else if (islower(list[i].move[0]) && list[i].move[5] == 'Q'){
             list[i].eval = 9000;
         }
         else if (strchr(list[i].move, 'x')){
-            list[i].eval = see(board, list[i].move, color, isque);
+            list[i].eval = see(board, list[i].move, color);
         }
         else if (!strcmp(list[i].move, KILLERTABLE[depth][0])){
             list[i].eval = 199;
         }
         else if (!strcmp(list[i].move, KILLERTABLE[depth][1])){
             list[i].eval = 198;
+        }
+        else if (position != -1 && !strcmp(list[i].move, COUNTERMOVES[cpos][position])){
+            list[i].eval = 197;
+            //printf("%s %s\n", lastmove, list[i].move);
         }
         
         else{
@@ -2025,21 +1937,40 @@ void movescore(struct board_info *board, struct list *list, int depth, char colo
     }
 }
 int quiesce(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depth, int maxdepth, char color, bool incheck){
+    evals++;
+    if (evals%5000 == 0){
+        clock_t rightnow = clock() - start_time;
+        if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey){ //you MOVE if you're down to 0.1 seconds!
+            return TIMEOUT;
+        }
+        if (InputPending() > 0){
+            int a = com_uci(board, (struct movelist *) 0, (int *) 0, WHITE);
+            if (a == 1){
+                return TIMEOUT;
+            }
+        }
+    }
     long long unsigned int original_pos = CURRENTPOS;
-    int stand_pat = eval(board, color);
+    int stand_pat;
+    if (!incheck || depth > maxdepth){
+        stand_pat = eval(board, color);
+    }
+    else{
+        stand_pat = -100000;
+    }
     if (depth > maxdepth || stand_pat == TIMEOUT){
         return stand_pat;
     }
-
+    
     if (stand_pat >= beta && !incheck){
         return beta;
     }
 
-    if (stand_pat > alpha && !incheck){
+    if (stand_pat > alpha){
         alpha = stand_pat;
     }
-    if (stand_pat + 1125 < alpha){
-        return stand_pat;
+    if (stand_pat + 1125 < alpha && !incheck){
+        return alpha;
     }
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
@@ -2054,12 +1985,12 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     }
 
 
-    movescore(board, list, 0, color, true, 'n', false);
-
+    movescore(board, list, 0, color, 'n', false, movelst[*key-2].move);
     int i = 0;
     bool ismove = false;
     while (list[i].move[0] != '\0'){
         selectionsort(list, i);
+        
         if ((!incheck) && list[i].eval < 200){
             CURRENTPOS = original_pos;
             return alpha;
@@ -2074,8 +2005,11 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
         }
         ismove = true;         
         move_add(&board2, movelst, key, list[i].move, color);
-        bool ischeck = check_check(board, color^1);
-        if (stand_pat + 150 < alpha && (!ischeck || depth > 2)){
+        
+        bool ischeck = check_check(&board2, color^1);
+
+        if (stand_pat + 150 < alpha && !incheck && (!ischeck || depth > 1)){
+            
             int victim = 0; if (!strchr(list[i].move, 'x')){
                 victim = 0;
             }
@@ -2099,6 +2033,9 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
             }
         }
         list[i].eval = -quiesce(&board2, movelst, key, -beta, -alpha, depth+1, maxdepth, color^1, ischeck);
+        
+       
+        
         if (abs(list[i].eval) == TIMEOUT){
             movelst[*key-1].move[0] = '\0';
             *key = *key-1;
@@ -2119,20 +2056,38 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
         CURRENTPOS = original_pos;
         i++;
     }
+    
     if (incheck && !ismove){
         return -100000;
     }
     return alpha;
 }
-int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depthleft, int depth, char color, bool isnull, bool ispv, bool incheck){
-    //printf("%i\n", depthleft);
-    if (checkdraw1(board) || checkdraw2(movelst, key) == 2){     
-        return 0;
+int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depthleft, int depth, char color, bool isnull, bool incheck){
+    evals++;
+    if (evals%5000 == 0){
+        clock_t rightnow = clock() - start_time;
+        if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey){ //you MOVE if you're down to 0.1 seconds!
+            return TIMEOUT;
+        }
+        if (InputPending() > 0){
+            int a = com_uci(board, (struct movelist *) 0, (int *) 0, WHITE);
+            if (a == 1){
+                return TIMEOUT;
+            }
+        }
     }
-    if (depth > 0 && checkdraw2(movelst, key) > 0){
-        return 0;
+    if (depth > 0){
+        if (checkdraw2(movelst, key) > 0 || checkdraw1(board)){
+            return 0;
+        }
+        int mate_distance = 100000 - depth;
+        if (mate_distance < beta){
+            beta = mate_distance;
+            if (alpha >= beta){
+                return beta;
+            }
+        }
     }
-
     int evl;
 
     char type; if (CURRENTPOS == TT[CURRENTPOS & _mask].zobrist_key){
@@ -2143,10 +2098,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         type = 'n';
         evl = -1024;
     }
-
+    bool ispv = (beta != alpha+1);
     if (!ispv && type != 'n' && TT[CURRENTPOS & _mask].depth >= depthleft){
             if (type == '0'){
-                if (evl >= beta){
+                if (evl > beta){
                     return beta;
                 }
                 if (evl < alpha){
@@ -2169,7 +2124,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
 
     if (depthleft <= 0){
-        int b = quiesce(board, movelst, key, alpha, beta, 0, 10, color, incheck);      
+        int b = quiesce(board, movelst, key, alpha, beta, 0, 15, color, incheck);      
         if (b == -100000){
             b += depth;
         } 
@@ -2178,9 +2133,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
         return b;        
     } 
+    if (incheck){
+        evl = -1000000;
+    }
+    else{
         evl = eval(board, color);
+    }
 
-
+    if (depthleft < 9 && evl - (depthleft*70) > beta){
+        return beta;
+    }
     if (isnull == false && !ispv){       
         bool ispiecew = false, ispieceb = false;
         for (int i = 1; i < 5; i++){
@@ -2192,11 +2154,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
         }
         if (ispiecew && ispieceb){
-            if (!incheck && evl >= beta){
+            if (evl >= beta){
                 unsigned long long int a = CURRENTPOS;
                 CURRENTPOS ^= ZOBRISTTABLE[772];
                 int R = 3 + (depthleft/8);
-                int nullmove = -alphabeta(board, movelst, key, -beta, -beta+1, depthleft-1-R, depth+2, color^1, true, false, false);
+                int nullmove = -alphabeta(board, movelst, key, -beta, -beta+1, depthleft-1-R, depth+2, color^1, true, false);
                 CURRENTPOS = a;
                 if (abs(nullmove) == TIMEOUT){
                     return TIMEOUT;
@@ -2208,6 +2170,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
         }
     }
+    
+    if (ispv && type == 'n'){
+        depthleft--;
+    }
 
     struct list list[LISTSIZE];
     list[0].move[0] = '\0';
@@ -2216,7 +2182,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int betacount = 0;
     movelist(board, list, movelst, key, color);
     //remove_illegal(board, list, color);
-    movescore(board, list, depth, color, false, type, ispv);
+    movescore(board, list, depth, color, type, ispv, movelst[*key-2].move);
     int i = 0;
     unsigned long long int original_pos = CURRENTPOS;
     bool raisedalpha = false;
@@ -2230,7 +2196,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     if (depthleft < 5 && !incheck && !ispv && alpha > -1000000 && evl+(futility[depthleft-1]) < alpha && (depthleft < 4 || type == 'n')){
         _fprune = true;
     }
-    while (list[i].move[0] != '\0'){      
+
+
+    int futility_move_count = (3+depthleft*depthleft);
+    int numquiets = 0;
+    bool movecountprune = false;
+
+    while (list[i].move[0] != '\0' && !movecountprune){      
         selectionsort(list, i);
 
         struct board_info board2;
@@ -2242,29 +2214,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             continue;
         }
         ismove = true;
+        bool iscap = strchr(list[i].move, 'x');
+        if (!iscap && !ispv && depthleft < 4){
+            numquiets++;
+            if (numquiets >= futility_move_count && depth > 0){
+                movecountprune = true;
+            }
+        }
         bool ischeck = check_check(&board2, color^1);
-        if (_fprune && !ischeck){
-            int victim = 0; if (!strchr(list[i].move, 'x')){
-                if (islower(list[i].move[0]) && list[i].move[5] == 'Q'){
-                    victim = VALUES[4];
-                }
-                else{
-                    victim = 0;
-                }
-            }
-            else{
-                if (list[i].move[5] == 'e'){
-                    victim = VALUES[0];
-                }
-                else if (islower(list[i].move[0])){
-                    victim = VALUES[(board->board[(int)list[i].move[3]-97] [atoi(&list[i].move[4])-1]-(color^1))/2];
-                }
-                else{
-                    victim = VALUES[(board->board[(int)list[i].move[4]-97][atoi(&list[i].move[5])-1]-(color^1))/2];
-                }
-            }
-
-            if ((evl + victim + futility[depthleft-1]) + 50 < alpha){
+        if (_fprune && !ischeck && !iscap){
+            if ((evl + futility[depthleft-1]) < alpha){
                 firstmove = false;
                 betacount++;
                 CURRENTPOS = original_pos;
@@ -2275,8 +2234,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         move_add(&board2, movelst, key, list[i].move, color);
 
         if (ispv == true && firstmove){
-
-                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
+                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft-1, depth+1, color^1, false, ischeck);
                 if (abs(list[i].eval) == TIMEOUT){
                                 movelst[*key-1].move[0] = '\0';
                 *key = *key-1;
@@ -2288,23 +2246,25 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         else{
             int R = 0;
-            if (strchr(list[i].move, 'x') || depthleft < 3){
+            if (list[i].eval > 197 || depthleft < 3){
                 R = 0;
             }
-            else if (ischeck || incheck){
-                int endgame = 0;
-                int a = material(board, &endgame);
-                if (endgame > 8){
-                    R = 0;
+
+            else{
+                if (ischeck || incheck || iscap){
+                    R = (int)round(log(depthleft)*log(betacount+1)/4);
                 }
                 else{
-                    R = (int)round(log(depthleft)*log(betacount+1)/3);
+                    R = (int)round(log(depthleft)*log(betacount+1)/1.95);
+                }
+                if (!ispv){
+                    R += 1;
                 }
             }
-            else{
-                R = (int)round(log(depthleft)*log(betacount+1)/1.95);
-            }
-            list[i].eval = -alphabeta(&board2, movelst, key, -alpha-1, -alpha, depthleft-1-R, depth+1, color^1, false, false, ischeck);
+
+            
+
+            list[i].eval = -alphabeta(&board2, movelst, key, -alpha-1, -alpha, depthleft-1-R, depth+1, color^1, false, ischeck);
                 if (abs(list[i].eval) == TIMEOUT){
                                 movelst[*key-1].move[0] = '\0';
             *key = *key-1;
@@ -2313,8 +2273,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             return TIMEOUT;
                 }
 
-            if (list[i].eval > alpha && R){
-                list[i].eval = -alphabeta(&board2, movelst, key, -alpha-1, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
+            if (list[i].eval > alpha && R > 0){
+                list[i].eval = -alphabeta(&board2, movelst, key, -alpha-1, -alpha, depthleft-1, depth+1, color^1, false, ischeck);
                 if (abs(list[i].eval) == TIMEOUT){
                                 movelst[*key-1].move[0] = '\0';
             *key = *key-1;
@@ -2325,8 +2285,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
 
             if (list[i].eval > alpha && ispv){
-
-                    list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft-1, depth+1, color^1, false, ispv, ischeck);
+                if (R > 0){
+                    R = 0;
+                }
+                    list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft-1, depth+1, color^1, false, ischeck);
                         if (abs(list[i].eval) == TIMEOUT){
                                 movelst[*key-1].move[0] = '\0';
             *key = *key-1;
@@ -2342,9 +2304,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 memcpy(currentmove, list[i].move, 8);
             }
             memcpy(bestmove, list[i].move, 8);
-            //if (beta != 0){
-                insert(original_pos, depthleft, beta, '1', bestmove);
-            //}
+            insert(original_pos, depthleft, beta, '1', bestmove);
             total++;
             if (betacount < 5){
                 betas++;
@@ -2352,8 +2312,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             else{
                 //printf("%s %i\n", list[i].move, betacount);
             }
-
-            if (!strchr(list[i].move, 'x') && depthleft > 1){
+            int pos;
+            if (!iscap && depthleft > 1){
                 if (strcmp(KILLERTABLE[depth][0], list[i].move)){
                     memcpy(KILLERTABLE[depth][0], list[i].move, 8);
                 }
@@ -2361,7 +2321,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     memcpy(KILLERTABLE[depth][1], list[i].move, 8);
                 }
                 if (list[i].move[0] != '0'){
-                    int pos; if (islower(list[i].move[0])){
+                     if (islower(list[i].move[0])){
                         pos = 0;
                     }
                     else{
@@ -2381,7 +2341,28 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     }
                 }
             }
-            movelst[*key-1].move[0] = '\0';
+
+
+        if (depth > 0 && !isnull && !iscap && isalpha(movelst[(*key)-2].move[0])){  //key-1 is the move you made, key-2 is the move the opponent made
+            int cpos;
+            pos = 1;
+            switch(movelst[(*key)-2].move[0]){
+                case 'K':
+                cpos = 5; break;
+                case 'Q':
+                cpos = 4; break;
+                case 'R':
+                cpos = 3; break;
+                case 'B':
+                cpos = 2; break;
+                case 'N':
+                cpos = 1; break;
+                default:
+                cpos = 0; pos = 0; break;                
+            }
+                memcpy(COUNTERMOVES[cpos][((movelst[(*key)-2].move[pos+3]-97)*8) + atoi(&movelst[(*key)-2].move[pos+4])-1], list[i].move, 8);
+            }
+            movelst[(*key)-1].move[0] = '\0';
             *key = *key-1;
             CURRENTPOS = original_pos;
             pvptr = pvstart;
@@ -2409,9 +2390,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
 
         else if (firstmove && depth == 0){
+            insert(original_pos, depthleft, alpha, '2', list[i].move);
             CURRENTPOS = original_pos;
             pvptr = pvstart;
             return alpha;
+        }
+        if (firstmove){
+            memcpy(bestmove, list[i].move, 8);
         }
         firstmove = false;
         CURRENTPOS = original_pos;
@@ -2420,7 +2405,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     pvptr = pvstart;
     if (!ismove){
-        if (check_check(board, color)){
+        if (incheck){
             return -100000 + depth;
         }
         else{
@@ -2448,7 +2433,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     /*if (*key < 5 && opening_book(board, movelst, key, color)){
         return 1;
     }*/
-    maximumtime = maxtime*3;
+    maximumtime = maxtime*2;
     //clearTT(false);
     start_time = clock();
     clearPV();
@@ -2466,17 +2451,17 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     char pvreply[8];
     //printf("%i %s %s\n", *key, movelst[*key-1].fen, movelst[*key-1].move);
     for (depth = 1; ; depth++){        
-        int aspiration = 25;       
-        int evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, true, incheck);  
+        int asphigh = 25, asplow = 25;       
+        int evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck);  
 
-        while (evl == alpha || evl == beta){
+        while (abs(evl) != TIMEOUT && (evl <= alpha || evl >= beta)){
 
-            if (evl == alpha){
+            if (evl <= alpha){
                 char temp[8];
                 printf("info depth %i score cp %i nodes %li time %i pv %s\n ", depth, alpha, evals, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, uci_move(pvmove, temp, color));
-                alpha -= aspiration;
-                aspiration *= 2;
-                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, true, incheck);
+                alpha -= asplow;    
+                asplow *= 3;            
+                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck);
                         if (abs(evl) == TIMEOUT){
             if (currentmove[0] == '\0'){
                 memcpy(currentmove, pvmove, 8);
@@ -2486,13 +2471,13 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         }   
                 
             }
-            else if (evl == beta){
+            else if (evl >= beta){
                 char temp[8];
                 printf("info depth %i score cp %i nodes %li time %i pv %s\n ", depth, beta, evals, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, uci_move(currentmove, temp, color));
                 memcpy(pvmove, currentmove, 8);
-                beta += aspiration;
-                aspiration *= 2;
-                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, true, incheck);   
+                beta += asphigh;
+                asphigh *= 3;
+                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck);   
             if (abs(evl) == TIMEOUT){
                 memcpy(currentmove, pvmove, 8);
                 break;
@@ -2519,15 +2504,15 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         for (int i = 0; i < depth && pvstack[i][0] != '\0'; i++){
             char temp[8];
             printf("%s ", pvstack[i]);
+
         }
         printf("\n");
-        fflush(stdin);
-        if ((float)time2/CLOCKS_PER_SEC > maxtime*0.65 || depth > 45){                      
+        if ((float)time2/CLOCKS_PER_SEC > maxtime*0.6 || depth > 48){                      
             break;
         }
          if (depth > 5){
-            alpha = evl-aspiration;
-            beta = evl+aspiration;
+            alpha = evl-25;
+            beta = evl+25;
         }   
     
     }
@@ -2558,17 +2543,17 @@ void iid(struct board_info *board, struct movelist *movelst, int maxdepth, int *
     bool incheck = check_check(board, color);
     for (int depth = 1; depth <= maxdepth; depth++){
         int aspiration = 25;
-        int evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, true, incheck);
+        int evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck);
         while (evl == alpha || evl == beta){
             if (evl == alpha){
                 alpha -= aspiration;
                 aspiration *= 2;
-                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, true, incheck);
+                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck);
             }
             else if (evl == beta){
                 beta += aspiration;
                 aspiration *= 2;
-                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, true, incheck);            
+                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck);            
             }
         }
         clock_t time2 = clock()-start_time;
@@ -2751,7 +2736,7 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
         return 1;
     }
   if (!strcmp(command, "uci")) {
-    printf("id name Willow 2.5\n");
+    printf("id name Willow 2.6\n");
     printf("id author Adam Kulju\n");
     // send options
 
@@ -2809,12 +2794,30 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
         }
         else if (strstr(command, "movetime")){
             time = atoi(command+12)/1000;
-            coldturkey = time+100;
+            coldturkey = time;
         }
 
         else if (strstr(command, "wtime")){ //this will be for a game
-            int k = 9;
-            
+        int k = 0;
+        int movestogo = -1;
+        if (strstr(command, "movestogo")){
+            int m = 0;
+            while (command[m] != 'm' || command[m+1] != 'o' || command[m+2] != 'v' || command[m+3] != 'e' || command[m+4] != 's'){
+                m++;
+            }
+            while (!isdigit(command[m])){
+                m++;
+            }
+            movestogo = atoi(&command[m]);
+            while (command[k] != 'w'){
+                k++;
+            }
+            k += 6;
+        }          
+        else{
+            k = 9;
+        }
+  
             if (*color == BLACK){
                 while (!isblank(command[k])){
                     k++;
@@ -2829,10 +2832,17 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
                     k++;
                 }              //we need to skip past the "1000 btime part"
             }
-            int milltime = atoi(&command[k]);
+            int milltime = atoi(&command[k]) - 400;
             coldturkey = (float)milltime/1000;
-            int movesleft = MAX(20, 70-(*key/2));
-            time = ((float)milltime/(1000*movesleft)) * 1.5;
+
+            if (movestogo != -1){
+                time = ((float)milltime/(1000*(movestogo+2))) * 1.5;
+            }
+            else{
+                int movesleft = MAX(20, 70-(*key/2));
+                time = ((float)milltime/(1000*movesleft)) * 1.5;
+            }
+
             if (strstr(command, "winc")){
                 while (command[k] != 'w'){
                     k++;
@@ -2861,10 +2871,11 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, char 
                 }
                 milltime = atoi(&command[k]);
                 if ((float)milltime/250 < coldturkey){ //if you're not already literally running on increment
-                time += (float)milltime/1000 * 0.7;
-                printf("%f\n", time);
+                time += (float)milltime/1000 * 0.5;
                 }
             }
+
+            
         }
         iid_time(board, movelst, time, key, *color, false);
     }
@@ -2888,70 +2899,6 @@ int com() {
         }
     return 0;
 }
-
-
-void game(int time){
-    unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
-    clearTT(true);
-    init_by_array64(init, 4);
-    struct board_info board;
-    struct movelist movelst[MOVESIZE];
-    int key;
-    setfull(&board);    
-    //setempty(&board);
-    setzobrist();
-    calc_pos(&board);    
-    clearHistory();
-    char fen[65] = "RP----prNP----pnBP----pbQP----pqKP----pkBP----pbNP----pnRP----pr\0";
-    //char fen[65] =   "-----------------------------Q--K------k------------------------\0";
-    setmovelist(movelst, &key);   
-
-    char color, temp;
-    int game_end_flag = 0;
-    printfull(&board, WHITE);
-    printf("Welcome to WILLOW!\n");
-    printf("What color would you like to play as? (W/B): ");
-    if(scanf("%c", &temp)){;}
-    printf("%c\n", temp);
-    if (temp == 'W'){
-        color = WHITE;
-    }
-    else{
-        color = BLACK;
-    }
-    if (color == BLACK){
-        iid_time(&board, movelst, time, &key, WHITE, true);
-    }
-
-    while (game_end_flag == 0){
-        game_end_flag = humanmove(&board, movelst, &key, color);
-        if (game_end_flag != 0){
-                break;
-        } 
-
-
-        game_end_flag = game_end(&board, movelst, &key, color^1);
-        if (game_end_flag != 0){
-            break;
-        }
-        printfull(&board, color);
-        printf("COMPUTER MOVING: \n");
-        iid_time(&board, movelst, time, &key, color^1, true);
-        //move(&board, TT[CURRENTPOS & _mask].bestmove, color);
-        //printf("%llu %llu %s\n", TT[CURRENTPOS & _mask].zobrist_key, CURRENTPOS, TT[CURRENTPOS & _mask].bestmove);
-
-    }
-    if (game_end_flag == 11){
-        printf("Draw!\n");
-    }
-    else if (game_end_flag == 1000){
-        printf("You won! Congratulations!\n");
-    }
-    else{
-        printf("You lost. Better luck next time!\n");
-    }
-}
-
 
 int main(void){
     init();
