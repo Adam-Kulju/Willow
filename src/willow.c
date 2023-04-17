@@ -370,7 +370,7 @@ void initglobals(){
                 KINGZONES[1][i][i+vector[4][n]] = (n&1) + 1;    
             }   
         }
-        if (i + 31 < 0x80){
+        if (i + 33 < 0x80){
         KINGZONES[0][i][i+31] = 3, KINGZONES[0][i][i+32] = 3, KINGZONES[0][i][i+33] = 3;   //and 3 for advanced squares
         }
         if (i - 33 > 0x0){
@@ -638,7 +638,7 @@ int move(struct board_info *board, struct move move, bool color){
     }
     unsigned char from = move.move>>8, to = move.move & 0xFF;
     unsigned char flag = move.flags >> 2;
-    if (from & 0x88 || to & 0x88){
+    if ((from & 0x88) || (to & 0x88)){
         printf("out of board index! %4x %x %i %x\n", move.move, (board->epsquare), color, move.flags);
         printfull(board);    
         return 1;
@@ -649,7 +649,7 @@ int move(struct board_info *board, struct move move, bool color){
 
     if (flag != 3){ //handle captures and en passant
             if (board->board[to]){  
-                board->pnbrqcount[color^1][((board->board[to]-2-(color^1))>>1)]--;
+                board->pnbrqcount[color^1][((board->board[to]>>1) - 1)]--;
                 CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to]-2)<<6))+to-((to>>4)<<3)];
             }
     }
@@ -1570,21 +1570,17 @@ void selectionsort(struct list *list, int k, int t){
     list[k] = tempmove;
 }
 
-void movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen){
+int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen){
     int i = 0; while (i < movelen){
         list[i].eval = 1000000;
-        if (type != 'n'){
-        //printf("%i %x %x %x %x\n", i, TT[(CURRENTPOS) & (_mask)].bestmove.move, TT[(CURRENTPOS) & (_mask)].bestmove.flags, list[i].move.move, list[i].move.flags);
+
+        if (depth > 1 && lastmove.move != 0 && (board->board[lastmove.move&0xFF]>>1)-1 < 0){
+            return 1;
         }
 
         if (type != 'n' && ismatch(TT[(CURRENTPOS) & (_mask)].bestmove, list[i].move)){
 
             if (TT[(CURRENTPOS) & (_mask)].bestmove.move == list[i].move.move){
-
-
-                if (TT[(CURRENTPOS) & (_mask)].bestmove.flags == 0){nodes++;}
-
-                if (list[i].move.flags == 0){nodes++;}
 
                 if (TT[(CURRENTPOS) & (_mask)].bestmove.flags == list[i].move.flags){
 
@@ -1605,8 +1601,9 @@ void movescore(struct board_info *board, struct list *list, int depth, bool colo
         else if (ismatch(list[i].move, KILLERTABLE[depth][1])){
             list[i].eval += 198;
         }
-        else if (depth > 1 && ismatch(list[i].move, COUNTERMOVES[(board->board[lastmove.move&0xFF]>>1)-1][lastmove.move&0xFF])){
+        else if (depth > 1 && lastmove.move != 0 && ismatch(list[i].move, COUNTERMOVES[(board->board[lastmove.move&0xFF]>>1)-1][lastmove.move&0xFF])){
                                                     //the piece that the opponent moved     the square it is on
+
             list[i].eval += 197;
         }
         
@@ -1619,7 +1616,7 @@ void movescore(struct board_info *board, struct list *list, int depth, bool colo
             
             i++;
         }
-
+    return 0;
 }
 int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthleft, bool color, bool incheck){
     if (depth > maxdepth){
@@ -1664,7 +1661,10 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
 
 
-    movescore(board, list, 0, color, 'n', nullmove, listlen);
+    if (movescore(board, list, 0, color, 'n', nullmove, listlen)){
+        printfull(board);
+        exit(1);
+    }
     int i = 0;
     bool ismove = false;
 
@@ -1815,20 +1815,18 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
             if (ispiecew && ispieceb){
                 unsigned long long int a = CURRENTPOS;
-                unsigned char tempep = board->epsquare;
-                board->epsquare = 0;
-                if (tempep){
+                struct board_info board2 = *board;
+                board2.epsquare = 0;
+                if (board->epsquare){
                     CURRENTPOS ^= ZOBRISTTABLE[773];
                 }
                 CURRENTPOS ^= ZOBRISTTABLE[772];
-                move_add(board, movelst, key, nullmove, color, false);
+                move_add(&board2, movelst, key, nullmove, color, false);
                 int R = 4 + (depthleft/6) + MIN((evl-beta)/200, 3);
-                int nm = -alphabeta(board, movelst, key, -beta, -beta+1, depthleft-R, depth+1, color^1, true, false);
+                int nm = -alphabeta(&board2, movelst, key, -beta, -beta+1, depthleft-R, depth+1, color^1, true, false);
+
                 CURRENTPOS = a;
-                if (tempep){
-                    CURRENTPOS ^= ZOBRISTTABLE[773];
-                }
-                board->epsquare = tempep;
+
                 movelst[*key-1].move = nullmove;
                 *key = *key-1;
                 if (abs(nm) == TIMEOUT){
@@ -1852,7 +1850,14 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int betacount = 0;
     int movelen = movegen(board, list, color, incheck);
     //remove_illegal(board, list, color);
-    movescore(board, list, depth, color, type, *key > 2 ? movelst[*key-2].move : nullmove, movelen);
+    if (movescore(board, list, depth, color, type, depth > 1 ? movelst[*key-1].move : nullmove, movelen)){
+        printfull(board);
+        printf("%i\n", depth);
+        for (int i = 0; i < *key; i++){
+            printf("%x\n", movelst[i].move.move);
+        }
+        exit(1);
+    }
     int i = 0;
     unsigned long long int original_pos = CURRENTPOS;
     bool raisedalpha = false;
@@ -1887,7 +1892,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
             printf("\n");
             exit(0);
-        }         
+        }      
         if (isattacked(&board2, board2.kingpos[color], color^1)){
             CURRENTPOS = original_pos;
             i++;
@@ -2112,7 +2117,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
 
             if (evl <= alpha){
                 char temp[6];
-                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, conv(pvmove, temp));
+                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, (long int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, conv(pvmove, temp));
                 
                 alpha = evl - asplow;    
                 asplow *= 3;            
@@ -2128,7 +2133,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
             }
             else if (evl >= beta){
                 char temp[6];
-                printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, conv(currentmove, temp));
+                printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, (long int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, conv(currentmove, temp));
                 pvmove = currentmove;
                 beta = evl + asphigh;
                 asphigh *= 3;
@@ -2154,13 +2159,13 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         pvmove = currentmove;
 
         if (g > 99900){
-            printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (100001-g)/2, nodes, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
+            printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (100001-g)/2, nodes, (long int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
         }
         else if (g < -99900){
-            printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (-100001-g)/2, nodes, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
+            printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (-100001-g)/2, nodes, (long int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
         }
         else{
-            printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv ", depth, maxdepth, g, nodes, (int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
+            printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv ", depth, maxdepth, g, nodes, (long int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
         }
         
         
@@ -2501,8 +2506,12 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
 int bench(){
     MAXDEPTH = 14;
     char positions[50][1024] = {
+        	{"2r2k2/8/4P1R1/1p6/8/P4K1N/7b/2B5 b - - 0 55\0"},
+            {"6k1/5pp1/8/2bKP2P/2P5/p4PNb/B7/8 b - - 1 44\0"},
+            {"6r1/5k2/p1b1r2p/1pB1p1p1/1Pp3PP/2P1R1K1/2P2P2/3R4 w - - 1 36\0"},
+        	{"4rrk1/2p1b1p1/p1p3q1/4p3/2P2n1p/1P1NR2P/PB3PP1/3R1QK1 b - - 2 24\0"},
+            {"3br1k1/p1pn3p/1p3n2/5pNq/2P1p3/1PN3PP/P2Q1PB1/4R1K1 w - - 0 23\0"},
             {"r3k2r/2pb1ppp/2pp1q2/p7/1nP1B3/1P2P3/P2N1PPP/R2QK2R w KQkq a6 0 14\0"},
-		    {"4rrk1/2p1b1p1/p1p3q1/4p3/2P2n1p/1P1NR2P/PB3PP1/3R1QK1 b - - 2 24\0"},
 		    {"r3qbrk/6p1/2b2pPp/p3pP1Q/PpPpP2P/3P1B2/2PB3K/R5R1 w - - 16 42\0"},
 		    {"6k1/1R3p2/6p1/2Bp3p/3P2q1/P7/1P2rQ1K/5R2 b - - 4 44\0"},
 		    {"8/8/1p2k1p1/3p3p/1p1P1P1P/1P2PK2/8/8 w - - 3 54\0"},
@@ -2542,19 +2551,15 @@ int bench(){
 		    {"1rb1rn1k/p3q1bp/2p3p1/2p1p3/2P1P2N/PP1RQNP1/1B3P2/4R1K1 b - - 4 23\0"},
 		    {"4rrk1/pp1n1pp1/q5p1/P1pP4/2n3P1/7P/1P3PB1/R1BQ1RK1 w - - 3 22\0"},
 		    {"r2qr1k1/pb1nbppp/1pn1p3/2ppP3/3P4/2PB1NN1/PP3PPP/R1BQR1K1 w - - 4 12\0"},
-		    {"2r2k2/8/4P1R1/1p6/8/P4K1N/7b/2B5 b - - 0 55\0"},
-		    {"6k1/5pp1/8/2bKP2P/2P5/p4PNb/B7/8 b - - 1 44\0"},
 		    {"2rqr1k1/1p3p1p/p2p2p1/P1nPb3/2B1P3/5P2/1PQ2NPP/R1R4K w - - 3 25\0"},
 		    {"r1b2rk1/p1q1ppbp/6p1/2Q5/8/4BP2/PPP3PP/2KR1B1R b - - 2 14\0"},
-		    {"6r1/5k2/p1b1r2p/1pB1p1p1/1Pp3PP/2P1R1K1/2P2P2/3R4 w - - 1 36\0"},
 		    {"rnbqkb1r/pppppppp/5n2/8/2PP4/8/PP2PPPP/RNBQKBNR b KQkq c3 0 2\0"},
 		    {"2rr2k1/1p4bp/p1q1p1p1/4Pp1n/2PB4/1PN3P1/P3Q2P/2RR2K1 w - f6 0 20\0"},
-		    {"3br1k1/p1pn3p/1p3n2/5pNq/2P1p3/1PN3PP/P2Q1PB1/4R1K1 w - - 0 23\0"},
 		    {"2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93\0"}
     };
     unsigned long int t = 0;
     clock_t start = clock();
-    for (int i = 0; i < 50; i++){
+    for (int i = 0; i < 1; i++){
 
         clearTT();
         clearKiller();
@@ -2570,6 +2575,7 @@ int bench(){
         int key;
         bool color;
         setfromfen(&board, movelst, &key, positions[i], &color, 0);
+        printfull(&board);
         iid_time(&board, movelst, 1000000, &key, color, false);
         t += nodes;
     }
