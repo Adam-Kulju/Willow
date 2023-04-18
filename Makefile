@@ -6,7 +6,7 @@ CXX := gcc
 
 CXXFLAGS := -O3 -march=native
 
-LDFLAGS :=
+LINKER :=
 
 SUFFIX :=
 
@@ -14,11 +14,11 @@ ifeq ($(OS), Windows_NT)
 	SUFFIX := .exe
 else
 	SUFFIX :=
-	LDFLAGS := -lm
+	LINKER := -lm
 endif
 
 OUT := $(EXE)$(SUFFIX)
 
 
 $(EXE): $(SOURCES)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(OUT) $^
+	$(CXX) $(CXXFLAGS) -o $(OUT) $(LDFLAGS) $^
