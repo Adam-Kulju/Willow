@@ -21,4 +21,4 @@ OUT := $(EXE)$(SUFFIX)
 
 
 $(EXE): $(SOURCES)
-	$(CXX) $(CXXFLAGS) -o $(OUT) $(LDFLAGS) $^
+	$(CXX) $(CXXFLAGS) -o $(OUT) $(LINKER) $^
