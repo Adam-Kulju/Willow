@@ -20,5 +20,5 @@ endif
 OUT := $(EXE)$(SUFFIX)
 
 
-($EXE): ($SOURCES)
+$(EXE): $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(OUT) $^
