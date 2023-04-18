@@ -23,7 +23,6 @@
 #define BKING 13
 //all we have to do is (board[i] & 1) to see if the color is white or black - if that is 1 then it's black if not then it's white
 
-
 #define NORTH 16
 #define SOUTH -16
 #define EAST 1
@@ -1061,15 +1060,15 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
     
     isattacker = false;
     unsigned char mobility = 0;
-    for (int dir = 0; dir < vectors[piecetype]; dir++){
-        for (unsigned char pos = i;;){
+    for (unsigned char dir = 0; dir < vectors[piecetype]; dir++){
+        for (int pos = i;;){
             pos += vector[piecetype][dir];
 
                 if ((pos & 0x88) || (board->board[pos] && (board->board[pos]&1) == color)){break;}
 
                     if (piecetype != 3){ //queen
                         if (color){
-                            if ((((pos+SE) & 0x88) || (board->board[pos+SE] != WPAWN)) && (((pos+SW) & 0x88) || (board->board[pos+SW] != WPAWN))){
+                            if ( (((pos+SE) & 0x88) || (board->board[pos+SE] != WPAWN))  && (((pos+SW) & 0x88) || (board->board[pos+SW] != WPAWN))){
                                 mobility++;
                             }                           
                         }
@@ -1088,7 +1087,7 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                             board->board[i] = BLANK;   
                             if (isattacked(board, pos, color) && isattacked_mv(board, pos, color^1) != 2){
     
-                                        king_attack_count[color] += 6;
+                                        king_attack_count[color] += 2;
                                     }
                                      
                             board->board[i] = temp;
@@ -1215,7 +1214,7 @@ int pst(struct board_info *board, int phase){
     wadvanced[i] = -1, badvanced[i] = 9;
     wbackwards[i] = 9, bbackwards[i] = -1;
     }
-    for (unsigned char i = 0; i < 0x7a; i++){
+    for (unsigned char i = 0; i < 0x80; i++){
         if ((i&0x88)){
             i += 7; continue;
         }
@@ -1241,6 +1240,7 @@ int pst(struct board_info *board, int phase){
             }
 
         }
+        
         if (board->board[i]){
             bool mobilitybonus = false;
             int moves = 0;
@@ -1304,8 +1304,9 @@ int pst(struct board_info *board, int phase){
 
         }
     }
+    
     int score = 0;
-
+    
     for (unsigned char i = 0; i < 8; i++){
         if (i == 7){
             if (wadvanced[7] != -1){
@@ -1412,6 +1413,7 @@ int pst(struct board_info *board, int phase){
             }
         }
     }
+    
     score += (phase*mgscore + (24-phase)*egscore)/24;
     if (phase > 16){
         int weight0 = 0, weight1 = 0;
@@ -1429,45 +1431,52 @@ int pst(struct board_info *board, int phase){
         score += space;
     }
     int wk = 0;
+    
     if (attackers[BLACK] > 1){
+        if (king_attack_count[BLACK] > 99){
+            king_attack_count[BLACK] = 99;
+        }
         int pawnshield = 0;
         if (board->kingpos[WHITE] < 0x40){
-        if (!((board->kingpos[WHITE]+WEST) & 0x88) && (board->board[board->kingpos[WHITE]+WEST] == WPAWN || board->board[board->kingpos[WHITE]+NW] == WPAWN)){
+        if ((!((board->kingpos[WHITE]+WEST) & 0x88)) && (board->board[board->kingpos[WHITE]+WEST] == WPAWN || board->board[board->kingpos[WHITE]+NW] == WPAWN)){
             pawnshield++;
         }
-        if (((board->board[board->kingpos[WHITE]+NORTH]>>1) == PAWN) || board->board[board->kingpos[WHITE]+NORTH+NORTH] == WPAWN || board->board[board->kingpos[WHITE]+NORTH+NORTH+NORTH] == WPAWN){
+        if ((((board->board[board->kingpos[WHITE]+NORTH])>>1) == PAWN) || board->board[board->kingpos[WHITE]+NORTH+NORTH] == WPAWN || board->board[board->kingpos[WHITE]+NORTH+NORTH+NORTH] == WPAWN){
             pawnshield++;
         }
-        if (!((board->kingpos[WHITE]+EAST) & 0x88) && (board->board[board->kingpos[WHITE]+EAST] == WPAWN || board->board[board->kingpos[WHITE]+NE] == WPAWN)){
+        if ((!((board->kingpos[WHITE]+EAST) & 0x88)) && (board->board[board->kingpos[WHITE]+EAST] == WPAWN || board->board[board->kingpos[WHITE]+NE] == WPAWN)){
             pawnshield++;
         }
 
         }
-        if (king_attack_count[BLACK] > 99){
-            king_attack_count[BLACK] = 99;
-        }
-        wk -= kingdangertable[king_attack_count[BLACK]]*(1.6-(0.2*pawnshield));
+        wk -= (kingdangertable[king_attack_count[BLACK]]*(8-pawnshield))/10;
+
+
     }
     
     if (attackers[WHITE] > 1){
+        if (king_attack_count[WHITE] > 99){
+            king_attack_count[WHITE] = 99;
+        }
         int pawnshield = 0;
-        if (board->kingpos[BLACK] > 0x37){
+        if (board->kingpos[BLACK] > 0x3a){
         if (!((board->kingpos[BLACK]+WEST) & 0x88) && (board->board[board->kingpos[BLACK]+WEST] == BPAWN || board->board[board->kingpos[BLACK]+SW] == BPAWN)){
             pawnshield++;
         }
-        if (((board->board[board->kingpos[BLACK]+SOUTH]>>1) == PAWN) || board->board[board->kingpos[BLACK]+SOUTH+SOUTH] == BPAWN || board->board[board->kingpos[BLACK]+SOUTH+SOUTH+SOUTH] == BPAWN){
+        if ((((board->board[board->kingpos[BLACK]+SOUTH])>>1) == PAWN) || board->board[board->kingpos[BLACK]+SOUTH+SOUTH] == BPAWN || board->board[board->kingpos[BLACK]+SOUTH+SOUTH+SOUTH] == BPAWN){
             pawnshield++;
         }
         if (!((board->kingpos[BLACK]+EAST) & 0x88) && (board->board[board->kingpos[BLACK]+EAST] == BPAWN || board->board[board->kingpos[BLACK]+SE] == BPAWN)){
             pawnshield++;
         }
         }
-        if (king_attack_count[WHITE] > 99){
-            king_attack_count[WHITE] = 99;
-        }
-        wk += kingdangertable[king_attack_count[WHITE]]*(1.6-(0.2*pawnshield));
+        wk += (kingdangertable[king_attack_count[WHITE]]*(8-pawnshield))/10;
+
+
     }
-    score += (wk>>1);
+    score += wk;
+
+
     return score;
 }
 
@@ -2506,6 +2515,7 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
 int bench(){
     MAXDEPTH = 14;
     char positions[50][1024] = {
+            {"2r4r/1p4k1/1Pnp4/3Qb1pq/8/4BpPp/5P2/2RR1BK1 w - - 0 42\0"},
         	{"2r2k2/8/4P1R1/1p6/8/P4K1N/7b/2B5 b - - 0 55\0"},
             {"6k1/5pp1/8/2bKP2P/2P5/p4PNb/B7/8 b - - 1 44\0"},
             {"6r1/5k2/p1b1r2p/1pB1p1p1/1Pp3PP/2P1R1K1/2P2P2/3R4 w - - 1 36\0"},
@@ -2517,8 +2527,7 @@ int bench(){
 		    {"8/8/1p2k1p1/3p3p/1p1P1P1P/1P2PK2/8/8 w - - 3 54\0"},
 		    {"7r/2p3k1/1p1p1qp1/1P1Bp3/p1P2r1P/P7/4R3/Q4RK1 w - - 0 36\0"},
 		    {"r1bq1rk1/pp2b1pp/n1pp1n2/3P1p2/2P1p3/2N1P2N/PP2BPPP/R1BQ1RK1 b - - 2 10\0"},
-		    {"3r3k/2r4p/1p1b3q/p4P2/P2Pp3/1B2P3/3BQ1RP/6K1 w - - 3 87\0"},
-		    {"2r4r/1p4k1/1Pnp4/3Qb1pq/8/4BpPp/5P2/2RR1BK1 w - - 0 42\0"},
+		    {"3r3k/2r4p/1p1b3q/p4P2/P2Pp3/1B2P3/3BQ1RP/6K1 w - - 3 87\0"},		    
 		    {"4q1bk/6b1/7p/p1p4p/PNPpP2P/KN4P1/3Q4/4R3 b - - 0 37\0"},
 		    {"2q3r1/1r2pk2/pp3pp1/2pP3p/P1Pb1BbP/1P4Q1/R3NPP1/4R1K1 w - - 2 34\0"},
 		    {"1r2r2k/1b4q1/pp5p/2pPp1p1/P3Pn2/1P1B1Q1P/2R3P1/4BR1K b - - 1 37\0"},
@@ -2559,7 +2568,7 @@ int bench(){
     };
     unsigned long int t = 0;
     clock_t start = clock();
-    for (int i = 0; i < 1; i++){
+    for (int i = 0; i < 50; i++){
 
         clearTT();
         clearKiller();
