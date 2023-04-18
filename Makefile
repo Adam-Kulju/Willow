@@ -19,7 +19,6 @@ endif
 
 OUT := $(EXE)$(SUFFIX)
 
-all: $(EXE)
 
 ($EXE): ($SOURCES)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(OUT) $^
