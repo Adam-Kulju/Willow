@@ -12,9 +12,9 @@ SUFFIX :=
 
 ifeq ($(OS), Windows_NT)
 	SUFFIX := .exe
-	LDFLAGS := -lm
 else
 	SUFFIX :=
+	LDFLAGS := -lm
 endif
 
 OUT := $(EXE)$(SUFFIX)
