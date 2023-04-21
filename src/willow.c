@@ -1811,7 +1811,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         evl = TT[(CURRENTPOS) & (_mask)].eval;
     }
 
-    if (!ispv && !incheck && depthleft < 9 && evl - (depthleft*70) + (improving*40) >= beta){
+    if (!ispv && !incheck && depthleft < 9 && evl - (depthleft*70) + (improving*50) >= beta){
         return evl;
     }
 
@@ -1947,19 +1947,30 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         else{
             int R;
-            if (list[i].eval > 1000200 || depthleft < 3){
+            if (depthleft < 3){
                 R = 0;
             }
 
             else{
                 R = LMRTABLE[depthleft-1][betacount];
-                if (ischeck || incheck || list[i].eval > 1000000){
-                    R >>= 1;
+                if (list[i].eval > 1000000){
+                    R--;
                 }
-                if (!ispv){
-                    R += 1;
+                if (ischeck || incheck){
+                    R--;
                 }
+                if (list[i].eval > 100195){
+                    R--;
+                }
+                if (!ispv && type != 3){
+                    R++;
+                }
+                if (!improving){
+                    R++;
+                }
+                
             }
+            R = MAX(R, 0);
 
             
 
@@ -2319,8 +2330,17 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
     if (fenstring[fenkey] == '-'){
         board->epsquare = 0;
     }
+    if (fenstring[fenkey] == '-'){
+        board->epsquare = 0;
+    }
     else{
-        board->epsquare = ((fenstring[fenkey]-97)*16) + atoi(&fenstring[fenkey+1]);
+        board->epsquare = (atoi(&fenstring[fenkey+1])-1)*16 + ((fenstring[fenkey]-97));
+        if (*color){
+            board->epsquare += NORTH;
+        }
+        else{
+            board->epsquare += SOUTH;
+        }
         fenkey++;
     }
     fenkey++;
