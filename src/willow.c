@@ -1811,7 +1811,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         evl = TT[(CURRENTPOS) & (_mask)].eval;
     }
 
-    if (!ispv && !incheck && depthleft < 9 && evl - (depthleft*70) + (improving*40) >= beta){
+    if (!ispv && !incheck && depthleft < 9 && evl - (depthleft*70) + (improving*50) >= beta){
         return evl;
     }
 
@@ -1954,7 +1954,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             else{
                 R = LMRTABLE[depthleft-1][betacount];
                 if (ischeck || incheck || list[i].eval > 1000000){
-                    R -= 1;
+                    R--;
+                }
+                if (list[i].eval > 1000190){
+                    R--;
                 }
                 if (!ispv && type != 3){
                     R++;
