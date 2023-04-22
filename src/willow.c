@@ -1811,7 +1811,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         evl = TT[(CURRENTPOS) & (_mask)].eval;
     }
 
-    if (!ispv && !incheck && depthleft < 9 && evl - (depthleft*70) + (improving*50) >= beta){
+    if (!ispv && !incheck && depthleft < 9 && evl - (depthleft*70) + (improving*40) >= beta){
         return evl;
     }
 
