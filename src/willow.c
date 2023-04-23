@@ -1881,19 +1881,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int pvstart = pvptr;
     pvstack[pvptr++].move = 0;
     struct move bestmove = nullmove;
-    bool _fprune = false;
-
-    if (depthleft < 5 && !incheck && !ispv && alpha > -1000000 && evl+(futility[depthleft-1]) < alpha && (depthleft < 4 || type == 'n')){
-        _fprune = true;
-    }
-
-
     int futility_move_count = (3+depthleft*depthleft/(1+(!improving)));
     int numquiets = 0;
-    bool movecountprune = false;
+    bool quietsprune = false;
     int bestscore = -1000000;
 
-    while (i < movelen && !movecountprune){     
+    while (i < movelen && !quietsprune){     
 
         selectionsort(list, i, movelen);
         struct board_info board2 = *board;
@@ -1916,22 +1909,22 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             bestmove = list[i].move;
         }
         ismove = true;
-        bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]);        
-        if (!iscap && !ispv && depthleft < 4){
+        bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]);    
+            
+        if (depth > 0 && !iscap && !ispv){
+            if (depthleft < 4){
             numquiets++;
             if (numquiets >= futility_move_count && depth > 0){
-                movecountprune = true;
+                quietsprune = true;
             }
+            }
+
+            if (depthleft < 6 && list[i].eval < 1000001 && movelst[*key-1].staticeval + 90*(depthleft) + (improving*40) < alpha){
+                quietsprune = true;
+            }
+
         }
         bool ischeck = isattacked(&board2, board2.kingpos[color^1], color);
-        if (_fprune && !ischeck && !iscap){
-            if ((evl + futility[depthleft-1] + (improving*40)) < alpha){
-                betacount++;
-                CURRENTPOS = original_pos;
-                i++;
-                continue;
-            }
-        }
         move_add(&board2, movelst, key, list[i].move, color, iscap);
 
         if (ispv == true && !betacount){
