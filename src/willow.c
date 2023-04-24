@@ -1686,19 +1686,36 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
     while (i < listlen){
         selectionsort(list, i, listlen);
-        if ((!incheck) && (list[i].eval < 1000001 || (stand_pat < alpha && list[i].eval < 1000200))){
+
+        if (!incheck && list[i].eval < 1000200){
             CURRENTPOS = original_pos;
             return bestscore;
         }
         struct board_info board2 = *board;
 
         if (move(&board2, list[i].move, color)){
-            //printf("%i %i\n", depth, color);
-        }         
+            exit(1);
+        }       
+
         if (isattacked(&board2, board2.kingpos[color], color^1)){
             CURRENTPOS = original_pos;
             i++;
             continue;
+        }
+        if (list[i].eval > 1000199 && (board->board[list[i].move.move>>8]>>1) < (board->board[list[i].move.move & 0xFF]>>1)){ 
+            //all captures of a higher ranking piece are checked to see if they're just immediately good enough
+            int d; 
+            material(board, &d);
+
+            unsigned char piecetypefrom = (board->board[list[i].move.move>>8]>>1)-1, piecetypeto = (board->board[list[i].move.move & 0xFF]>>1)-1;
+
+            int maxloss = (d*VALUES[piecetypefrom] + (MAXPHASE-d)*VALUES2[piecetypefrom])/MAXPHASE;
+            int mingain = (d*VALUES[piecetypeto] + (MAXPHASE-d)*VALUES2[piecetypeto])/MAXPHASE;
+
+            if (stand_pat + mingain - maxloss >= beta){
+                CURRENTPOS = original_pos;
+                return stand_pat + mingain - maxloss;
+            }
         }
         ismove = true;   
         
