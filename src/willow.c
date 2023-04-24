@@ -1704,8 +1704,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         }
         if (list[i].eval > 1000199 && (board->board[list[i].move.move>>8]>>1) < (board->board[list[i].move.move & 0xFF]>>1)){ 
             //all captures of a higher ranking piece are checked to see if they're just immediately good enough
-            int d; 
-            material(board, &d);
+            int d = 0; 
+            int a = material(board, &d);
 
             unsigned char piecetypefrom = (board->board[list[i].move.move>>8]>>1)-1, piecetypeto = (board->board[list[i].move.move & 0xFF]>>1)-1;
 
