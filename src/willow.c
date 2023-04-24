@@ -1712,6 +1712,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             int maxloss = (d*VALUES[piecetypefrom] + (MAXPHASE-d)*VALUES2[piecetypefrom])/MAXPHASE;
             int mingain = (d*VALUES[piecetypeto] + (MAXPHASE-d)*VALUES2[piecetypeto])/MAXPHASE;
 
+            //exit(0);
+
             if (stand_pat + mingain - maxloss >= beta){
                 CURRENTPOS = original_pos;
                 return stand_pat + mingain - maxloss;
