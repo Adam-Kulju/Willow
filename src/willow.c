@@ -2493,8 +2493,8 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
                     k++;
                 }              //we need to skip past the "1000 btime part"
             }
-            int milltime = atoi(&command[k]) - 400;
-            coldturkey = (float)milltime/1000;
+            int milltime = atoi(&command[k]) - 200;
+            coldturkey = (float)milltime/1000 - 0.2;
 
             if (movestogo != -1){
                 time = ((float)milltime/(1000*(movestogo+2))) * 1.5;
@@ -2538,6 +2538,9 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
 
             
         }
+
+        time = MAX(time, 0.01);
+        printf("%f\n", time);
         iid_time(board, movelst, time, key, *color, false);
     }
     //fflush(hstdin);
