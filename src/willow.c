@@ -1731,7 +1731,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     while (i < listlen){
         selectionsort(list, i, listlen);
 
-        if (!incheck && (list[i].eval < 1000001 || (list[i].eval < 1000200 && falpha == alpha))){   //search losing captures if our position is decent; otherwise, just return.
+        if (!incheck && list[i].eval < 1000200){
             CURRENTPOS = original_pos;
             return bestscore;
         }
@@ -1758,9 +1758,9 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
             //exit(0);
 
-            if (stand_pat + mingain - maxloss - 50 >= beta){    //this -50 is because of all the stuff like bishop pair bonus, mobility, etc.
+            if (stand_pat + mingain - maxloss >= beta){    //this -50 is because of all the stuff like bishop pair bonus, mobility, etc.
                 CURRENTPOS = original_pos;
-                return stand_pat + mingain - maxloss - 50;
+                return stand_pat + mingain - maxloss;
             }
         }
         ismove = true;   
