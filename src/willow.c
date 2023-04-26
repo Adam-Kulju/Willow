@@ -1666,6 +1666,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     else{
         type = 'n';
+        evl = 0;
     }
     if (type != 'n'){
             if (type == 3){
@@ -1730,7 +1731,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
     while (i < listlen){
         selectionsort(list, i, listlen);
-
         if (!incheck && (list[i].eval < 1000001 || (list[i].eval < 1000200 && falpha == alpha))){   //search losing captures if our position is decent; otherwise, just return.
             CURRENTPOS = original_pos;
             return bestscore;
@@ -1795,10 +1795,10 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         return -100000;
     }
     if (falpha != alpha){
-        insert(original_pos, 0, list[i].eval, 3, bestmove);
+        insert(original_pos, 0, bestscore, 3, bestmove);
     }
     else{
-        insert(original_pos, 0, list[i].eval, 1, bestmove);
+        insert(original_pos, 0, bestscore, 1, bestmove);
     }
     return bestscore;
 }
