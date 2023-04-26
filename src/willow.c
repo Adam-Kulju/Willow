@@ -1659,6 +1659,31 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             return TIMEOUT;
         }
     }
+    int evl = 0;
+    char type; if (CURRENTPOS == TT[(CURRENTPOS) & (_mask)].zobrist_key){
+        type = TT[(CURRENTPOS) & (_mask)].type;
+            evl = TT[(CURRENTPOS) & (_mask)].eval;
+    }
+    else{
+        type = 'n';
+    }
+    if (type != 'n'){
+            if (type == 3){
+                return evl;
+            }
+            else if (type == 2){ //a move that caused a beta cutoff
+                if (evl >= beta){
+                    //don't eval any further
+                    return evl;
+                }
+
+            }
+            else{ //a move that didn't raise alpha
+                if (evl < alpha){
+                    return evl;
+                }
+            }
+        }
     long long unsigned int original_pos = CURRENTPOS;
     int stand_pat;
     if (!incheck || depthleft <= 0){
@@ -1674,6 +1699,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     if (stand_pat >= beta && !incheck){
         return stand_pat;
     }
+
+    int falpha = alpha;
 
     if (stand_pat > alpha){
         alpha = stand_pat;
@@ -1699,11 +1726,12 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     bool ismove = false;
 
     int bestscore = stand_pat;
+    struct move bestmove = nullmove;
 
     while (i < listlen){
         selectionsort(list, i, listlen);
 
-        if (!incheck && list[i].eval < 1000200){
+        if (!incheck && (list[i].eval < 1000001 || (list[i].eval < 1000200 && falpha == alpha))){   //search losing captures if our position is decent; otherwise, just return.
             CURRENTPOS = original_pos;
             return bestscore;
         }
@@ -1730,9 +1758,9 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
             //exit(0);
 
-            if (stand_pat + mingain - maxloss >= beta){
+            if (stand_pat + mingain - maxloss - 50 >= beta){    //this -50 is because of all the stuff like bishop pair bonus, mobility, etc.
                 CURRENTPOS = original_pos;
-                return stand_pat + mingain - maxloss;
+                return stand_pat + mingain - maxloss - 50;
             }
         }
         ismove = true;   
@@ -1748,10 +1776,12 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             return TIMEOUT;
         }
         if (list[i].eval > bestscore){
+            bestmove = list[i].move;
             bestscore = list[i].eval;
         }
         if (list[i].eval >= beta){
             CURRENTPOS = original_pos;
+            insert(original_pos, 0, list[i].eval, 2, list[i].move);
             return list[i].eval;
         }
         if (list[i].eval > alpha){
@@ -1763,6 +1793,12 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     
     if (incheck && !ismove){
         return -100000;
+    }
+    if (falpha != alpha){
+        insert(original_pos, 0, list[i].eval, 3, bestmove);
+    }
+    else{
+        insert(original_pos, 0, list[i].eval, 1, bestmove);
     }
     return bestscore;
 }
