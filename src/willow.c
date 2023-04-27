@@ -2086,7 +2086,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             else{
                 //printf("%s %i\n", list[i].move, betacount);
             }
-            if (!iscap && depthleft > 1){
+            if (!iscap){
                 if (!ismatch(KILLERTABLE[depth][0], list[i].move)){
                     KILLERTABLE[depth][0] = list[i].move;
                 }
