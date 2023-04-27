@@ -2546,7 +2546,7 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
                 }              //we need to skip past the "1000 btime part"
             }
             int milltime = atoi(&command[k]) - 200;
-            coldturkey = (float)milltime/1000 - 0.2;
+            coldturkey = (float)milltime/1000;
 
             if (movestogo != -1){
                 time = ((float)milltime/(1000*(movestogo+2))) * 1.5;
