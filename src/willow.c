@@ -1643,7 +1643,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     nodes++;
     if (!((nodes) & (CHECKTIME))){
-        clock_t rightnow = (float)(clock() - start_time)/CLOCKS_PER_SEC;
+        float rightnow = ((float)(clock() - start_time))/CLOCKS_PER_SEC;
         if (rightnow > maximumtime || rightnow > coldturkey){ //you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
@@ -1799,7 +1799,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         maxdepth = 0;
     }
     if (!((nodes) & (CHECKTIME))){
-        clock_t rightnow = (float)(clock() - start_time)/CLOCKS_PER_SEC;
+        float rightnow = ((float)(clock() - start_time))/CLOCKS_PER_SEC;
         if (rightnow > maximumtime || rightnow > coldturkey){ //you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
