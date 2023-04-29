@@ -2547,8 +2547,9 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
 
             int milltime = atoi(&command[k]) - 200;
             if (milltime < 1){
-                milltime = 1;
+                time = 0.01; coldturkey = 0.01;
             }
+            else{
             coldturkey = (float)milltime/1000;
 
             if (movestogo != -1){
@@ -2589,6 +2590,7 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
                 if ((float)milltime/250 < coldturkey){ //if you're not already literally running on increment
                 time += (float)milltime/1000 * 0.5;
                 }
+            }
             }
 
             
