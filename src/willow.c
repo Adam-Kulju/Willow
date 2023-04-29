@@ -56,7 +56,7 @@
 #define LM 0x7FFFFFFFULL /* Least significant 31 bits */
 #define TTSIZE 1 << 20
 #define _mask (1 << 20) - 1
-#define CHECKTIME (1 << 12)-1
+#define CHECKTIME (1 << 10)-1
 #define TIMEOUT 111111
 #define TEMPO 5
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -98,7 +98,6 @@ unsigned long long int ZOBRISTTABLE[774];
 //color key is 772
 //ep possible is 773
 unsigned long long int CURRENTPOS;
-int pvptr = 0;
 int attackers[2];
 struct move{
     unsigned short int move;
@@ -163,7 +162,6 @@ bool CENTERBLACK[0x88];
 struct move KILLERTABLE[100][2];
 struct move COUNTERMOVES[6][128];
 unsigned long int HISTORYTABLE[2][0x80][0x80]; //allows for faster lookups
-struct move pvstack[10000];
 
 unsigned long int nodes;
 long int totals;
@@ -517,15 +515,6 @@ void clearTT(){
         }
         
     }
-
-
-void clearPV(){
-    int i; for (i = 0; i < 10000; i++){
-        pvstack[i].move = 0;
-        pvstack[i].flags = 0;
-    }
-    pvptr = 0;
-}
 
 void clearHistory(bool delete){
     if (!delete){
@@ -1654,8 +1643,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     nodes++;
     if (!((nodes) & (CHECKTIME))){
-        clock_t rightnow = clock() - start_time;
-        if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey){ //you MOVE if you're down to 0.1 seconds!
+        float rightnow = ((float)(clock() - start_time))/CLOCKS_PER_SEC;
+        if (rightnow > maximumtime || rightnow > coldturkey){ //you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
     }
@@ -1808,17 +1797,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     nodes++;
     if (depth == 0){
         maxdepth = 0;
-        clearPV();
     }
     if (!((nodes) & (CHECKTIME))){
-        clock_t rightnow = clock() - start_time;
-        if ((float)rightnow/CLOCKS_PER_SEC > maximumtime || (float)rightnow/CLOCKS_PER_SEC > coldturkey){ //you MOVE if you're down to 0.1 seconds!
+        float rightnow = ((float)(clock() - start_time))/CLOCKS_PER_SEC;
+        if (rightnow > maximumtime || rightnow > coldturkey){ //you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
     }
     if (depth > 0){
         if (checkdraw2(movelst, key) > 0 || checkdraw1(board)){
-            return 0;
+            return (nodes & 3) - 2;
         }
         int mate_distance = 100000 - depth;
         if (mate_distance < beta){
@@ -1948,8 +1936,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     if (depth == 0){
         currentmove.move = 0;
     }
-    int pvstart = pvptr;
-    pvstack[pvptr++].move = 0;
     struct move bestmove = nullmove;
     int futility_move_count = (3+depthleft*depthleft/(1+(!improving)));
     int numquiets = 0;
@@ -2115,7 +2101,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             movelst[(*key)-1].move.flags = 0;
             *key = *key-1;
             CURRENTPOS = original_pos;
-            pvptr = pvstart;
             return beta;
         }
         
@@ -2127,21 +2112,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
             raisedalpha = true;
             alpha = list[i].eval;     
-            
-            int p = pvptr;
-            //printf("%i\n", p);
-            pvptr = pvstart;
-            pvstack[pvptr] = list[i].move;
-            pvptr++;        
-            while (p < 4999 && pvstack[p].move != 0){ pvstack[pvptr] = pvstack[p]; p++; pvptr++;}
-            pvstack[pvptr].move = 0;
-             // the move we just searched is now the first of the new PV
+
         }
 
         else if (!betacount && depth == 0){
             insert(original_pos, depthleft, list[i].eval, 1, list[i].move);
             CURRENTPOS = original_pos;
-            pvptr = pvstart;
             return list[i].eval;
         }
 
@@ -2150,7 +2126,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         i++;
     }
 
-    pvptr = pvstart;
     if (!ismove){
         if (incheck){
             return -100000 + depth;
@@ -2174,6 +2149,24 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     return bestscore;
 }
 
+bool verifypv(struct board_info *board, struct move pvmove, bool incheck, bool color){
+    struct list list[LISTSIZE];
+    int movelen = movegen(board, list, color, incheck);
+    for (int i = 0; i < movelen; i++){
+        if (ismatch(pvmove, list[i].move)){
+            unsigned long long int c = CURRENTPOS;
+            struct board_info board2 = *board;
+            move(&board2, pvmove, color);
+            CURRENTPOS = c;
+            if (isattacked(&board2, board2.kingpos[color], color^1)){
+                return false;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 
 float iid_time(struct board_info *board, struct movelist *movelst, float maxtime, int *key, bool color, bool ismove){
     /*if (*key < 5 && opening_book(board, movelst, key, color)){
@@ -2184,7 +2177,6 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     //printf("%f\n", maximumtime);
     //clearTT(false);
     start_time = clock();
-    clearPV();
     clearHistory(false);
     clearKiller();
     currentmove.move = 0;
@@ -2252,16 +2244,24 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         else{
             printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv ", depth, maxdepth, g, nodes, (long int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC);
         }
-        
-        
-
-        for (int i = 0; i < depth && pvstack[i].move != 0; i++){
-            char temp[8];
-            printf("%s ", conv(pvstack[i], temp));
-
+                
+        int d = depth;
+        unsigned long long int op = CURRENTPOS;
+        struct board_info board2 = *board; 
+        bool c = color;
+        while (d > 0){
+            if (TT[CURRENTPOS & _mask].zobrist_key != CURRENTPOS || ismatch(TT[CURRENTPOS & _mask].bestmove, nullmove) ||
+             !verifypv(&board2, TT[CURRENTPOS & _mask].bestmove, false, c)){
+                break;
+            }
+            char temp[6];
+            printf("%s ", conv(TT[CURRENTPOS & _mask].bestmove, temp));
+            move(&board2, TT[CURRENTPOS & _mask].bestmove, c);
+            c ^= 1;
+            d--;
         }
         printf("\n");
-        //printf("%f\n", (float)betas/total*100);
+        CURRENTPOS = op;
 
         if ((float)time2/CLOCKS_PER_SEC > maxtime*0.6 || depth >= MAXDEPTH){                      
             break;
@@ -2273,7 +2273,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     
     }
     char temp[8], temp2[8];
-    printf("bestmove %s ponder %s\n", conv(currentmove, temp), conv(pvstack[1], temp2));
+    printf("bestmove %s\n", conv(currentmove, temp));
     
     
 
@@ -2468,7 +2468,6 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
         clearKiller();
         clearCounters();
         clearHistory(true);
-        clearPV();
         setfull(board);
         setmovelist(movelst, key); 
         search_age = 0;
@@ -2545,7 +2544,12 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
                     k++;
                 }              //we need to skip past the "1000 btime part"
             }
+
             int milltime = atoi(&command[k]) - 200;
+            if (milltime < 1){
+                time = 0.01; coldturkey = 0.01;
+            }
+            else{
             coldturkey = (float)milltime/1000;
 
             if (movestogo != -1){
@@ -2586,6 +2590,7 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
                 if ((float)milltime/250 < coldturkey){ //if you're not already literally running on increment
                 time += (float)milltime/1000 * 0.5;
                 }
+            }
             }
 
             
@@ -2662,7 +2667,6 @@ int bench(){
         clearKiller();
         clearCounters();
         clearHistory(true);
-        clearPV();
         search_age = 0;
 
         printf("%s\n", positions[i]);
