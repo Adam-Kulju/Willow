@@ -56,7 +56,7 @@
 #define LM 0x7FFFFFFFULL /* Least significant 31 bits */
 #define TTSIZE 1 << 20
 #define _mask (1 << 20) - 1
-#define CHECKTIME (1 << 12)-1
+#define CHECKTIME (1 << 10)-1
 #define TIMEOUT 111111
 #define TEMPO 5
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -2544,7 +2544,11 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
                     k++;
                 }              //we need to skip past the "1000 btime part"
             }
+
             int milltime = atoi(&command[k]) - 200;
+            if (milltime < 1){
+                milltime = 1;
+            }
             coldturkey = (float)milltime/1000;
 
             if (movestogo != -1){
