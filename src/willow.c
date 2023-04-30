@@ -1712,7 +1712,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         printfull(board);
         exit(1);
     }
-    int i = 0;
+    int i = 0, quiets = 0;
     bool ismove = false;
 
     int bestscore = stand_pat;
@@ -1722,7 +1722,14 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         selectionsort(list, i, listlen);
         if (!incheck && (list[i].eval < 1000001 || (list[i].eval < 1000200 && falpha == alpha))){   //search losing captures if our position is decent; otherwise, just return.
             CURRENTPOS = original_pos;
-            return bestscore;
+            break;
+        }
+        if (list[i].eval < 1000001){
+            quiets++;
+            if (quiets > 2){
+                CURRENTPOS = original_pos;
+                break;
+            }
         }
         struct board_info board2 = *board;
 
@@ -1747,9 +1754,10 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
             //exit(0);
 
-            if (stand_pat + mingain - maxloss - 50 >= beta){    //this -50 is because of all the stuff like bishop pair bonus, mobility, etc.
+            if (stand_pat + mingain - maxloss >= beta){
                 CURRENTPOS = original_pos;
-                return stand_pat + mingain - maxloss - 50;
+                insert(original_pos, 0, stand_pat + mingain - maxloss, 2, list[i].move);
+                return stand_pat + mingain - maxloss;
             }
         }
         ismove = true;   
