@@ -2186,19 +2186,21 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
     int depth;
     struct move pvmove;
     //printf("%i %s %s\n", *key, movelst[*key-1].fen, movelst[*key-1].move);
-    for (depth = 1; ; depth++){        
+    for (depth = 1; ; depth++){
+        int delta = 12;
+        int tempdepth = depth;    
         int asphigh = 25, asplow = 25;       
-        int evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck); 
+        int evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck); 
 
         while (abs(evl) != TIMEOUT && (evl <= alpha || evl >= beta)){
-
             if (evl <= alpha){
                 char temp[6];
                     printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, (long int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, conv(pvmove, temp));
-                
-                alpha = evl - asplow;    
-                asplow *= 3;            
-                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck);
+                alpha -= delta;
+                beta = (alpha + 3 * beta) / 4;         
+                delta += delta * 2 / 3;
+                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck);
+
                         if (abs(evl) == TIMEOUT){
             if (currentmove.move == 0){
                 currentmove = pvmove;
@@ -2212,9 +2214,10 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
                 char temp[6];
                 printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, (long int)((float)clock()-start_time)*1000/CLOCKS_PER_SEC, conv(currentmove, temp));
                 pvmove = currentmove;
-                beta = evl + asphigh;
-                asphigh *= 3;
-                evl = alphabeta(board, movelst, key, alpha, beta, depth, 0, color, false, incheck);   
+                beta += delta;
+                delta += delta * 2 / 3;
+                tempdepth = MAX(tempdepth-1, 1);
+                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck);   
             if (abs(evl) == TIMEOUT){
                 currentmove = pvmove;
                 break;
@@ -2266,9 +2269,9 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         if ((float)time2/CLOCKS_PER_SEC > maxtime*0.6 || depth >= MAXDEPTH){                      
             break;
         }
-         if (depth > 5){
-            alpha = evl-25;
-            beta = evl+25;
+         if (depth > 6){
+            alpha = evl-12;
+            beta = evl+12;
         }   
     
     }
