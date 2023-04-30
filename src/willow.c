@@ -1724,13 +1724,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             CURRENTPOS = original_pos;
             break;
         }
-        if (list[i].eval < 1000001){
-            quiets++;
-            if (quiets > 2){
-                CURRENTPOS = original_pos;
-                break;
-            }
-        }
         struct board_info board2 = *board;
 
         if (move(&board2, list[i].move, color)){
