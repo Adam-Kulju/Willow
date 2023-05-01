@@ -349,10 +349,12 @@ char *getsafe(char *buffer, int count)
         result =  NULL;
     }
 
-	else if (count == 1)
-		*result = '\0';
-
-	else if ((result = fgets(buffer, count, stdin)) != NULL)
+	else{
+        result = fgets(buffer, count, stdin);
+        if (result == NULL && feof(stdin) == EOF){
+            exit(0);
+        }
+    } 
 	if ((np = strchr(buffer, '\n')))
 		*np = '\0';
 	return result;
