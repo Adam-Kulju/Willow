@@ -2217,7 +2217,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
                 pvmove = currentmove;
                 beta += delta;
                 delta += delta * 2 / 3;
-                tempdepth = MAX(tempdepth-1, 1);
+                tempdepth = MAX(tempdepth-1, depth-3);
                 evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck);   
             if (abs(evl) == TIMEOUT){
                 currentmove = pvmove;
