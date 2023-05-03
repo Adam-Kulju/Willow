@@ -1517,6 +1517,121 @@ int eval(struct board_info *board, bool color){
 }
 
 
+int get_cheapest_attacker(struct board_info *board, unsigned int pos, unsigned int *attacker, bool encolor){  //returns 0 - 6 from blank to king
+    char flag = 10;
+    *attacker = 0;
+    //pawns
+    if (!encolor){
+        if (!((pos+SW)&0x88) && board->board[pos+SW] == WPAWN){
+            *attacker = pos+SW;
+            return 1;
+        }
+        else if (!((pos+SE)&0x88) && board->board[pos+SE] == WPAWN){
+            *attacker = pos+SE;
+            return 1;
+        }
+    }
+    else{
+        if (!((pos+NE)&0x88) && board->board[pos+NE] == BPAWN){
+            *attacker = pos+NE;
+            return 1;
+        }
+        else if (!((pos+NW)&0x88) && board->board[pos+NW] == BPAWN){
+            *attacker = pos+NW;
+            return 1;
+        }        
+    }
+    //knights, kings, and sliders
+    unsigned char d, f;
+    for (f = 0; f < 8; f++){
+        d = pos + vector[0][f];
+        
+        if (!(d&0x88) && board->board[d]-encolor == WKNIGHT){
+            *attacker = d;
+            return 2;
+        }
+
+        char vec = vector[4][f];
+        d = pos + vec;
+
+        if ((d&0x88)){continue;}
+
+        if (board->board[d]-encolor == WKING){
+            if (flag > 6){*attacker = d; flag = 6;}
+             continue;
+        }
+        do{
+            if (board->board[d]){
+                if ((board->board[d]&1) == encolor && 
+                (board->board[d]-encolor == WQUEEN || ( ((f&1) && board->board[d]-encolor == WROOK) || (!(f&1) && board->board[d]-encolor == WBISHOP) ))){
+                    if ((board->board[d]>>1) < flag){
+                        flag = (board->board[d]>>1);
+                        *attacker = d;
+                    }
+                }
+                break;
+            }
+            d += vec;
+        } 
+        while (!(d&0x88));
+        
+    }
+
+    return flag;
+}
+
+int SEEVALUES[7] = {0, 100, 310, 310, 500, 900, 10000};
+
+bool static_exchange_evaluation(struct board_info *board, struct move mve, bool color){
+    if (mve.flags){ //it's going to be either en passant or a promotion, both of which are good.
+        return true;
+    }
+    int to = mve.move&0xFF;
+    
+    int gain = SEEVALUES[board->board[mve.move & 0xFF] >> 1];   //what you get from taking the piece
+    int risk = SEEVALUES[board->board[mve.move >> 8] >> 1];     //what you lose if your piece gets taken!
+
+    struct board_info board2 = *board;
+
+    board2.board[mve.move >> 8] = BLANK;
+
+    unsigned int attacker_pos = 0;
+
+    int totalgain = gain;   //how much you have gained after the first capture you made.
+
+    while (totalgain - risk < 0){   //an example with RxB BxR RxB
+
+        int i = get_cheapest_attacker(&board2, to, &attacker_pos, color^1);
+        if (i == 10){
+            return true;    //if opponent had no attackers, we just took a free piece!
+        }
+
+        totalgain -= risk;      //first we subtract the value of the piece that you just had taken (since this is from opponent's point of view). in our RXB case, that was a bishop, so we're now at -200.
+        risk = SEEVALUES[i];    //if the bishop gets taken, he loses 300 (a minor piece).
+        if (totalgain + risk < 0){  //if the piece he took with was low enough value that you can't get the material back by taking it (2 pawns for a bishop), return. not true here.
+            return false;
+        }
+        board2.board[attacker_pos] = BLANK; //remove the piece to account for batteries. 
+                                            //and yeah this fails to discovered checks, but a discovered check will quickly cause a beta cutoff anyways so no big deal.
+
+        i = get_cheapest_attacker(&board2, to, &attacker_pos, color);  //now we look at it from our point of view.
+        if (i == 10){   //if we have no attackers, it is losing, since the condition in the while loop guarantees at least equal if we do something like BxB.
+            return false;
+        }
+        totalgain += risk;  //we were at -200 before, now we're at 100.
+        risk = SEEVALUES[i];
+
+        board2.board[attacker_pos] = BLANK;
+
+    }
+    //another example: RxB QxR PxQ
+    //RxB is not winning in and of itself, so we get the smallest attacker which turns out to be Q.
+    //this sets totalgain to -300, but risk to 900.
+    //we can take it, and it's with a pawn. Total gain becomes 600, risk becomes 100, and we return true.
+    return true;
+}
+
+
 int see(struct board_info *board, struct move mve, bool color){
 
     int attacker, victim;
@@ -1546,30 +1661,12 @@ int see(struct board_info *board, struct move mve, bool color){
         case QUEEN:
         victim = 9000;  break;
         case BLANK:
-        return 0;
+        return 0; break;
         default:
         victim = 3000; break;
     }
-
-    char a = isattacked_mv(board, mve.move&0xFF, color^1);
-    if (!a){
-        return (victim-(attacker/1000));
-    }
-    if (a == 1){
-        char temp = board->board[(mve.move>>8)];
-
-        board->board[(mve.move>>8)] = BLANK;
-        
-        a = isattacked_mv(board, mve.move&0xFF, color);
-
-        board->board[(mve.move>>8)] = temp;
-        if (a != 2){ //this means that the opponent can't take that piece with his king. In this case the higher material the better.
-            //printfull(board, color);
-            //printf("%s\n", mve);
-            return (victim+(attacker/1000));
-        }
-    }
-    if (victim-attacker >= 0){
+    
+    if (victim-attacker >= 0 || static_exchange_evaluation(board, mve, color)){
         return (victim-(attacker/100));
     }
 
@@ -2680,7 +2777,9 @@ int bench(){
         int key;
         bool color;
         setfromfen(&board, movelst, &key, positions[i], &color, 0);
+        
         printfull(&board);
+
         iid_time(&board, movelst, 1000000, &key, color, false);
         t += nodes;
     }
