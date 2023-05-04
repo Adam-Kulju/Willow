@@ -1717,6 +1717,10 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         maxdepth = depth;
     }
     nodes++;
+    if (depthleft <= 0){
+        return eval(board, color);
+    }
+
     if (!((nodes) & (CHECKTIME))){
         float rightnow = ((float)(clock() - start_time))/CLOCKS_PER_SEC;
         if (rightnow > maximumtime || rightnow > coldturkey){ //you MOVE if you're down to 0.1 seconds!
@@ -1752,10 +1756,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     long long unsigned int original_pos = CURRENTPOS;
 
     int stand_pat = incheck ? -100000 : eval(board, color);
-
-    if (depthleft <= 0){
-        return stand_pat;
-    }
     
     
     int bestscore = stand_pat;
@@ -1766,7 +1766,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         if (stand_pat >= beta){
             return stand_pat;
         }
-        if (stand_pat > alpha && !incheck){
+        if (stand_pat > alpha){
             alpha = stand_pat;
         }
         futility = stand_pat + 60;
@@ -1774,8 +1774,10 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
 
     int falpha = alpha;
+    
     struct list list[LISTSIZE];
     int listlen = 0;
+
     if (incheck){
         listlen = movegen(board, list, color, true);
     }
@@ -1799,7 +1801,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             if (list[i].eval < 1000200){
                 break;
             }
-            if (futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1] <= alpha && 
+            /*if (futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1] <= alpha && 
                 !(board->board[list[i].move.move >> 8] >> 1 == PAWN && (color ? 7 - (list[i].move.move >> 12) : list[i].move.move >> 12) >= 5)){
                     bestscore = MAX(bestscore, futility + VALUES2[board->board[list[i].move.move & 0xFF]>>1]);
                     i++;
@@ -1809,7 +1811,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
                 bestscore = MAX(bestscore, futility);
                 i++;
                 continue;
-            }
+            }*/
 
         }
         struct board_info board2 = *board;
