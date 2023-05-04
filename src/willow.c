@@ -1770,7 +1770,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         if (stand_pat > alpha){
             alpha = stand_pat;
         }
-        futility = stand_pat + 60;
+        futility = stand_pat + 90;
 
     }
 
@@ -1802,8 +1802,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             if (list[i].eval < 1000200){
                 break;
             }
-            /*if (futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1] <= alpha && 
-                !(board->board[list[i].move.move >> 8] >> 1 == PAWN && (color ? 7 - (list[i].move.move >> 12) : list[i].move.move >> 12) >= 5)){
+           /* if (futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1] <= alpha && !list[i].move.flags){
                     bestscore = MAX(bestscore, futility + VALUES2[board->board[list[i].move.move & 0xFF]>>1]);
                     i++;
                     continue;
