@@ -1665,12 +1665,12 @@ int see(struct board_info *board, struct move mve, bool color){
         default:
         victim = 3000; break;
     }
-    
+
     if (victim-attacker >= 0 || static_exchange_evaluation(board, mve, color)){
         return (victim-(attacker/100));
     }
 
-    return 160+((victim-attacker)/1000);
+    return victim-attacker;
 }
 
 void selectionsort(struct list *list, int k, int t){
@@ -1706,7 +1706,7 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         }    
             
         else if (list[i].move.flags == 7){
-            list[i].eval += (9900 + see(board, list[i].move, color));
+            list[i].eval += (10000 + see(board, list[i].move, color));
         }
         else if (board->board[list[i].move.move & 0xFF]){
             list[i].eval += see(board, list[i].move, color);
@@ -1817,7 +1817,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
     while (i < listlen){
         selectionsort(list, i, listlen);
-        if (!incheck && (list[i].eval < 1000001 || (list[i].eval < 1000200 && falpha == alpha))){   //search losing captures if our position is decent; otherwise, just return.
+        if (!incheck && list[i].eval < 1000200){
             CURRENTPOS = original_pos;
             break;
         }
@@ -2040,9 +2040,14 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool quietsprune = false;
     int bestscore = -1000000;
 
-    while (i < movelen && !quietsprune){     
+    while (i < movelen){     
 
         selectionsort(list, i, movelen);
+        bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]);    
+        if (quietsprune && !iscap){
+            i++;
+            continue;
+        }
         struct board_info board2 = *board;
 
         if (move(&board2, list[i].move, color)){
@@ -2063,7 +2068,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             bestmove = list[i].move;
         }
         ismove = true;
-        bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]);    
 
         if (depth > 0 && !iscap && !ispv){
             if (depthleft < 4){
@@ -2073,7 +2077,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
             }
 
-            if ((depthleft < 6 && list[i].eval < 1000001 && movelst[*key-1].staticeval + 90*(depthleft) + (improving*40) < alpha)){
+            if ((depthleft < 6 && list[i].eval < 1000200 && movelst[*key-1].staticeval + 90*(depthleft) + (improving*40) < alpha)){
                 quietsprune = true;
             }
 
@@ -2100,7 +2104,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             else{
                 R = LMRTABLE[depthleft-1][betacount];
-                if (ischeck || incheck || list[i].eval > 1000000){
+                if (ischeck || incheck || list[i].eval < 0 || list[i].eval > 1000190){
                     R--;
                 }
                 if (list[i].eval > 1000190){
