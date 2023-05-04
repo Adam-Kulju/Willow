@@ -1634,40 +1634,14 @@ bool static_exchange_evaluation(struct board_info *board, struct move mve, bool 
 
 int see(struct board_info *board, struct move mve, bool color){
 
-    int attacker, victim;
-
-    switch(board->board[(mve.move>>8)]>>1){
-        case PAWN:
-        attacker = 1000; break;
-        case KING:
-        attacker = 9500; break;
-        case ROOK:
-        attacker = 5000; break;
-        case QUEEN:
-        attacker = 9000; break;
-        default:
-        attacker = 3000; break;
-    }
-
     if (mve.flags == 0xC){
         return 1000;
     }
 
-    switch(board->board[(mve.move&0xFF)]>>1){
-        case PAWN:
-        victim = 1000; break;
-        case ROOK:
-        victim = 5000; break;
-        case QUEEN:
-        victim = 9000;  break;
-        case BLANK:
-        return 0; break;
-        default:
-        victim = 3000; break;
-    }
+    int attacker = SEEVALUES[board->board[(mve.move>>8)]>>1], victim = SEEVALUES[board->board[(mve.move&0xFF)]>>1]; 
 
     if (victim-attacker >= 0 || static_exchange_evaluation(board, mve, color, 0)){
-        return (victim-(attacker/100));
+        return ((victim*10)-(attacker/100));
     }
 
     return victim-attacker;
@@ -1706,7 +1680,7 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         }    
             
         else if (list[i].move.flags == 7){
-            list[i].eval += (10000 + see(board, list[i].move, color));
+            list[i].eval += (20000 + see(board, list[i].move, color));
         }
         else if (board->board[list[i].move.move & 0xFF]){
             list[i].eval += see(board, list[i].move, color);
