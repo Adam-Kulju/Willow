@@ -1580,7 +1580,7 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos, unsigned i
     return flag;
 }
 
-int SEEVALUES[7] = {0, 100, 310, 310, 500, 900, 10000};
+int SEEVALUES[7] = {0, 100, 450, 450, 650, 1250, 10000};
 
 bool static_exchange_evaluation(struct board_info *board, struct move mve, bool color, int threshold){
     if (mve.flags && mve.flags >> 2 != 1){  //castling and en passant both come out neutral; thus we can return immediately.
