@@ -1795,7 +1795,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     while (i < listlen){
         selectionsort(list, i, listlen);
 
-        if (bestscore > -100000){
+        if (!incheck){
             if (list[i].eval < 1000200){
                 break;
             }
