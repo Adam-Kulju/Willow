@@ -1807,12 +1807,12 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
                     bestscore = MAX(bestscore, futility + VALUES2[board->board[list[i].move.move & 0xFF]>>1]);
                     i++;
                     continue;
-                }
+                }*/
             if (futility <= alpha && !static_exchange_evaluation(board, list[i].move, color, 1)){
                 bestscore = MAX(bestscore, futility);
                 i++;
                 continue;
-            }*/
+            }
 
         }
         struct board_info board2 = *board;
