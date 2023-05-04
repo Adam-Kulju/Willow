@@ -351,7 +351,8 @@ char *getsafe(char *buffer, int count)
 
 	else{
         result = fgets(buffer, count, stdin);
-        if (result == NULL && feof(stdin) == EOF){
+        if (result == NULL){
+            printf("exiting\n");
             exit(0);
         }
     } 
