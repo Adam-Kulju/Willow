@@ -1582,9 +1582,9 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos, unsigned i
 
 int SEEVALUES[7] = {0, 100, 310, 310, 500, 900, 10000};
 
-bool static_exchange_evaluation(struct board_info *board, struct move mve, bool color){
-    if (mve.flags){ //it's going to be either en passant or a promotion, both of which are good.
-        return true;
+bool static_exchange_evaluation(struct board_info *board, struct move mve, bool color, int threshold){
+    if (mve.flags && mve.flags >> 2 != 1){  //castling and en passant both come out neutral; thus we can return immediately.
+        return (threshold <= 0);
     }
     int to = mve.move&0xFF;
     
@@ -1597,7 +1597,7 @@ bool static_exchange_evaluation(struct board_info *board, struct move mve, bool 
 
     unsigned int attacker_pos = 0;
 
-    int totalgain = gain;   //how much you have gained after the first capture you made.
+    int totalgain = gain - threshold;   //how much you have gained after the first capture you made.
 
     while (totalgain - risk < 0){   //an example with RxB BxR RxB
 
@@ -1666,7 +1666,7 @@ int see(struct board_info *board, struct move mve, bool color){
         victim = 3000; break;
     }
 
-    if (victim-attacker >= 0 || static_exchange_evaluation(board, mve, color)){
+    if (victim-attacker >= 0 || static_exchange_evaluation(board, mve, color, 0)){
         return (victim-(attacker/100));
     }
 
@@ -2048,6 +2048,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             i++;
             continue;
         }
+        if (depth && list[i].eval < 1000000 && bestscore > -50000 && depthleft < 9 && 
+            !static_exchange_evaluation(board, list[i].move, color, depthleft * ((iscap || list[i].move.flags>>2 == 1) ? -90 : -50))){
+                i++;
+                continue;
+            }
         struct board_info board2 = *board;
 
         if (move(&board2, list[i].move, color)){
