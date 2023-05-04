@@ -1770,7 +1770,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         if (stand_pat > alpha){
             alpha = stand_pat;
         }
-        futility = stand_pat + 60;
+        futility = stand_pat + 80;
 
     }
 
@@ -2802,3 +2802,4 @@ int main(int argc, char *argv[]){
     com();
     return 0;
 } 
+
