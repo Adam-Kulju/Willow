@@ -325,6 +325,7 @@ short int backwardspen = -3;
 
 char attacknums[4] = {2,2,3,5};
 int king_attack_count[2];
+int attacking_pieces[2];
 
 short int kingdangertable[100] = {
    0,    0,    1,    2,    8,   10,   10,   21,   25,   19, 
@@ -340,6 +341,8 @@ short int kingdangertable[100] = {
 };
 short int pawnshieldmg[4] = {226, 144, 82, 2};
 short int pawnshieldeg[4] = {-57, -11, 17, 46};
+
+short int pieceattacksbonus[5] = {30, 14, 8, 21, 59};
 
 
 char *getsafe(char *buffer, int count)
@@ -1051,7 +1054,7 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
     return key;
 }
 
-int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype){
+int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *score){
     
     
     isattacker = false;
@@ -1102,6 +1105,24 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                         isattacker = true;
                     }
                     if (board->board[pos] || !slide[piecetype]){
+                        if ((piecetype == 0 || piecetype == 1) && (board->board[pos]>>1 == QUEEN || board->board[pos]>>1 == ROOK)){
+                            attacking_pieces[color]++;
+                            if (color){
+                                *score -= pieceattacksbonus[2];
+                            }
+                            else{
+                                *score += pieceattacksbonus[2];
+                            }
+                        }
+                        if (piecetype == 2 && board->board[pos]>>1 == QUEEN){
+                            attacking_pieces[color]++;
+                            if (color){
+                                *score -= pieceattacksbonus[3];
+                            }
+                            else{
+                                *score += pieceattacksbonus[3];
+                            }
+                        }
                         break;
                     }                         
                 }
@@ -1201,7 +1222,9 @@ int material(struct board_info *board, int *phase){
 
 int pst(struct board_info *board, int phase){
 
+    attacking_pieces[0] = 0, attacking_pieces[1] = 0;
 
+    int score = 0;
     unsigned char spacew = 0, spaceb = 0;
     int mgscore = 0, egscore = 0;
     int blockedpawns = 0;
@@ -1244,7 +1267,7 @@ int pst(struct board_info *board, int phase){
             int moves = 0;
             unsigned char piecetype = (board->board[i]>>1)-1, piececolor = (board->board[i]&1);
             if (piecetype != 0 && piecetype != 5){ //pawns or kings
-                moves = piece_mobility(board, i, piececolor, piecetype-1);
+                moves = piece_mobility(board, i, piececolor, piecetype-1, &score);
                 if (piecetype != 4){ //queens
                     mobilitybonus = true;
                 }
@@ -1261,6 +1284,26 @@ int pst(struct board_info *board, int phase){
                     blockedpawns++;
                 }
                 if (piecetype == 0){
+                    if (!((i + SW) & 0x88) && board->board[i+SW] && !(board->board[i+SW]&1)){
+                        if (board->board[i+SW] == WKNIGHT || board->board[i+SW] == WBISHOP){
+                            attacking_pieces[BLACK]++;
+                            score -= pieceattacksbonus[0];
+                        }
+                        else if (board->board[i+SW] == WROOK || board->board[i+SW] == WQUEEN){
+                            attacking_pieces[BLACK]++;
+                            score -= pieceattacksbonus[1];
+                        }
+                    }
+                   if (!((i + SE) & 0x88) && board->board[i+SE] && !(board->board[i+SE]&1)){
+                        if (board->board[i+SE] == WKNIGHT || board->board[i+SE] == WBISHOP){
+                            attacking_pieces[BLACK]++;
+                            score -= pieceattacksbonus[0];
+                        }
+                        else if (board->board[i+SE] == WROOK || board->board[i+SE] == WQUEEN){
+                            attacking_pieces[BLACK]++;
+                            score -= pieceattacksbonus[1];
+                        }
+                    }
                     if (badvanced[(i&7)] == 9){
                         badvanced[(i&7)] = (i>>4);
                     }
@@ -1286,6 +1329,26 @@ int pst(struct board_info *board, int phase){
                     blockedpawns++;
                 }
                 if (piecetype == 0){
+                    if (!((i + NW) & 0x88) && board->board[i+NW] && (board->board[i+NW] & 1)){
+                        if (board->board[i+NW] == BKNIGHT || board->board[i+NW] == BBISHOP){
+                            attacking_pieces[WHITE]++;
+                            score += pieceattacksbonus[0];
+                        }
+                        else if (board->board[i+NW] == BROOK || board->board[i+NW] == BQUEEN){
+                            attacking_pieces[WHITE]++;
+                            score += pieceattacksbonus[1];
+                        }
+                    }
+                   if (!((i + NE) & 0x88) && board->board[i+NE] && (board->board[i+NE] & 1)){
+                        if (board->board[i+NE] == BKNIGHT || board->board[i+NE] == BBISHOP){
+                            attacking_pieces[WHITE]++;
+                            score += pieceattacksbonus[0];
+                        }
+                        else if (board->board[i+NE] == BROOK || board->board[i+NE] == BQUEEN){
+                            attacking_pieces[WHITE]++;
+                            score += pieceattacksbonus[1];
+                        }
+                    }
                     if (wbackwards[(i&7)] == 9){
                         wbackwards[(i&7)] = (i>>4);
                     }
@@ -1304,8 +1367,6 @@ int pst(struct board_info *board, int phase){
     }
 
 
-    
-    int score = 0;
     
     for (unsigned char i = 0; i < 8; i++){
         if (i == 7){
@@ -1488,6 +1549,12 @@ int pst(struct board_info *board, int phase){
     }
     score += (phase*mgscore + (24-phase)*egscore)/24;
 
+    if (attacking_pieces[WHITE] > 1){
+        score += pieceattacksbonus[4];
+    }
+    if (attacking_pieces[BLACK] > 1){
+        score -= pieceattacksbonus[4];
+    }
 
     return score;
 }
