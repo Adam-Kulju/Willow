@@ -1600,6 +1600,10 @@ bool static_exchange_evaluation(struct board_info *board, struct move mve, bool 
 
     int totalgain = gain - threshold;   //how much you have gained after the first capture you made.
 
+    if (totalgain < 0){
+        return false;
+    }
+
     while (totalgain - risk < 0){   //an example with RxB BxR RxB
 
         int i = get_cheapest_attacker(&board2, to, &attacker_pos, color^1);
@@ -1633,7 +1637,7 @@ bool static_exchange_evaluation(struct board_info *board, struct move mve, bool 
 }
 
 
-int see(struct board_info *board, struct move mve, bool color){
+int see(struct board_info *board, struct move mve, bool color, int threshold){
 
     if (mve.flags == 0xC){
         return 1000;
@@ -1641,7 +1645,7 @@ int see(struct board_info *board, struct move mve, bool color){
 
     int attacker = SEEVALUES[board->board[(mve.move>>8)]>>1], victim = SEEVALUES[board->board[(mve.move&0xFF)]>>1]; 
 
-    if (victim-attacker >= 0 || static_exchange_evaluation(board, mve, color, 0)){
+    if (victim-attacker >= threshold || static_exchange_evaluation(board, mve, color, threshold)){
         return ((victim*10)-(attacker/100));
     }
 
@@ -1661,7 +1665,7 @@ void selectionsort(struct list *list, int k, int t){
     list[k] = tempmove;
 }
 
-int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen){
+int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen, int threshold){
     int i = 0; while (i < movelen){
         list[i].eval = 1000000;
 
@@ -1681,10 +1685,10 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         }    
             
         else if (list[i].move.flags == 7){
-            list[i].eval += (20000 + see(board, list[i].move, color));
+            list[i].eval += (20000 + see(board, list[i].move, color, threshold));
         }
         else if (board->board[list[i].move.move & 0xFF]){
-            list[i].eval += see(board, list[i].move, color);
+            list[i].eval += see(board, list[i].move, color, threshold);
         }
         else if (ismatch(list[i].move, KILLERTABLE[depth][0])){
             list[i].eval += 199;
@@ -1714,6 +1718,10 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         maxdepth = depth;
     }
     nodes++;
+    if (depthleft <= 0){
+        return eval(board, color);
+    }
+
     if (!((nodes) & (CHECKTIME))){
         float rightnow = ((float)(clock() - start_time))/CLOCKS_PER_SEC;
         if (rightnow > maximumtime || rightnow > coldturkey){ //you MOVE if you're down to 0.1 seconds!
@@ -1747,31 +1755,30 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             }
         }
     long long unsigned int original_pos = CURRENTPOS;
-    int stand_pat;
-    if (!incheck || depthleft <= 0){
-        stand_pat = eval(board, color);
-    }
-    else{
-        stand_pat = -100000;
-    }
-    if (depthleft <= 0 || stand_pat == TIMEOUT){
-        return stand_pat;
-    }
+
+    int stand_pat = incheck ? -100000 : eval(board, color);
     
-    if (stand_pat >= beta && !incheck){
-        return stand_pat;
+    
+    int bestscore = stand_pat;
+    int futility = -100000;
+
+    if (!incheck){
+
+        if (stand_pat >= beta){
+            return stand_pat;
+        }
+        if (stand_pat > alpha){
+            alpha = stand_pat;
+        }
+        futility = stand_pat + 60;
+
     }
 
     int falpha = alpha;
-
-    if (stand_pat > alpha){
-        alpha = stand_pat;
-    }
-    if (stand_pat + 1125 < alpha && !incheck){
-        return stand_pat;
-    }
+    
     struct list list[LISTSIZE];
     int listlen = 0;
+
     if (incheck){
         listlen = movegen(board, list, color, true);
     }
@@ -1780,21 +1787,27 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
 
 
-    if (movescore(board, list, 99, color, 'n', nullmove, listlen)){
+    if (movescore(board, list, 99, color, 'n', nullmove, listlen, -108)){
         printfull(board);
         exit(1);
     }
-    int i = 0, quiets = 0;
-    bool ismove = false;
 
-    int bestscore = stand_pat;
     struct move bestmove = nullmove;
+    int i = 0;
 
     while (i < listlen){
         selectionsort(list, i, listlen);
-        if (!incheck && list[i].eval < 1000200){
-            CURRENTPOS = original_pos;
-            break;
+
+        if (!incheck){
+            if (list[i].eval < 1000200){
+                break;
+            }
+            if (futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1] <= alpha && !list[i].move.flags){
+                    bestscore = MAX(bestscore, futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1]);
+                    i++;
+                    continue;
+                }
+
         }
         struct board_info board2 = *board;
 
@@ -1807,29 +1820,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             i++;
             continue;
         }
-        if (list[i].eval > 1000199 && (board->board[list[i].move.move>>8]>>1) < (board->board[list[i].move.move & 0xFF]>>1)){ 
-            //all captures of a higher ranking piece are checked to see if they're just immediately good enough
-            int d = 0; 
-            int a = material(board, &d);
 
-            unsigned char piecetypefrom = (board->board[list[i].move.move>>8]>>1)-1, piecetypeto = (board->board[list[i].move.move & 0xFF]>>1)-1;
-
-            int maxloss = (d*VALUES[piecetypefrom] + (MAXPHASE-d)*VALUES2[piecetypefrom])/MAXPHASE;
-            int mingain = (d*VALUES[piecetypeto] + (MAXPHASE-d)*VALUES2[piecetypeto])/MAXPHASE;
-
-            //exit(0);
-
-            if (stand_pat + mingain - maxloss >= beta){
-                CURRENTPOS = original_pos;
-                insert(original_pos, 0, stand_pat + mingain - maxloss, 2, list[i].move);
-                return stand_pat + mingain - maxloss;
-            }
-        }
-        ismove = true;   
-        
-        bool ischeck = isattacked(board, board->kingpos[color^1], color);
-
-        list[i].eval = -quiesce(&board2, -beta, -alpha, depth+1, depthleft-1, color^1, ischeck);
+        list[i].eval = -quiesce(&board2, -beta, -alpha, depth+1, depthleft-1, color^1, isattacked(board, board->kingpos[color^1], color));
         
        
         
@@ -1853,7 +1845,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         i++;
     }
     
-    if (incheck && !ismove){
+    if (incheck && bestscore == -100000){
         return -100000;
     }
     if (falpha != alpha){
@@ -1994,8 +1986,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool ismove = false;
     int betacount = 0;
     int movelen = movegen(board, list, color, incheck);
-    //remove_illegal(board, list, color);
-    if (movescore(board, list, depth, color, type, depth > 1 ? movelst[*key-1].move : nullmove, movelen)){
+    if (movescore(board, list, depth, color, type, depth > 1 ? movelst[*key-1].move : nullmove, movelen, 0)){
         printfull(board);
         printf("%i\n", depth);
         for (int i = 0; i < *key; i++){
