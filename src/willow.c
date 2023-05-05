@@ -341,6 +341,8 @@ short int kingdangertable[100] = {
 short int pawnshieldmg[4] = {226, 144, 82, 2};
 short int pawnshieldeg[4] = {-57, -11, 17, 46};
 
+short int pieceattacksbonus[5] = {30, 14, 8, 21, 59};
+
 
 char *getsafe(char *buffer, int count)
 {
@@ -1770,7 +1772,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         if (stand_pat > alpha){
             alpha = stand_pat;
         }
-        futility = stand_pat + 60;
+        futility = stand_pat + 80;
 
     }
 
