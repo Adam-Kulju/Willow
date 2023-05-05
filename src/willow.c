@@ -1770,7 +1770,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         if (stand_pat > alpha){
             alpha = stand_pat;
         }
-        futility = stand_pat + 80;
+        futility = stand_pat + 60;
 
     }
 
@@ -1820,6 +1820,16 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             i++;
             continue;
         }
+
+        if (board->board[list[i].move.move & 0xFF]){
+            int mingain = VALUES[(board->board[list[i].move.move & 0xFF]>>1) - 1];
+            int maxloss = (board->board[list[i].move.move >> 8] >> 1) == KING ? 0 : VALUES2[(board->board[list[i].move.move >> 8]>>1) - 1];
+            if (stand_pat + mingain - maxloss >= beta){
+                CURRENTPOS = original_pos;
+                insert(original_pos, 0, stand_pat + mingain - maxloss, 2, list[i].move);
+                return stand_pat + mingain - maxloss;   
+            }   
+        }       
 
         list[i].eval = -quiesce(&board2, -beta, -alpha, depth+1, depthleft-1, color^1, isattacked(board, board->kingpos[color^1], color));
         
@@ -2802,4 +2812,3 @@ int main(int argc, char *argv[]){
     com();
     return 0;
 } 
-
