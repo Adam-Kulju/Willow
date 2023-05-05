@@ -1809,7 +1809,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
                     i++;
                     continue;
                 }
-            if (futility <= alpha && !static_exchange_evaluation(board, list[i].move, color, 1)){
+            if (futility <= alpha && !static_exchange_evaluation(board, list[i].move, color, 0)){
                 bestscore = MAX(bestscore, futility);
                 i++;
                 continue;                
