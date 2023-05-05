@@ -6,7 +6,6 @@
 #include <time.h>
 #include <math.h>
 
-
 #define WHITE 0
 #define BLACK 1
 #define BLANK 0
@@ -341,8 +340,6 @@ short int kingdangertable[100] = {
 };
 short int pawnshieldmg[4] = {226, 144, 82, 2};
 short int pawnshieldeg[4] = {-57, -11, 17, 46};
-
-short int pieceattacksbonus[5] = {30, 14, 8, 21, 59};
 
 
 char *getsafe(char *buffer, int count)
@@ -1805,6 +1802,11 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             if (list[i].eval < 1000200){
                 break;
             }
+            if (futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1] <= alpha && !list[i].move.flags){
+                    bestscore = MAX(bestscore, futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1]);
+                    i++;
+                    continue;
+                }
 
         }
         struct board_info board2 = *board;
@@ -1818,7 +1820,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             i++;
             continue;
         }
-
 
         list[i].eval = -quiesce(&board2, -beta, -alpha, depth+1, depthleft-1, color^1, isattacked(board, board->kingpos[color^1], color));
         
