@@ -6,6 +6,7 @@
 #include <time.h>
 #include <math.h>
 
+
 #define WHITE 0
 #define BLACK 1
 #define BLANK 0
