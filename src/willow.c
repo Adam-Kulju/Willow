@@ -1798,7 +1798,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     int evl = 0;
     char type; if (CURRENTPOS == TT[(CURRENTPOS) & (_mask)].zobrist_key){
         type = TT[(CURRENTPOS) & (_mask)].type;
-            evl = TT[(CURRENTPOS) & (_mask)].eval;
+        evl = TT[(CURRENTPOS) & (_mask)].eval;
     }
     else{
         type = 'n';
@@ -1823,7 +1823,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         }
     long long unsigned int original_pos = CURRENTPOS;
 
-    int stand_pat = incheck ? -100000 : eval(board, color);
+    int stand_pat = incheck ? -100000 :  eval(board, color);
     
     
     int bestscore = stand_pat;
@@ -1995,7 +1995,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
     movelst[*key-1].staticeval = evl;
 
-    bool improving = (depth > 2 && !incheck && movelst[*key-1].staticeval > movelst[*key-3].staticeval);
+    bool improving = (depth > 1 && !incheck && movelst[*key-1].staticeval > movelst[*key-3].staticeval);
 
     if (type != 'n'){
         evl = TT[(CURRENTPOS) & (_mask)].eval;
@@ -2043,10 +2043,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
 
     }
-    
-    if (ispv && type == 'n' && depthleft > 3){
-        depthleft--;
-    }
 
     struct list list[LISTSIZE];
 
@@ -2061,6 +2057,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
         exit(1);
     }
+
+    if (ispv && type == 'n' && depthleft > 3){
+        alphabeta(board, movelst, key, alpha, beta, depthleft-2, depth, color, false, incheck);
+        type = TT[CURRENTPOS & _mask].type;
+    }
+
     int i = 0;
     unsigned long long int original_pos = CURRENTPOS;
     bool raisedalpha = false;
@@ -2143,7 +2145,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             else{
                 R = LMRTABLE[depthleft-1][betacount];
-                if (ischeck || incheck || list[i].eval < 0 || list[i].eval > 1000190){
+                if (list[i].eval < 0){
+                    R >>= 1;
+                }
+                if (ischeck || incheck || list[i].eval > 1000190){
                     R--;
                 }
                 if (list[i].eval > 1000190){
@@ -2158,7 +2163,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (type != 'n' && (list[0].move.flags == 0xC || board->board[list[0].move.move & 0xFF])){
                     R++;
                 }
-                R = MAX(R, 0);
+                    R = MAX(R, 0);
+                
             }
 
             
@@ -2228,7 +2234,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     if (HISTORYTABLE[color][(list[i].move.move>>8)][(list[i].move.move&0xFF)] > 1000000){
                         for (int a = 0; a < 0x80; a++){
                             for (int b = 0; b < 0x80; b++){
-                                HISTORYTABLE[color][a][b] = (HISTORYTABLE[color][a][b]>>1)+1;
+                                HISTORYTABLE[color][a][b] = (HISTORYTABLE[color][a][b]>>1);
                             }
                         }
                     }
