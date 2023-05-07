@@ -2071,7 +2071,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int futility_move_count = (3+depthleft*depthleft/(1+(!improving)));
     int numquiets = 0;
     bool quietsprune = false;
-    int bestscore = -1000000;
+    int bestscore = -100000;
 
     while (i < movelen){     
 
@@ -2081,11 +2081,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             i++;
             continue;
         }
-        if (depth && list[i].eval < 1000000 && bestscore > -50000 && depthleft < 9 && 
-            !static_exchange_evaluation(board, list[i].move, color, depthleft * ((iscap || list[i].move.flags>>2 == 1) ? -90 : -50))){
-                i++;
-                continue;
-            }
         struct board_info board2 = *board;
 
         if (move(&board2, list[i].move, color)){
@@ -2119,6 +2114,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 quietsprune = true;
             }
 
+        }
+        if (depth && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 9 && 
+            !static_exchange_evaluation(board, list[i].move, color, depthleft * ((iscap || list[i].move.flags>>2 == 1) ? -90 : -50))){
+                CURRENTPOS = original_pos;
+                i++;
+                continue;
         }
         bool ischeck = isattacked(&board2, board2.kingpos[color^1], color);
         move_add(&board2, movelst, key, list[i].move, color, iscap);
