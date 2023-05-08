@@ -1827,7 +1827,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     if (incheck){
         stand_pat = -100000;
     }
-    else if (type != 'n'){
+    else if (type != 'n' && TT[CURRENTPOS & _mask].depth != 0){
         stand_pat = TT[CURRENTPOS & _mask].eval;
     }
     else{
