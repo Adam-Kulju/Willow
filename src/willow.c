@@ -2245,7 +2245,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         }
                     }
 
-                    for (int a = 0; a < i; a++){
+                    /*for (int a = 0; a < i; a++){
 
                         if (!(list[a].move.flags == 0xC || board->board[list[a].move.move & 0xFF])){
 
@@ -2262,7 +2262,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
 
                         }
-                    }
+                    }*/
             }
 
 
