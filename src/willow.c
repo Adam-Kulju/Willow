@@ -1998,7 +1998,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool improving = (depth > 1 && !incheck && movelst[*key-1].staticeval > movelst[*key-3].staticeval);
 
     if (type != 'n'){
-        evl = TT[(CURRENTPOS) & (_mask)].eval;
+        //evl = TT[(CURRENTPOS) & (_mask)].eval;
     }
 
     if (!ispv && !incheck && depthleft < 9 && evl - ((depthleft-improving)*80) >= beta){
