@@ -161,7 +161,7 @@ bool CENTERBLACK[0x88];
 
 struct move KILLERTABLE[100][2];
 struct move COUNTERMOVES[6][128];
-unsigned long int HISTORYTABLE[2][0x80][0x80]; //allows for faster lookups
+long int HISTORYTABLE[2][0x80][0x80]; //allows for faster lookups
 
 unsigned long int nodes;
 long int totals;
@@ -2242,6 +2242,25 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                             for (int b = 0; b < 0x80; b++){
                                 HISTORYTABLE[color][a][b] = (HISTORYTABLE[color][a][b]>>1);
                             }
+                        }
+                    }
+                    
+                    for (int a = 0; a < i; a++){
+
+                        if (!(list[a].move.flags == 0xC || board->board[list[a].move.move & 0xFF])){
+
+                            HISTORYTABLE[color][(list[a].move.move>>8)][list[a].move.move&0xFF] -= c;
+
+
+                            if (HISTORYTABLE[color][(list[a].move.move>>8)][(list[a].move.move&0xFF)] < -1000000){
+                                for (int c = 0; c < 0x80; c++){
+                                    for (int b = 0; b < 0x80; b++){
+                                        HISTORYTABLE[color][c][b] = (HISTORYTABLE[color][c][b]>>1);
+                                    }
+                                }
+                            }
+
+
                         }
                     }
             }
