@@ -1827,9 +1827,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     if (incheck){
         stand_pat = -100000;
     }
-    else if (type != 'n' && TT[CURRENTPOS & _mask].depth != 0){
-        stand_pat = TT[CURRENTPOS & _mask].eval;
-    }
     else{
         stand_pat = eval(board, color);
     }
@@ -1863,7 +1860,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
 
 
-    if (movescore(board, list, 99, color, 'n', nullmove, listlen, -108)){
+    if (movescore(board, list, 99, color, (type != 'n' && TT[CURRENTPOS & _mask].depth == 0) ? type : 'n', nullmove, listlen, -108)){
         printfull(board);
         exit(1);
     }
