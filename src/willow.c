@@ -2233,7 +2233,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     KILLERTABLE[depth][1] = list[i].move;
                 }
 
-                    int c = depthleft*depthleft; if (c > 400){c = 400;}
+                    int c = depthleft*depthleft+depthleft-1;
                     //printf("%s\n", conv(list[i].move, b));
                     HISTORYTABLE[color][(list[i].move.move>>8)][list[i].move.move&0xFF] += c;
 
@@ -2244,7 +2244,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                             }
                         }
                     }
-                    
+
                     for (int a = 0; a < i; a++){
 
                         if (!(list[a].move.flags == 0xC || board->board[list[a].move.move & 0xFF])){
