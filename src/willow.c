@@ -1875,7 +1875,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             if (list[i].eval < 1000200){
                 break;
             }
-            if (!list[i].move.flags && futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1] <= alpha){
+            if (board->board[list[i].move.move & 0xFF] && futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1] <= alpha){
                     bestscore = MAX(bestscore, futility + VALUES2[(board->board[list[i].move.move & 0xFF]>>1) - 1]);
                     i++;
                     continue;
