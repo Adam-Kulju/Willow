@@ -1823,7 +1823,16 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         }
     long long unsigned int original_pos = CURRENTPOS;
 
-    int stand_pat = incheck ? -100000 :  eval(board, color);
+    int stand_pat;
+    if (incheck){
+        stand_pat = -100000;
+    }
+    else if (type != 'n'){
+        stand_pat = TT[CURRENTPOS & _mask].eval;
+    }
+    else{
+        stand_pat = eval(board, color);
+    }
     
     
     int bestscore = stand_pat;
@@ -1998,7 +2007,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool improving = (depth > 1 && !incheck && movelst[*key-1].staticeval > movelst[*key-3].staticeval);
 
     if (type != 'n'){
-        //evl = TT[(CURRENTPOS) & (_mask)].eval;
+        evl = TT[(CURRENTPOS) & (_mask)].eval;
     }
 
     if (!ispv && !incheck && depthleft < 9 && evl - ((depthleft-improving)*80) >= beta){
