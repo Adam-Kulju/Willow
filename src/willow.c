@@ -1755,7 +1755,13 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
             list[i].eval += (20000 + see(board, list[i].move, color, threshold));
         }
         else if (board->board[list[i].move.move & 0xFF]){
-            list[i].eval += see(board, list[i].move, color, threshold);
+            int bonus = see(board, list[i].move, color, threshold);
+            if (bonus > 0){
+                list[i].eval += bonus;
+            }
+            else{
+                list[i].eval = -1000000 + bonus; //losing capture
+            }
         }
         else if (ismatch(list[i].move, KILLERTABLE[depth][0])){
             list[i].eval += 199;
@@ -2151,7 +2157,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             else{
                 R = LMRTABLE[depthleft-1][betacount];
-                if (list[i].eval < 0){
+                if (iscap){
                     R >>= 1;
                 }
                 if (ischeck || incheck || list[i].eval > 1000190){
@@ -2219,12 +2225,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             bestmove = list[i].move;
             insert(original_pos, depthleft, bestscore, 2, bestmove);
             total++;
-            if (betacount < 1){
-                betas++;
-            }
-            else{
-                //printf("%s %i\n", list[i].move, betacount);
-            }
+            betas += betacount+1;
             if (!iscap){
                 if (!ismatch(KILLERTABLE[depth][0], list[i].move)){
                     KILLERTABLE[depth][0] = list[i].move;
@@ -2245,7 +2246,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         }
                     }
 
-                    /*for (int a = 0; a < i; a++){
+                    for (int a = 0; a < i; a++){
 
                         if (!(list[a].move.flags == 0xC || board->board[list[a].move.move & 0xFF])){
 
@@ -2262,7 +2263,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
 
                         }
-                    }*/
+                    }
             }
 
 
