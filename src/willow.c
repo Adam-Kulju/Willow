@@ -54,8 +54,8 @@
 #define MATRIX_A 0xB5026F5AA96619E9ULL
 #define UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
 #define LM 0x7FFFFFFFULL /* Least significant 31 bits */
-#define TTSIZE 1 << 20
-#define _mask (1 << 20) - 1
+//#define TTSIZE 1 << 20
+//#define _mask (1 << 20) - 1
 #define CHECKTIME (1 << 10)-1
 #define TIMEOUT 111111
 #define TEMPO 5
@@ -144,7 +144,11 @@ struct ttentry{
 struct move currentmove;
 struct move nullmove = {0,0};
 struct ttentry nullTT = {0,0,{0,0},0,0,0};
-struct ttentry TT[TTSIZE];
+
+//struct ttentry TT[TTSIZE];
+struct ttentry *TT;
+long int TTSIZE;
+long int _mask;
 
 short int search_age;
 
@@ -355,7 +359,7 @@ char *getsafe(char *buffer, int count)
 	else{
         result = fgets(buffer, count, stdin);
         if (result == NULL){
-            printf("exiting\n");
+            free(TT);
             exit(0);
         }
     } 
@@ -2627,10 +2631,10 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
     }
     
   if (!strcmp(command, "uci")) {
-    printf("id name Willow 2.7\n");
+    printf("id name Willow 2.8\n");
     printf("id author Adam Kulju\n");
     // send options
-    printf("option name Hash type spin default 32 min 32 max 32\n");
+    printf("option name Hash type spin default 32 min 1 max 1028\n");
     printf("option name Threads type spin default 1 min 1 max 1\n");
 
     printf("uciok\n");
@@ -2650,8 +2654,25 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
         }
 
     if (!strcmp(command, "quit")){
+        free(TT);
         exit(0);
     }
+
+    if (strstr(command, "setoption name Hash value")){
+        int a = atoi(&command[26]);
+        int target = a * 1024 * 1024;
+        int size = 0; while (sizeof(struct ttentry) * (1<<size) < target){
+            size++;
+        }
+        size--;
+        if (TT){
+            free(TT);
+        }
+        TT = (struct ttentry *) malloc(sizeof(struct ttentry) * (1<<size));
+        TTSIZE = 1<<size;
+        _mask = TTSIZE - 1;
+    }
+
     if (strstr(command, "position startpos")){
         *color = WHITE;
         setfull(board);
@@ -2837,6 +2858,13 @@ int bench(){
     };
     unsigned long int t = 0;
     clock_t start = clock();
+    int target = 32 * 1024 * 1024;
+    int size = 0; while (sizeof(struct ttentry) * (1<<size) < target){
+        size++;
+    }
+    TT = (struct ttentry *) malloc(sizeof(struct ttentry) * (1<<size));
+    TTSIZE = 1<<size;
+    _mask = TTSIZE - 1;
     for (int i = 0; i < 50; i++){
 
         clearTT();
@@ -2845,7 +2873,6 @@ int bench(){
         clearHistory(true);
         search_age = 0;
 
-        printf("%s\n", positions[i]);
         
         struct board_info board;
         struct movelist movelst[MOVESIZE];
