@@ -2742,9 +2742,9 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
                 }              //we need to skip past the "1000 btime part"
             }
 
-            int milltime = atoi(&command[k]) - 200;
+            int milltime = atoi(&command[k]) - 50;
             if (milltime < 1){
-                time = 0.01; coldturkey = 0.01;
+                time = 0.001; coldturkey = -0.001;
             }
             else{
             coldturkey = (float)milltime/1000;
@@ -2784,7 +2784,7 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
                     }           //if we're playing as black, we need to skip again to past "binc". it's usually the same, but eventually it might not be so always good to plan ahead.
                 }
                 milltime = atoi(&command[k]);
-                if ((float)milltime/250 < coldturkey){ //if you're not already literally running on increment
+                if (time + ((float)milltime/1000 * 4) < coldturkey){ //if you have at least four increments left over, it's safe to add half the increment to your move.
                 time += (float)milltime/1000 * 0.5;
                 }
             }
@@ -2793,8 +2793,8 @@ int com_uci( struct board_info *board, struct movelist *movelst, int *key, bool 
             
         }
 
-        time = MAX(time, 0.01);
-        printf("%f\n", time);
+        time = MAX(time, 0.001);
+        printf("%f %f\n", coldturkey, time);
         iid_time(board, movelst, time, key, *color, false);
     }
     //fflush(hstdin);
