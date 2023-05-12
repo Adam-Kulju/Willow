@@ -1711,16 +1711,17 @@ bool static_exchange_evaluation(struct board_info *board, struct move mve, bool 
 int see(struct board_info *board, struct move mve, bool color, int threshold){
 
     if (mve.flags == 0xC){
-        return 1000;
+        return 2000000 + 100*10;
     }
 
     int attacker = SEEVALUES[board->board[(mve.move>>8)]>>1], victim = SEEVALUES[board->board[(mve.move&0xFF)]>>1]; 
 
-    if (victim-attacker >= threshold || static_exchange_evaluation(board, mve, color, threshold)){
-        return ((victim*10)-(attacker/100));
+    int v = 2000000;
+    if (victim - attacker < threshold && !static_exchange_evaluation(board, mve, color, threshold)){
+        v = -v;
     }
+    return v + victim*10 - attacker;
 
-    return victim-attacker;
 }
 
 void selectionsort(struct list *list, int k, int t){
@@ -1750,22 +1751,16 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
 
                 if (TT[(CURRENTPOS) & (_mask)].bestmove.flags == list[i].move.flags){
 
-                    list[i].eval += 100000;
+                    list[i].eval += 10000000;
                 }
             }
         }    
             
         else if (list[i].move.flags == 7){
-            list[i].eval += (20000 + see(board, list[i].move, color, threshold));
-        }
+            list[i].eval += 5000000 + SEEVALUES[board->board[(list[i].move.move&0xFF)]>>1];
+            }
         else if (board->board[list[i].move.move & 0xFF]){
-            int bonus = see(board, list[i].move, color, threshold);
-            if (bonus > 0){
-                list[i].eval += bonus;
-            }
-            else{
-                list[i].eval = -1000000 + bonus; //losing capture
-            }
+            list[i].eval = see(board, list[i].move, color, threshold);
         }
         else if (ismatch(list[i].move, KILLERTABLE[depth][0])){
             list[i].eval += 199;
@@ -1790,6 +1785,8 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         }
     return 0;
 }
+
+
 int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthleft, bool color, bool incheck){
     if (depth > maxdepth){
         maxdepth = depth;
@@ -2230,6 +2227,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             insert(original_pos, depthleft, bestscore, 2, bestmove);
             total++;
             betas += betacount+1;
+
+            int c = depthleft*depthleft+depthleft-1;
             if (!iscap){
                 if (!ismatch(KILLERTABLE[depth][0], list[i].move)){
                     KILLERTABLE[depth][0] = list[i].move;
@@ -2238,7 +2237,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     KILLERTABLE[depth][1] = list[i].move;
                 }
 
-                    int c = depthleft*depthleft+depthleft-1;
                     //printf("%s\n", conv(list[i].move, b));
                     HISTORYTABLE[color][(list[i].move.move>>8)][list[i].move.move&0xFF] += c;
 
@@ -2269,7 +2267,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         }
                     }
             }
-
 
         if (depth > 1 && !isnull && !iscap){  //key-1 is the move you made, key-2 is the move the opponent made
 
@@ -2923,6 +2920,7 @@ int main(int argc, char *argv[]){
     printf("%i\n", argc);
     if (argc > 1 && !strcmp(argv[1], "bench")){
         bench();
+        printf("%f\n", (float)betas/total);
         exit(0);
     }
     
