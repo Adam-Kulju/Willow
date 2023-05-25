@@ -222,7 +222,7 @@ short int pstbonusesm[6][0x80] = {
  -34,  -14,  -16,  -27,  -25,   -7,  -12,  -10,    0,    0,    0,    0,    0,    0,    0,    0, 
   -6,  -19,   -2,  -23,   -8,   30,    6,   20,    0,    0,    0,    0,    0,    0,    0,    0, 
  -20,  -44,  -24,  -14,  -47,   18,  -15,   40,    0,    0,    0,    0,    0,    0,    0,    0, 
- -29,  -44,   -7,  -52,   48,   33,   16,   34,    0,    0,    0,    0,    0,    0,    0,    0
+ -29,  -44,   -7,  -52,   48,   33,   16,   34,    0,    0,    0,    0,    0,    0,    0,    0, 
 
     },
     {
@@ -288,7 +288,7 @@ short int pstbonusese[6][0x80] = {
   34,   36,   38,   74,   79,   35,   48,   21,    0,    0,    0,    0,    0,    0,    0,    0, 
   -9,   17,   18,   65,   66,   16,    6,  -12,    0,    0,    0,    0,    0,    0,    0,    0, 
    2,   42,   51,   63,   79,   27,   37,   -3,    0,    0,    0,    0,    0,    0,    0,    0, 
- -12,   44,   31,   51,   -5,    5,   -9,  -11,    0,    0,    0,    0,    0,    0,    0,    0
+ -12,   44,   31,   51,   -5,    5,   -9,  -11,    0,    0,    0,    0,    0,    0,    0,    0, 
     },
     {
  -70,  -54,  -27,   -9,  -29,  -15,  -42,  -72,    0,    0,    0,    0,    0,    0,    0,    0, 
@@ -312,16 +312,18 @@ short int blockedmgbonus[8] = {4,  -16,  -16,  -18,   -4,   -5,    6,    0};
 short int blockedegbonus[8] = {58,   11,   21,   32,   40,   64,   60,    0};
 
 
-short int mobilitybonusesmg[3][15] = {
+short int mobilitybonusesmg[4][28] = {
     {-30,  -19,   -8,   -2,    4,    9,   17,   24,   36},
     {-29,  -18,   -8,   -1,    7,   12,   16,   17,   18,   21,   34,   56,   35,   63},
-    {-33,  -20,  -16,  -12,  -13,   -5,    0,    7,   13,   18,   24,   28,   35,   37,   15}
+    {-33,  -20,  -16,  -12,  -13,   -5,    0,    7,   13,   18,   24,   28,   35,   37,   15},
+    {-1,  -12,  -24,  -23,  -22,  -19,  -16,  -14,  -11,   -9,   -8,   -5,   -3,   -3,   -1,    2,   -8,   -7,    1,   10,   16,   43,   30,   20,   24,    9,    2,    0}
 };
 
-short int mobilitybonuseseg[3][15] = {
+short int mobilitybonuseseg[4][28] = {
     {-67,  -13,    9,   20,   27,   35,   35,   32,   21},
     {-45,  -21,   -4,   10,   20,   30,   35,   39,   43,   42,   35,   32,   46,   32},
-    {-19,   14,   28,   34,   44,   48,   54,   58,   62,   67,   70,   74,   76,   74,   87}
+    {-19,   14,   28,   34,   44,   48,   54,   58,   62,   67,   70,   74,   76,   74,   87},
+    {0,   -2,   -6,   -9,  -13,  -17,  -16,  -12,  -10,   -7,   -3,    0,    0,    4,    4,    5,   27,   25,   21,   14,   15,    2,    5,   13,   16,   12,    3,   -1}
 };
 short int doubledpen = -16;
 short int isopen =  -12;
@@ -1161,7 +1163,6 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
 
                 if ((pos & 0x88) || (board->board[pos] && (board->board[pos]&1) == color)){break;}
 
-                    if (piecetype != 3){ //queen
                         if (color){
                             if ( (((pos+SE) & 0x88) || (board->board[pos+SE] != WPAWN))  && (((pos+SW) & 0x88) || (board->board[pos+SW] != WPAWN))){
                                 mobility++;
@@ -1172,7 +1173,6 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                                 mobility++;
                             }      
                         }                        
-                    }
                     
                     if (KINGZONES[color^1][board->kingpos[color^1]][pos]){
                         attackers[color] += (!isattacker);          
@@ -1364,9 +1364,7 @@ int pst(struct board_info *board, int phase){
             unsigned char piecetype = (board->board[i]>>1)-1, piececolor = (board->board[i]&1);
             if (piecetype != 0 && piecetype != 5){ //pawns or kings
                 moves = piece_mobility(board, i, piececolor, piecetype-1, &score);
-                if (piecetype != 4){ //queens
-                    mobilitybonus = true;
-                }
+                mobilitybonus = true;
             }
             if ((piececolor)){   //black piece
                 mgscore -= pstbonusesm[piecetype][i^112];
