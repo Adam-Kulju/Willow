@@ -1206,17 +1206,17 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                     }
                     if (board->board[pos] || !slide[piecetype]){
                         if (piecetype == 0){    //knight
-                            if (board->board[pos] > BKNIGHT){   //knights get bonuses for attacking queens, rooks, and bishops.
+                            if (board->board[pos] > BKNIGHT && board->board[pos]/2 != KING){   //knights get bonuses for attacking queens, rooks, and bishops.
                                 *score -= pieceattacksbonus[1][board->board[pos]/2 - 2];
                             }
                         }
                         else if (piecetype == 1){ //bishops get bonuses for attacking queens, rooks, and knights.
-                            if (board->board[pos] > BBISHOP || board->board[pos]/2 == KNIGHT){
+                            if ((board->board[pos] > BBISHOP || board->board[pos]/2 == KNIGHT) && board->board[pos]/2 != KING){
                                 *score -= pieceattacksbonus[2][board->board[pos]/2 - 2];
                             }
                         }
                         else if (piecetype == 2){
-                            if (board->board[pos] > BROOK){ //rooks get bonuses for attacking queens.
+                            if (board->board[pos]/2 == QUEEN){ //rooks get bonuses for attacking queens.
                                 *score -= pieceattacksbonus[3][board->board[pos]/2 - 2];
                             }
                         }
@@ -1379,11 +1379,11 @@ int pst(struct board_info *board, int phase){
                     blockedpawns++;
                 }
                 if (piecetype == 0){
-                    if (!((i + SW) & 0x88) && board->board[i+SW] > BPAWN && !(board->board[i+SW]&1)){
+                    if (!((i + SW) & 0x88) && board->board[i+SW] > BPAWN && board->board[i+SW] < WKING && !(board->board[i+SW]&1)){
                             attacking_pieces[BLACK]++;
                             score -= pieceattacksbonus[0][board->board[i+SW]/2-2];
                     }
-                   if (!((i + SE) & 0x88) && board->board[i+SE] > BPAWN && !(board->board[i+SE]&1)){
+                   if (!((i + SE) & 0x88) && board->board[i+SE] > BPAWN && board->board[i+SE] < WKING && !(board->board[i+SE]&1)){
                             attacking_pieces[BLACK]++;
                             score -= pieceattacksbonus[0][board->board[i+SE]/2-2];
                     }
@@ -1412,11 +1412,11 @@ int pst(struct board_info *board, int phase){
                     blockedpawns++;
                 }
                 if (piecetype == 0){
-                    if (!((i + NW) & 0x88) && board->board[i+NW] > BPAWN && (board->board[i+NW]&1)){
+                    if (!((i + NW) & 0x88) && board->board[i+NW] > BPAWN && board->board[i+NW] < WKING && (board->board[i+NW]&1)){
                             attacking_pieces[WHITE]++;
-                            score -= pieceattacksbonus[0][board->board[i+SW]/2-2];
+                            score -= pieceattacksbonus[0][board->board[i+NW]/2-2];
                     }
-                   if (!((i + NE) & 0x88) && board->board[i+NE] > BPAWN && (board->board[i+NE]&1)){
+                   if (!((i + NE) & 0x88) && board->board[i+NE] > BPAWN &&  board->board[i+NE] < WKING && (board->board[i+NE]&1)){
                             attacking_pieces[WHITE]++;
                             score += pieceattacksbonus[0][board->board[i+NE]/2-2];
                     }
