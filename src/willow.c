@@ -439,12 +439,12 @@ short int kingdangertableeg[4][100] = {
 
 
 const int pieceattacksbonus[4][4] = {
-    {31, 46, 31, 29},
-    {0, 16, 13, 7},
-    {9, 0,  14, 38},
-    {0, 0, 0, 41}
+    {27, 38, 24, 29},
+    {0, 16, 13, 8},
+    {9, 0,  14, 39},
+    {0, 0, 0, 42}
 };
-const int multattacksbonus = 27;
+const int multattacksbonus = 24;
 
 
 char *getsafe(char *buffer, int count)
@@ -1207,17 +1207,20 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                     if (board->board[pos] || !slide[piecetype]){
                         if (piecetype == 0){    //knight
                             if (board->board[pos] > BKNIGHT && board->board[pos]/2 != KING){   //knights get bonuses for attacking queens, rooks, and bishops.
-                                *score -= pieceattacksbonus[1][board->board[pos]/2 - 2];
+                                *score += pieceattacksbonus[1][board->board[pos]/2 - 2] * (-color + (color^1));
+                                attacking_pieces[color]++;
                             }
                         }
                         else if (piecetype == 1){ //bishops get bonuses for attacking queens, rooks, and knights.
                             if ((board->board[pos] > BBISHOP || board->board[pos]/2 == KNIGHT) && board->board[pos]/2 != KING){
-                                *score -= pieceattacksbonus[2][board->board[pos]/2 - 2];
+                                *score += pieceattacksbonus[2][board->board[pos]/2 - 2] * (-color + (color^1));
+                                attacking_pieces[color]++;
                             }
                         }
                         else if (piecetype == 2){
                             if (board->board[pos]/2 == QUEEN){ //rooks get bonuses for attacking queens.
-                                *score -= pieceattacksbonus[3][board->board[pos]/2 - 2];
+                                *score += pieceattacksbonus[3][board->board[pos]/2 - 2] * (-color + (color^1));
+                                attacking_pieces[color]++;
                             }
                         }
                         break;
@@ -1342,7 +1345,7 @@ int pst(struct board_info *board, int phase){
                 if (board->board[i] != WPAWN && ((((i+NW)&0x88) || board->board[i+NW] != BPAWN) && (((i+NE)&0x88) || board->board[i+NE] != BPAWN))){
                     
                     spacew++;
-                    if ((board->board[i+NORTH] == WPAWN || board->board[i+(NORTH<<1)] == WPAWN || board->board[i+(NORTH*3)] == WPAWN) && !isattacked(board, i, BLACK)){
+                    if ((board->board[i+NORTH] == WPAWN || board->board[i+(NORTH*2)] == WPAWN || board->board[i+(NORTH*3)] == WPAWN) && !isattacked(board, i, BLACK)){
                         spacew++;
                     }
                 }
@@ -1350,7 +1353,7 @@ int pst(struct board_info *board, int phase){
             else if (CENTERBLACK[i]){
                 if (board->board[i] != BPAWN && ((((i+SW)&0x88) || board->board[i+SW] != WPAWN) && (((i+SE)&0x88) || board->board[i+SE] != WPAWN))){
                     spaceb++;
-                    if ((board->board[i+SOUTH] == BPAWN || board->board[i+(SOUTH*1)] == BPAWN || board->board[i+(SOUTH*3)] == BPAWN) && !isattacked(board, i, WHITE)){
+                    if ((board->board[i+SOUTH] == BPAWN || board->board[i+(SOUTH*2)] == BPAWN || board->board[i+(SOUTH*3)] == BPAWN) && !isattacked(board, i, WHITE)){
                         spaceb++;
                     }
                 } 
@@ -1414,7 +1417,7 @@ int pst(struct board_info *board, int phase){
                 if (piecetype == 0){
                     if (!((i + NW) & 0x88) && board->board[i+NW] > BPAWN && board->board[i+NW] < WKING && (board->board[i+NW]&1)){
                             attacking_pieces[WHITE]++;
-                            score -= pieceattacksbonus[0][board->board[i+NW]/2-2];
+                            score += pieceattacksbonus[0][board->board[i+NW]/2-2];
                     }
                    if (!((i + NE) & 0x88) && board->board[i+NE] > BPAWN &&  board->board[i+NE] < WKING && (board->board[i+NE]&1)){
                             attacking_pieces[WHITE]++;
