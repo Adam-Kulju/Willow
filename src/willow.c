@@ -437,10 +437,14 @@ short int kingdangertableeg[4][100] = {
 }
 };
 
-short int pawnshieldmg[4] = {226, 144, 82, 2};
-short int pawnshieldeg[4] = {-57, -11, 17, 46};
 
-short int pieceattacksbonus[5] = {31, 20, 16, 31, 62};
+const int pieceattacksbonus[4][4] = {
+    {27, 38, 24, 29},
+    {0, 16, 13, 8},
+    {9, 0,  14, 39},
+    {0, 0, 0, 42}
+};
+const int multattacksbonus = 24;
 
 
 char *getsafe(char *buffer, int count)
@@ -1201,22 +1205,22 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                         isattacker = true;
                     }
                     if (board->board[pos] || !slide[piecetype]){
-                        if ((piecetype == 0 || piecetype == 1) && (board->board[pos]>>1 == QUEEN || board->board[pos]>>1 == ROOK)){
-                            attacking_pieces[color]++;
-                            if (color){
-                                *score -= pieceattacksbonus[2];
-                            }
-                            else{
-                                *score += pieceattacksbonus[2];
+                        if (piecetype == 0){    //knight
+                            if (board->board[pos] > BKNIGHT && board->board[pos]/2 != KING){   //knights get bonuses for attacking queens, rooks, and bishops.
+                                *score += pieceattacksbonus[1][board->board[pos]/2 - 2] * (-color + (color^1));
+                                attacking_pieces[color]++;
                             }
                         }
-                        if (piecetype == 2 && board->board[pos]>>1 == QUEEN){
-                            attacking_pieces[color]++;
-                            if (color){
-                                *score -= pieceattacksbonus[3];
+                        else if (piecetype == 1){ //bishops get bonuses for attacking queens, rooks, and knights.
+                            if ((board->board[pos] > BBISHOP || board->board[pos]/2 == KNIGHT) && board->board[pos]/2 != KING){
+                                *score += pieceattacksbonus[2][board->board[pos]/2 - 2] * (-color + (color^1));
+                                attacking_pieces[color]++;
                             }
-                            else{
-                                *score += pieceattacksbonus[3];
+                        }
+                        else if (piecetype == 2){
+                            if (board->board[pos]/2 == QUEEN){ //rooks get bonuses for attacking queens.
+                                *score += pieceattacksbonus[3][board->board[pos]/2 - 2] * (-color + (color^1));
+                                attacking_pieces[color]++;
                             }
                         }
                         break;
@@ -1341,7 +1345,7 @@ int pst(struct board_info *board, int phase){
                 if (board->board[i] != WPAWN && ((((i+NW)&0x88) || board->board[i+NW] != BPAWN) && (((i+NE)&0x88) || board->board[i+NE] != BPAWN))){
                     
                     spacew++;
-                    if ((board->board[i+NORTH] == WPAWN || board->board[i+(NORTH<<1)] == WPAWN || board->board[i+(NORTH*3)] == WPAWN) && !isattacked(board, i, BLACK)){
+                    if ((board->board[i+NORTH] == WPAWN || board->board[i+(NORTH*2)] == WPAWN || board->board[i+(NORTH*3)] == WPAWN) && !isattacked(board, i, BLACK)){
                         spacew++;
                     }
                 }
@@ -1349,7 +1353,7 @@ int pst(struct board_info *board, int phase){
             else if (CENTERBLACK[i]){
                 if (board->board[i] != BPAWN && ((((i+SW)&0x88) || board->board[i+SW] != WPAWN) && (((i+SE)&0x88) || board->board[i+SE] != WPAWN))){
                     spaceb++;
-                    if ((board->board[i+SOUTH] == BPAWN || board->board[i+(SOUTH*1)] == BPAWN || board->board[i+(SOUTH*3)] == BPAWN) && !isattacked(board, i, WHITE)){
+                    if ((board->board[i+SOUTH] == BPAWN || board->board[i+(SOUTH*2)] == BPAWN || board->board[i+(SOUTH*3)] == BPAWN) && !isattacked(board, i, WHITE)){
                         spaceb++;
                     }
                 } 
@@ -1378,25 +1382,13 @@ int pst(struct board_info *board, int phase){
                     blockedpawns++;
                 }
                 if (piecetype == 0){
-                    if (!((i + SW) & 0x88) && board->board[i+SW] && !(board->board[i+SW]&1)){
-                        if (board->board[i+SW] == WKNIGHT || board->board[i+SW] == WBISHOP){
+                    if (!((i + SW) & 0x88) && board->board[i+SW] > BPAWN && board->board[i+SW] < WKING && !(board->board[i+SW]&1)){
                             attacking_pieces[BLACK]++;
-                            score -= pieceattacksbonus[0];
-                        }
-                        else if (board->board[i+SW] == WROOK || board->board[i+SW] == WQUEEN){
-                            attacking_pieces[BLACK]++;
-                            score -= pieceattacksbonus[1];
-                        }
+                            score -= pieceattacksbonus[0][board->board[i+SW]/2-2];
                     }
-                   if (!((i + SE) & 0x88) && board->board[i+SE] && !(board->board[i+SE]&1)){
-                        if (board->board[i+SE] == WKNIGHT || board->board[i+SE] == WBISHOP){
+                   if (!((i + SE) & 0x88) && board->board[i+SE] > BPAWN && board->board[i+SE] < WKING && !(board->board[i+SE]&1)){
                             attacking_pieces[BLACK]++;
-                            score -= pieceattacksbonus[0];
-                        }
-                        else if (board->board[i+SE] == WROOK || board->board[i+SE] == WQUEEN){
-                            attacking_pieces[BLACK]++;
-                            score -= pieceattacksbonus[1];
-                        }
+                            score -= pieceattacksbonus[0][board->board[i+SE]/2-2];
                     }
                     if (badvanced[(i&7)] == 9){
                         badvanced[(i&7)] = (i>>4);
@@ -1423,25 +1415,13 @@ int pst(struct board_info *board, int phase){
                     blockedpawns++;
                 }
                 if (piecetype == 0){
-                    if (!((i + NW) & 0x88) && board->board[i+NW] && (board->board[i+NW] & 1)){
-                        if (board->board[i+NW] == BKNIGHT || board->board[i+NW] == BBISHOP){
+                    if (!((i + NW) & 0x88) && board->board[i+NW] > BPAWN && board->board[i+NW] < WKING && (board->board[i+NW]&1)){
                             attacking_pieces[WHITE]++;
-                            score += pieceattacksbonus[0];
-                        }
-                        else if (board->board[i+NW] == BROOK || board->board[i+NW] == BQUEEN){
-                            attacking_pieces[WHITE]++;
-                            score += pieceattacksbonus[1];
-                        }
+                            score += pieceattacksbonus[0][board->board[i+NW]/2-2];
                     }
-                   if (!((i + NE) & 0x88) && board->board[i+NE] && (board->board[i+NE] & 1)){
-                        if (board->board[i+NE] == BKNIGHT || board->board[i+NE] == BBISHOP){
+                   if (!((i + NE) & 0x88) && board->board[i+NE] > BPAWN &&  board->board[i+NE] < WKING && (board->board[i+NE]&1)){
                             attacking_pieces[WHITE]++;
-                            score += pieceattacksbonus[0];
-                        }
-                        else if (board->board[i+NE] == BROOK || board->board[i+NE] == BQUEEN){
-                            attacking_pieces[WHITE]++;
-                            score += pieceattacksbonus[1];
-                        }
+                            score += pieceattacksbonus[0][board->board[i+NE]/2-2];
                     }
                     if (wbackwards[(i&7)] == 9){
                         wbackwards[(i&7)] = (i>>4);
@@ -1644,10 +1624,10 @@ int pst(struct board_info *board, int phase){
     score += (phase*mgscore + (24-phase)*egscore)/24;
 
     if (attacking_pieces[WHITE] > 1){
-        score += pieceattacksbonus[4];
+        score += multattacksbonus * (attacking_pieces[WHITE] - 1);
     }
     if (attacking_pieces[BLACK] > 1){
-        score -= pieceattacksbonus[4];
+        score -= multattacksbonus * (attacking_pieces[BLACK] - 1);
     }
 
     return score;
@@ -1883,7 +1863,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     nodes++;
     if (depthleft <= 0){
-        return eval(board, color);
+        return incheck ? 0 : eval(board, color);
     }
 
     if (!((nodes) & (CHECKTIME))){
