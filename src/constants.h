@@ -16,7 +16,7 @@
 #define BQUEEN 11
 #define WKING 12
 #define BKING 13
-//all we have to do is (board[i] & 1) to see if the color is white or black - if that is 1 then it's black if not then it's white
+// all we have to do is (board[i] & 1) to see if the color is white or black - if that is 1 then it's black if not then it's white
 
 #define NORTH 16
 #define SOUTH -16
@@ -41,24 +41,23 @@
 #define QUEEN 5
 #define KING 6
 
-
 #define LISTSIZE 150
 #define MOVESIZE 1000
 #define NN 312
 #define MM 156
 #define MATRIX_A 0xB5026F5AA96619E9ULL
 #define UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
-#define LM 0x7FFFFFFFULL /* Least significant 31 bits */
-//#define TTSIZE 1 << 20
-//#define _mask (1 << 20) - 1
-#define CHECKTIME (1 << 10)-1
+#define LM 0x7FFFFFFFULL         /* Least significant 31 bits */
+// #define TTSIZE 1 << 20
+// #define _mask (1 << 20) - 1
+#define CHECKTIME (1 << 10) - 1
 #define TIMEOUT 111111
 #define TEMPO 5
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAXPHASE 24
- const int VALUES[5] = {75,  299,  297,  409,  819};
- const int VALUES2[5] = {82,  338,  349,  584, 1171};
+const int VALUES[5] = {75, 299, 297, 409, 819};
+const int VALUES2[5] = {82, 338, 349, 584, 1171};
 const int pstbonusesm[6][0x80] = {
     {
     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
@@ -189,33 +188,27 @@ const int pstbonusese[6][0x80] = {
     }
 };
 
+const int bishop_pair[9] = {55, 70, 46, 47, 41, 35, 32, 35, 39};
+const int passedmgbonus[8] = {4, -4, -10, -8, 14, 0, -6, 0};
+const int passedegbonus[8] = {58, 10, 13, 42, 70, 153, 186, 0};
 
-
-const int bishop_pair[9] = {55,   70,   46,   47,   41,   35,   32,   35,   39};
-const int passedmgbonus[8] = {4,   -4,  -10,   -8,   14,    0,   -6,    0};
-const int passedegbonus[8] = {58,   10,   13,   42,   70,  153,  186,    0};
-
-const int blockedmgbonus[8] = {4,  -16,  -16,  -18,   -4,   -5,    6,    0};
-const int blockedegbonus[8] = {58,   11,   21,   32,   40,   64,   60,    0};
-
+const int blockedmgbonus[8] = {4, -16, -16, -18, -4, -5, 6, 0};
+const int blockedegbonus[8] = {58, 11, 21, 32, 40, 64, 60, 0};
 
 const int mobilitybonusesmg[4][28] = {
-    {-30,  -19,   -8,   -2,    4,    9,   17,   24,   36},
-    {-29,  -18,   -8,   -1,    7,   12,   16,   17,   18,   21,   34,   56,   35,   63},
-    {-33,  -20,  -16,  -12,  -13,   -5,    0,    7,   13,   18,   24,   28,   35,   37,   15},
-    {-1,  -12,  -24,  -23,  -22,  -19,  -16,  -14,  -11,   -9,   -8,   -5,   -3,   -3,   -1,    2,   -8,   -7,    1,   10,   16,   43,   30,   20,   24,    9,    2,    0}
-};
+    {-30, -19, -8, -2, 4, 9, 17, 24, 36},
+    {-29, -18, -8, -1, 7, 12, 16, 17, 18, 21, 34, 56, 35, 63},
+    {-33, -20, -16, -12, -13, -5, 0, 7, 13, 18, 24, 28, 35, 37, 15},
+    {-1, -12, -24, -23, -22, -19, -16, -14, -11, -9, -8, -5, -3, -3, -1, 2, -8, -7, 1, 10, 16, 43, 30, 20, 24, 9, 2, 0}};
 
 const int mobilitybonuseseg[4][28] = {
-    {-67,  -13,    9,   20,   27,   35,   35,   32,   21},
-    {-45,  -21,   -4,   10,   20,   30,   35,   39,   43,   42,   35,   32,   46,   32},
-    {-19,   14,   28,   34,   44,   48,   54,   58,   62,   67,   70,   74,   76,   74,   87},
-    {0,   -2,   -6,   -9,  -13,  -17,  -16,  -12,  -10,   -7,   -3,    0,    0,    4,    4,    5,   27,   25,   21,   14,   15,    2,    5,   13,   16,   12,    3,   -1}
-};
+    {-67, -13, 9, 20, 27, 35, 35, 32, 21},
+    {-45, -21, -4, 10, 20, 30, 35, 39, 43, 42, 35, 32, 46, 32},
+    {-19, 14, 28, 34, 44, 48, 54, 58, 62, 67, 70, 74, 76, 74, 87},
+    {0, -2, -6, -9, -13, -17, -16, -12, -10, -7, -3, 0, 0, 4, 4, 5, 27, 25, 21, 14, 15, 2, 5, 13, 16, 12, 3, -1}};
 const int doubledpen = -16;
-const int isopen =  -12;
+const int isopen = -12;
 const int backwardspen = -4;
-
 
 const int kingdangertablemg[4][100] = {
 
@@ -321,26 +314,27 @@ const int kingdangertableeg[4][100] = {
 }
 };
 
-const int slide[5] = { 0, 1, 1, 1, 0 };
-const int vectors[5] = { 8, 4, 4, 8, 8 };
+const int slide[5] = {0, 1, 1, 1, 0};
+const int vectors[5] = {8, 4, 4, 8, 8};
 const int vector[5][8] = {
-    { SSW, SSE, WSW, ESE, WNW, ENE, NNW, NNE },
-    { SW, SE, NW, NE},
+    {SSW, SSE, WSW, ESE, WNW, ENE, NNW, NNE},
+    {SW, SE, NW, NE},
     {SOUTH, WEST, EAST, NORTH},
-  {SW, SOUTH, SE, WEST, NW, EAST, NE, NORTH},
-  {SW, SOUTH, SE, WEST, NW, EAST, NE, NORTH}
-};
+    {SW, SOUTH, SE, WEST, NW, EAST, NE, NORTH},
+    {SW, SOUTH, SE, WEST, NW, EAST, NE, NORTH}};
 
-struct move{
+struct move
+{
     unsigned short int move;
-    //use >>8 to get SQUAREFROM and &FF to get SQUARETO
+    // use >>8 to get SQUAREFROM and &FF to get SQUARETO
     unsigned char flags;
-    //in form 0000 xx yy
-    //xx = flags - 00 normal 01 promotion 10 castling 11 ep - if = 1 then yy flags - 00 knight 01 bishop 10 rook 11 queen
-    //get xxflags with >>2, and yyflags with &11
+    // in form 0000 xx yy
+    // xx = flags - 00 normal 01 promotion 10 castling 11 ep - if = 1 then yy flags - 00 knight 01 bishop 10 rook 11 queen
+    // get xxflags with >>2, and yyflags with &11
 };
 
-struct board_info{
+struct board_info
+{
     unsigned char board[0x80];
     unsigned char pnbrqcount[2][5];
     bool castling[2][2];
@@ -348,44 +342,45 @@ struct board_info{
     unsigned char epsquare;
 };
 
-struct movelist{
+struct movelist
+{
     struct move move;
-    //char fen[65];
+    // char fen[65];
     long long unsigned int fen;
     char halfmoves;
     int staticeval;
 };
-struct list{
+struct list
+{
     struct move move;
     int eval;
 };
 
-struct ttentry{
+struct ttentry
+{
     unsigned long long int zobrist_key;
     char type;
-    //come in three types:
-    //2: EXACT, 2: FAIL-HIGH, 1: FAIL-LOW
+    // come in three types:
+    // 2: EXACT, 2: FAIL-HIGH, 1: FAIL-LOW
     struct move bestmove;
     int eval;
     char depth;
     short int age;
 };
 
-const struct move nullmove = {0,0};
-const struct ttentry nullTT = {0,0,{0,0},0,0,0};
-
+const struct move nullmove = {0, 0};
+const struct ttentry nullTT = {0, 0, {0, 0}, 0, 0, 0};
 
 const int boardsize = sizeof(struct board_info);
 const int listsize = sizeof(struct list);
 const int movesize = sizeof(struct move);
-const int attacknums[4] = {2,2,3,5};
+const int attacknums[4] = {2, 2, 3, 5};
 
 const int pieceattacksbonus[4][4] = {
     {27, 38, 24, 29},
     {0, 16, 13, 8},
-    {9, 0,  14, 39},
-    {0, 0, 0, 42}
-};
+    {9, 0, 14, 39},
+    {0, 0, 0, 42}};
 const int multattacksbonus = 24;
 
 #endif
