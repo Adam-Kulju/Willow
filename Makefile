@@ -1,6 +1,6 @@
 EXE := willow
 
-SOURCES := src/willow.c
+SOURCES := src/willow.cpp
 
 CXX := gcc
 
