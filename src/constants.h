@@ -195,6 +195,12 @@ const int passedegbonus[8] = {58, 10, 13, 42, 70, 153, 186, 0};
 const int blockedmgbonus[8] = {4, -16, -16, -18, -4, -5, 6, 0};
 const int blockedegbonus[8] = {58, 11, 21, 32, 40, 64, 60, 0};
 
+const int protectedpassedmg[8] = {0, 0, -2, 3, 13, 61, 106, 0};
+const int protectedpassedeg[8] = {0, 0, 1, 0, 9, 10, -9, 0};
+
+const int candidatepassedmg[8] = {};
+const int candidatepassedeg[8] = {};
+
 const int mobilitybonusesmg[4][28] = {
     {-30, -19, -8, -2, 4, 9, 17, 24, 36},
     {-29, -18, -8, -1, 7, 12, 16, 17, 18, 21, 34, 56, 35, 63},
