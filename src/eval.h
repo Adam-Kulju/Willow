@@ -333,10 +333,12 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 }
             }
 
-            if (wadvanced[7] != -1 && wadvanced[7] >= bbackwards[7] && wadvanced[7] >= bbackwards[6])
+            if (wadvanced[7] != -1 && wadvanced[7] >= bbackwards[7] && wadvanced[7] >= bbackwards[6] - 1)
             {
                     //Passed pawn check
                 int pos = ((wadvanced[7] << 4)) + 7;
+
+                if (wadvanced[7] >= bbackwards[6]){
                 if (board->board[pos + NORTH])  //If the square in front of the passed pawn is occupied, it's a blocked passed pawn and gets a bit less of a bonus.
                 {
                     mgscore += blockedmgbonus[wadvanced[7]], egscore += blockedegbonus[wadvanced[7]];
@@ -345,13 +347,18 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 {
                     mgscore += passedmgbonus[wadvanced[7]], egscore += passedegbonus[wadvanced[7]];
                 }
-                if (board->board[pos + SW] == WPAWN){
+                /*if (board->board[pos + SW] == WPAWN){
                     mgscore += protectedpassedmg[wadvanced[7]], egscore += protectedpassedeg[wadvanced[7]];
+                }*/
+                }
+                else if (!board->board[pos+NORTH]){
+                    mgscore += candidatepassedmg[wadvanced[7]], egscore += candidatepassedeg[wadvanced[7]];
                 }
             }
-            if (badvanced[7] != 9 && badvanced[7] <= wbackwards[7] && badvanced[7] <= wbackwards[6])
+            if (badvanced[7] != 9 && badvanced[7] <= wbackwards[7] && badvanced[7] <= wbackwards[6] + 1)
             {
                 int pos = ((badvanced[7] << 4)) + 7;
+                if (badvanced[7] <= wbackwards[6] + 1){
                 if (board->board[pos + SOUTH])
                 {
                     mgscore -= blockedmgbonus[7 - badvanced[7]], egscore -= blockedegbonus[7 - badvanced[7]];
@@ -360,8 +367,12 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 {
                     mgscore -= passedmgbonus[7 - badvanced[7]], egscore -= passedegbonus[7 - badvanced[7]];
                 }
-                if (board->board[pos + NW] == BPAWN){
+                /*if (board->board[pos + NW] == BPAWN){
                     mgscore -= protectedpassedmg[7 - badvanced[7]], egscore -= protectedpassedeg[7 - badvanced[7]];
+                }*/
+                }
+                else if (!board->board[pos+SOUTH]){
+                    mgscore -= candidatepassedmg[7 - badvanced[7]], egscore -= candidatepassedeg[7 - badvanced[7]];
                 }
             }
         }
@@ -392,10 +403,11 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 }
             }
 
-            if (wadvanced[0] != -1 && wadvanced[0] >= bbackwards[0] && wadvanced[0] >= bbackwards[1])
+            if (wadvanced[0] != -1 && wadvanced[0] >= bbackwards[0] && wadvanced[0] >= bbackwards[1] - 1)
             {
                     //Passed pawn check
                 int pos = ((wadvanced[0] << 4));
+                if (wadvanced[0] >= bbackwards[1]){
                 if (board->board[pos + NORTH])
                 {
                     mgscore += blockedmgbonus[wadvanced[0]], egscore += blockedegbonus[wadvanced[0]];
@@ -404,13 +416,18 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 {
                     mgscore += passedmgbonus[wadvanced[0]], egscore += passedegbonus[wadvanced[0]];
                 }
-                if (board->board[pos + SE] == WPAWN){
+                /*if (board->board[pos + SE] == WPAWN){
                     mgscore += protectedpassedmg[wadvanced[0]], egscore += protectedpassedeg[wadvanced[0]];
+                }*/
+                }
+                else if (!board->board[pos+NORTH]){
+                    mgscore += candidatepassedmg[wadvanced[0]], egscore += candidatepassedeg[wadvanced[0]];
                 }
             }
-            if (badvanced[0] != 9 && badvanced[0] <= wbackwards[0] && badvanced[0] <= wbackwards[1])
+            if (badvanced[0] != 9 && badvanced[0] <= wbackwards[0] && badvanced[0] <= wbackwards[1] + 1)
             {
                 int pos = ((badvanced[0] << 4));
+                if (badvanced[0] <= wbackwards[1]){
                 if (board->board[pos + SOUTH])
                 {
                     mgscore -= blockedmgbonus[7 - badvanced[0]], egscore -= blockedegbonus[7 - badvanced[0]];
@@ -419,8 +436,12 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 {
                     mgscore -= passedmgbonus[7 - badvanced[0]], egscore -= passedegbonus[7 - badvanced[0]];
                 }
-                if (board->board[pos + NE] == BPAWN){
+                /*if (board->board[pos + NE] == BPAWN){
                     mgscore -= protectedpassedmg[7 - badvanced[0]], egscore -= protectedpassedeg[7 - badvanced[0]];
+                }*/
+                }
+                else if (!board->board[pos+SOUTH]){
+                    mgscore -= candidatepassedmg[7 - badvanced[0]], egscore -= candidatepassedeg[7 - badvanced[0]];
                 }
             }
         }
@@ -452,9 +473,11 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 }
             }
 
-            if (wadvanced[i] != -1 && wadvanced[i] >= bbackwards[i] && wadvanced[i] >= bbackwards[i - 1] && wadvanced[i] >= bbackwards[i + 1])
+            if (wadvanced[i] != -1 && wadvanced[i] >= bbackwards[i] && wadvanced[i] >= bbackwards[i - 1] - 1 && wadvanced[i] >= bbackwards[i + 1] - 1)
             {
                 int pos = ((wadvanced[i] << 4)) + i;
+
+                if (wadvanced[i] >= bbackwards[i - 1] && wadvanced[i] >= bbackwards[i + 1]){
 
                 if (board->board[pos + NORTH])
                 {
@@ -464,14 +487,18 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 {
                     mgscore += passedmgbonus[wadvanced[i]], egscore += passedegbonus[wadvanced[i]];
                 }
-                if (board->board[pos + SW] == WPAWN || board->board[pos + SE] == WPAWN){
+                /*if (board->board[pos + SW] == WPAWN || board->board[pos + SE] == WPAWN){
                     mgscore += protectedpassedmg[wadvanced[i]], egscore += protectedpassedeg[wadvanced[i]];
+                }*/
+                }
+                else if (!board->board[pos + NORTH]){
+                    mgscore += candidatepassedmg[wadvanced[i]], egscore += candidatepassedeg[wadvanced[i]];
                 }
             }
-            if (badvanced[i] != 9 && badvanced[i] <= wbackwards[i - 1] && badvanced[i] <= wbackwards[i] && badvanced[i] <= wbackwards[i + 1])
+            if (badvanced[i] != 9 && badvanced[i] <= wbackwards[i - 1] && badvanced[i] <= wbackwards[i] && badvanced[i] <= wbackwards[i + 1] + 1)
             {
                 int pos = ((badvanced[i] << 4)) + i;
-
+                if (badvanced[i] <= wbackwards[i - 1] && badvanced[i] <= wbackwards[i + 1]){
                 if (board->board[pos + SOUTH])
                 {
                     mgscore -= blockedmgbonus[7 - badvanced[i]], egscore -= blockedegbonus[7 - badvanced[i]];
@@ -480,8 +507,12 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                 {
                     mgscore -= passedmgbonus[7 - badvanced[i]], egscore -= passedegbonus[7 - badvanced[i]];
                 }
-                if (board->board[pos + NW] == BPAWN || board->board[pos + NE] == BPAWN){
+                /*if (board->board[pos + NW] == BPAWN || board->board[pos + NE] == BPAWN){
                      mgscore -= protectedpassedmg[7 - badvanced[i]], egscore -= protectedpassedeg[7 - badvanced[i]];
+                }*/
+                }
+                else if (!board->board[pos+SOUTH]){
+                    mgscore -= candidatepassedmg[7 - badvanced[i]], egscore -= candidatepassedeg[7 - badvanced[i]];
                 }
             }
         }
