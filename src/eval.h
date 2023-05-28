@@ -4,25 +4,25 @@
 #include "globals.h"
 #include "board.h"
 
-int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *score) 
+int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *score)
 {
-        //Gets the mobility of a piece, as well as info about attacks on the enemy king and other pieces.
+    // Gets the mobility of a piece, as well as info about attacks on the enemy king and other pieces.
 
     isattacker = false;
     unsigned char mobility = 0;
     for (unsigned char dir = 0; dir < vectors[piecetype]; dir++)
     {
-        //Move in each direction the piece can go to.
+        // Move in each direction the piece can go to.
         for (int pos = i;;)
         {
             pos += vector[piecetype][dir];
 
-            if ((pos & 0x88) || (board->board[pos] && (board->board[pos] & 1) == color))    //Break if we hit the edge of the board or our own piece.
+            if ((pos & 0x88) || (board->board[pos] && (board->board[pos] & 1) == color)) // Break if we hit the edge of the board or our own piece.
             {
                 break;
             }
 
-                //Any square that is not controlled by an enemy pawn is a safe square as far as mobility is concerned.
+            // Any square that is not controlled by an enemy pawn is a safe square as far as mobility is concerned.
 
             if (color)
             {
@@ -39,14 +39,14 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                 }
             }
 
-                //Check if the move would take the piece near the enemy king
+            // Check if the move would take the piece near the enemy king
             if (KINGZONES[color ^ 1][board->kingpos[color ^ 1]][pos])
             {
-                    //Update the number of attacking pieces, and add a weight to the number of total attacks. The weight depends on the piece - a queen attack is more deadly than a knight attack.
+                // Update the number of attacking pieces, and add a weight to the number of total attacks. The weight depends on the piece - a queen attack is more deadly than a knight attack.
                 attackers[color] += (!isattacker);
                 king_attack_count[color] += attacknums[piecetype];
 
-                    //Safe rook and queen contact checks get an additional bonus.
+                // Safe rook and queen contact checks get an additional bonus.
 
                 if (piecetype == 2 && KINGZONES[color ^ 1][board->kingpos[color ^ 1]][pos] == 2)
                 {
@@ -78,7 +78,7 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
             if (board->board[pos] || !slide[piecetype])
             {
 
-                    //Threat detection. 
+                // Threat detection.
                 if (piecetype == 0)
                 { // knight
                     if (board->board[pos] > BKNIGHT && board->board[pos] / 2 != KING)
@@ -112,7 +112,7 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
 
 int material(struct board_info *board, int *phase)
 {
-        //Evaluates material and bishop pair bonus, and gets the phase of the game.
+    // Evaluates material and bishop pair bonus, and gets the phase of the game.
     int mgscore = 0, egscore = 0;
     int val = 0;
     for (int i = 0; i < 5; i++)
@@ -132,7 +132,7 @@ int material(struct board_info *board, int *phase)
         egscore += VALUES2[i] * board->pnbrqcount[WHITE][i];
         egscore -= VALUES2[i] * board->pnbrqcount[BLACK][i];
     }
-        //0 represents an entirely pieceless board (only kings and pawns), while MAXPHASE is at least the starting number of pieces on the board.
+    // 0 represents an entirely pieceless board (only kings and pawns), while MAXPHASE is at least the starting number of pieces on the board.
     if (*phase > MAXPHASE)
     {
         *phase = MAXPHASE;
@@ -140,7 +140,7 @@ int material(struct board_info *board, int *phase)
 
     val = ((*phase) * mgscore + (24 - (*phase)) * egscore) / 24;
 
-        //Add bishop pair bonuses
+    // Add bishop pair bonuses
     if (board->pnbrqcount[WHITE][2] > 1)
     {
         val += bishop_pair[board->pnbrqcount[WHITE][0]];
@@ -152,16 +152,16 @@ int material(struct board_info *board, int *phase)
     return val;
 }
 
-int pst(struct board_info *board, int phase)        //A whale of a function.
+int pst(struct board_info *board, int phase) // A whale of a function.
 {
     attacking_pieces[0] = 0, attacking_pieces[1] = 0;
 
     int score = 0;
-    unsigned char spacew = 0, spaceb = 0;       //represents the space area that White and Black have.
+    unsigned char spacew = 0, spaceb = 0; // represents the space area that White and Black have.
     int mgscore = 0, egscore = 0;
-    int blockedpawns = 0;           //the amount of blocked pawns in the position, gives space a weight.
+    int blockedpawns = 0; // the amount of blocked pawns in the position, gives space a weight.
 
-    short int wbackwards[8], wadvanced[8], bbackwards[8], badvanced[8]; //gets the most advanced and furthest backwards pawns on the file - useful for pawn structure detection
+    short int wbackwards[8], wadvanced[8], bbackwards[8], badvanced[8]; // gets the most advanced and furthest backwards pawns on the file - useful for pawn structure detection
 
     for (unsigned char i = 0; i < 8; i++)
     {
@@ -177,7 +177,7 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
         }
         if (phase > 16)
         {
-            if (CENTERWHITE[i])     //If we're in the middlegame, and we have a pawn in the center, or control squares in the center behind a friendly pawn, it's good for us.
+            if (CENTERWHITE[i]) // If we're in the middlegame, and we have a pawn in the center, or control squares in the center behind a friendly pawn, it's good for us.
             {
 
                 if (board->board[i] != WPAWN && ((((i + NW) & 0x88) || board->board[i + NW] != BPAWN) && (((i + NE) & 0x88) || board->board[i + NE] != BPAWN)))
@@ -223,15 +223,15 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                     egscore -= mobilitybonuseseg[piecetype - 1][moves];
                 }
 
-                    //Blocked pawns are any pawns that either have an enemy pawn right in front of it, or two pawns a knight's move forwards
-                    //eg a white pawn on e4 gets blocked by black pawns on d6 and f6
+                // Blocked pawns are any pawns that either have an enemy pawn right in front of it, or two pawns a knight's move forwards
+                // eg a white pawn on e4 gets blocked by black pawns on d6 and f6
                 if (!piecetype && (board->board[i + SOUTH] == WPAWN || ((((i + SSW) & 0x88) || board->board[i + SSW] == WPAWN) && (((i + SSE) & 0x88) || board->board[i + SSE] == WPAWN))))
                 {
                     blockedpawns++;
                 }
                 if (piecetype == 0)
                 {
-                        //if we're evaluating a pawn, is it attacking a piece of greater value?
+                    // if we're evaluating a pawn, is it attacking a piece of greater value?
                     if (!((i + SW) & 0x88) && board->board[i + SW] > BPAWN && board->board[i + SW] < WKING && !(board->board[i + SW] & 1))
                     {
                         attacking_pieces[BLACK]++;
@@ -242,7 +242,7 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
                         attacking_pieces[BLACK]++;
                         score -= pieceattacksbonus[0][board->board[i + SE] / 2 - 2];
                     }
-                        //update pawn structure array - if we already have a pawn on that file, we've found a doubled pawn.
+                    // update pawn structure array - if we already have a pawn on that file, we've found a doubled pawn.
                     if (badvanced[(i & 7)] == 9)
                     {
                         badvanced[(i & 7)] = (i >> 4);
@@ -261,7 +261,7 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
             }
             else
             {
-                    //The same thing as above, but for white pieces.
+                // The same thing as above, but for white pieces.
                 mgscore += pstbonusesm[piecetype][i];
                 egscore += pstbonusese[piecetype][i];
                 if (mobilitybonus)
@@ -305,11 +305,11 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
 
     for (unsigned char i = 0; i < 8; i++)
     {
-        if (i == 7)     //Evaluate if the h-pawn is passed/isolated/etc.
+        if (i == 7) // Evaluate if the h-pawn is passed/isolated/etc.
         {
             if (wadvanced[7] != -1)
             {
-                    //If we have no pawns on the g-file at all, the h-pawn is isolated. If instead the furthest backwards one is further up the board, it's a backwards pawn.
+                // If we have no pawns on the g-file at all, the h-pawn is isolated. If instead the furthest backwards one is further up the board, it's a backwards pawn.
                 if (wadvanced[6] == -1)
                 {
                     score += isopen;
@@ -335,50 +335,54 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
 
             if (wadvanced[7] != -1 && wadvanced[7] >= bbackwards[7] && wadvanced[7] >= bbackwards[6] - 1)
             {
-                    //Passed pawn check
+                // Passed pawn check
                 int pos = ((wadvanced[7] << 4)) + 7;
 
-                if (wadvanced[7] >= bbackwards[6]){
-                if (board->board[pos + NORTH])  //If the square in front of the passed pawn is occupied, it's a blocked passed pawn and gets a bit less of a bonus.
+                if (wadvanced[7] >= bbackwards[6])
                 {
-                    mgscore += blockedmgbonus[wadvanced[7]], egscore += blockedegbonus[wadvanced[7]];
+                    if (board->board[pos + NORTH]) // If the square in front of the passed pawn is occupied, it's a blocked passed pawn and gets a bit less of a bonus.
+                    {
+                        mgscore += blockedmgbonus[wadvanced[7]], egscore += blockedegbonus[wadvanced[7]];
+                    }
+                    else
+                    {
+                        mgscore += passedmgbonus[wadvanced[7]], egscore += passedegbonus[wadvanced[7]];
+                    }
+                    /*if (board->board[pos + SW] == WPAWN){
+                        mgscore += protectedpassedmg[wadvanced[7]], egscore += protectedpassedeg[wadvanced[7]];
+                    }*/
                 }
-                else
+                else if (!board->board[pos + NORTH])
                 {
-                    mgscore += passedmgbonus[wadvanced[7]], egscore += passedegbonus[wadvanced[7]];
-                }
-                /*if (board->board[pos + SW] == WPAWN){
-                    mgscore += protectedpassedmg[wadvanced[7]], egscore += protectedpassedeg[wadvanced[7]];
-                }*/
-                }
-                else if (!board->board[pos+NORTH]){
                     mgscore += candidatepassedmg[wadvanced[7]], egscore += candidatepassedeg[wadvanced[7]];
                 }
             }
             if (badvanced[7] != 9 && badvanced[7] <= wbackwards[7] && badvanced[7] <= wbackwards[6] + 1)
             {
                 int pos = ((badvanced[7] << 4)) + 7;
-                if (badvanced[7] <= wbackwards[6] + 1){
-                if (board->board[pos + SOUTH])
+                if (badvanced[7] <= wbackwards[6])
                 {
-                    mgscore -= blockedmgbonus[7 - badvanced[7]], egscore -= blockedegbonus[7 - badvanced[7]];
+                    if (board->board[pos + SOUTH])
+                    {
+                        mgscore -= blockedmgbonus[7 - badvanced[7]], egscore -= blockedegbonus[7 - badvanced[7]];
+                    }
+                    else
+                    {
+                        mgscore -= passedmgbonus[7 - badvanced[7]], egscore -= passedegbonus[7 - badvanced[7]];
+                    }
+                    /*if (board->board[pos + NW] == BPAWN){
+                        mgscore -= protectedpassedmg[7 - badvanced[7]], egscore -= protectedpassedeg[7 - badvanced[7]];
+                    }*/
                 }
-                else
+                else if (!board->board[pos + SOUTH])
                 {
-                    mgscore -= passedmgbonus[7 - badvanced[7]], egscore -= passedegbonus[7 - badvanced[7]];
-                }
-                /*if (board->board[pos + NW] == BPAWN){
-                    mgscore -= protectedpassedmg[7 - badvanced[7]], egscore -= protectedpassedeg[7 - badvanced[7]];
-                }*/
-                }
-                else if (!board->board[pos+SOUTH]){
                     mgscore -= candidatepassedmg[7 - badvanced[7]], egscore -= candidatepassedeg[7 - badvanced[7]];
                 }
             }
         }
         else if (i == 0)
         {
-                //Same as above, but for pawns on the a-file.
+            // Same as above, but for pawns on the a-file.
             if (wadvanced[0] != -1)
             {
 
@@ -405,49 +409,53 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
 
             if (wadvanced[0] != -1 && wadvanced[0] >= bbackwards[0] && wadvanced[0] >= bbackwards[1] - 1)
             {
-                    //Passed pawn check
+                // Passed pawn check
                 int pos = ((wadvanced[0] << 4));
-                if (wadvanced[0] >= bbackwards[1]){
-                if (board->board[pos + NORTH])
+                if (wadvanced[0] >= bbackwards[1])
                 {
-                    mgscore += blockedmgbonus[wadvanced[0]], egscore += blockedegbonus[wadvanced[0]];
+                    if (board->board[pos + NORTH])
+                    {
+                        mgscore += blockedmgbonus[wadvanced[0]], egscore += blockedegbonus[wadvanced[0]];
+                    }
+                    else
+                    {
+                        mgscore += passedmgbonus[wadvanced[0]], egscore += passedegbonus[wadvanced[0]];
+                    }
+                    /*if (board->board[pos + SE] == WPAWN){
+                        mgscore += protectedpassedmg[wadvanced[0]], egscore += protectedpassedeg[wadvanced[0]];
+                    }*/
                 }
-                else
+                else if (!board->board[pos + NORTH])
                 {
-                    mgscore += passedmgbonus[wadvanced[0]], egscore += passedegbonus[wadvanced[0]];
-                }
-                /*if (board->board[pos + SE] == WPAWN){
-                    mgscore += protectedpassedmg[wadvanced[0]], egscore += protectedpassedeg[wadvanced[0]];
-                }*/
-                }
-                else if (!board->board[pos+NORTH]){
                     mgscore += candidatepassedmg[wadvanced[0]], egscore += candidatepassedeg[wadvanced[0]];
                 }
             }
             if (badvanced[0] != 9 && badvanced[0] <= wbackwards[0] && badvanced[0] <= wbackwards[1] + 1)
             {
                 int pos = ((badvanced[0] << 4));
-                if (badvanced[0] <= wbackwards[1]){
-                if (board->board[pos + SOUTH])
+                if (badvanced[0] <= wbackwards[1])
                 {
-                    mgscore -= blockedmgbonus[7 - badvanced[0]], egscore -= blockedegbonus[7 - badvanced[0]];
+                    if (board->board[pos + SOUTH])
+                    {
+                        mgscore -= blockedmgbonus[7 - badvanced[0]], egscore -= blockedegbonus[7 - badvanced[0]];
+                    }
+                    else
+                    {
+                        mgscore -= passedmgbonus[7 - badvanced[0]], egscore -= passedegbonus[7 - badvanced[0]];
+                    }
+                    /*if (board->board[pos + NE] == BPAWN){
+                        mgscore -= protectedpassedmg[7 - badvanced[0]], egscore -= protectedpassedeg[7 - badvanced[0]];
+                    }*/
                 }
-                else
+                else if (!board->board[pos + SOUTH])
                 {
-                    mgscore -= passedmgbonus[7 - badvanced[0]], egscore -= passedegbonus[7 - badvanced[0]];
-                }
-                /*if (board->board[pos + NE] == BPAWN){
-                    mgscore -= protectedpassedmg[7 - badvanced[0]], egscore -= protectedpassedeg[7 - badvanced[0]];
-                }*/
-                }
-                else if (!board->board[pos+SOUTH]){
                     mgscore -= candidatepassedmg[7 - badvanced[0]], egscore -= candidatepassedeg[7 - badvanced[0]];
                 }
             }
         }
         else
         {
-                //Pawn structure for b-g files
+            // Pawn structure for b-g files
             if (wadvanced[i] != -1)
             {
                 if (wadvanced[i - 1] == -1 && wadvanced[i + 1] == -1)
@@ -477,41 +485,45 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
             {
                 int pos = ((wadvanced[i] << 4)) + i;
 
-                if (wadvanced[i] >= bbackwards[i - 1] && wadvanced[i] >= bbackwards[i + 1]){
+                if (wadvanced[i] >= bbackwards[i - 1] && wadvanced[i] >= bbackwards[i + 1])
+                {
 
-                if (board->board[pos + NORTH])
+                    if (board->board[pos + NORTH])
+                    {
+                        mgscore += blockedmgbonus[wadvanced[i]], egscore += blockedegbonus[wadvanced[i]];
+                    }
+                    else
+                    {
+                        mgscore += passedmgbonus[wadvanced[i]], egscore += passedegbonus[wadvanced[i]];
+                    }
+                    /*if (board->board[pos + SW] == WPAWN || board->board[pos + SE] == WPAWN){
+                        mgscore += protectedpassedmg[wadvanced[i]], egscore += protectedpassedeg[wadvanced[i]];
+                    }*/
+                }
+                else if (!board->board[pos + NORTH])
                 {
-                    mgscore += blockedmgbonus[wadvanced[i]], egscore += blockedegbonus[wadvanced[i]];
-                }
-                else
-                {
-                    mgscore += passedmgbonus[wadvanced[i]], egscore += passedegbonus[wadvanced[i]];
-                }
-                /*if (board->board[pos + SW] == WPAWN || board->board[pos + SE] == WPAWN){
-                    mgscore += protectedpassedmg[wadvanced[i]], egscore += protectedpassedeg[wadvanced[i]];
-                }*/
-                }
-                else if (!board->board[pos + NORTH]){
                     mgscore += candidatepassedmg[wadvanced[i]], egscore += candidatepassedeg[wadvanced[i]];
                 }
             }
-            if (badvanced[i] != 9 && badvanced[i] <= wbackwards[i - 1] && badvanced[i] <= wbackwards[i] && badvanced[i] <= wbackwards[i + 1] + 1)
+            if (badvanced[i] != 9 && badvanced[i] <= wbackwards[i - 1] + 1 && badvanced[i] <= wbackwards[i] && badvanced[i] <= wbackwards[i + 1] + 1)
             {
                 int pos = ((badvanced[i] << 4)) + i;
-                if (badvanced[i] <= wbackwards[i - 1] && badvanced[i] <= wbackwards[i + 1]){
-                if (board->board[pos + SOUTH])
+                if (badvanced[i] <= wbackwards[i - 1] && badvanced[i] <= wbackwards[i + 1])
                 {
-                    mgscore -= blockedmgbonus[7 - badvanced[i]], egscore -= blockedegbonus[7 - badvanced[i]];
+                    if (board->board[pos + SOUTH])
+                    {
+                        mgscore -= blockedmgbonus[7 - badvanced[i]], egscore -= blockedegbonus[7 - badvanced[i]];
+                    }
+                    else
+                    {
+                        mgscore -= passedmgbonus[7 - badvanced[i]], egscore -= passedegbonus[7 - badvanced[i]];
+                    }
+                    /*if (board->board[pos + NW] == BPAWN || board->board[pos + NE] == BPAWN){
+                         mgscore -= protectedpassedmg[7 - badvanced[i]], egscore -= protectedpassedeg[7 - badvanced[i]];
+                    }*/
                 }
-                else
+                else if (!board->board[pos + SOUTH])
                 {
-                    mgscore -= passedmgbonus[7 - badvanced[i]], egscore -= passedegbonus[7 - badvanced[i]];
-                }
-                /*if (board->board[pos + NW] == BPAWN || board->board[pos + NE] == BPAWN){
-                     mgscore -= protectedpassedmg[7 - badvanced[i]], egscore -= protectedpassedeg[7 - badvanced[i]];
-                }*/
-                }
-                else if (!board->board[pos+SOUTH]){
                     mgscore -= candidatepassedmg[7 - badvanced[i]], egscore -= candidatepassedeg[7 - badvanced[i]];
                 }
             }
@@ -520,21 +532,21 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
 
     if (phase > 16)
     {
-            //If we're still early in the game, calculate space.
+        // If we're still early in the game, calculate space.
         int weight0 = 0, weight1 = 0;
 
-        for (int i = 0; i < 5; i++) //One of the weights is dependent on the amount of material on the board...
+        for (int i = 0; i < 5; i++) // One of the weights is dependent on the amount of material on the board...
         {
             weight0 += board->pnbrqcount[WHITE][i];
             weight1 += board->pnbrqcount[BLACK][i];
         }
-        blockedpawns = MIN(blockedpawns, 9);    //and the other one is on how blocked up the position is (up to a limit).
+        blockedpawns = MIN(blockedpawns, 9); // and the other one is on how blocked up the position is (up to a limit).
 
         weight0 = MAX(0, weight0 - 3 + 1 + blockedpawns);
         weight1 = MAX(0, weight1 - 3 + 1 + blockedpawns);
 
         int space = ((((spacew * weight0 * weight0) >> 4) - ((spaceb * weight1 * weight1) >> 4))) >> 1;
-        score += space * 5 / 10;    //This final weight is what the tuner spits out after everything else is calculated as a multiplier.
+        score += space * 5 / 10; // This final weight is what the tuner spits out after everything else is calculated as a multiplier.
     }
 
     if (attackers[BLACK] > 1)
@@ -543,7 +555,7 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
         int pawnshield = 0;
         if (board->kingpos[WHITE] < 0x40)
         {
-                //calculate king shelter. Friendly pawns within two ranks of the king (in front), as well as an enemy pawn right in front of the king, count as pawn shelter for a file.
+            // calculate king shelter. Friendly pawns within two ranks of the king (in front), as well as an enemy pawn right in front of the king, count as pawn shelter for a file.
 
             if ((!((board->kingpos[WHITE] + WEST) & 0x88)) && (board->board[board->kingpos[WHITE] + WEST] == WPAWN || board->board[board->kingpos[WHITE] + NW] == WPAWN))
             {
@@ -584,7 +596,7 @@ int pst(struct board_info *board, int phase)        //A whale of a function.
     }
     score += (phase * mgscore + (24 - phase) * egscore) / 24;
 
-    if (attacking_pieces[WHITE] > 1)    //Having multiple threats at once is good.
+    if (attacking_pieces[WHITE] > 1) // Having multiple threats at once is good.
     {
         score += multattacksbonus * (attacking_pieces[WHITE] - 1);
     }
@@ -604,8 +616,8 @@ int eval(struct board_info *board, bool color)
     int evl = material(board, &phase);
 
     evl += pst(board, phase);
-    if (board->pnbrqcount[WHITE][0] <= 1 && evl >= 0 && evl < 400 && phase != 0)    //Apply scaling.
-    { // if White is up material, we want to stop it from trading pawns
+    if (board->pnbrqcount[WHITE][0] <= 1 && evl >= 0 && evl < 400 && phase != 0) // Apply scaling.
+    {                                                                            // if White is up material, we want to stop it from trading pawns
         if (board->pnbrqcount[WHITE][0] == 0)
         {
             evl >>= 2;
