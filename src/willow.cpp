@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -9,39 +8,38 @@
 #include "movegen.h"
 #include "search.h"
 
-char *getsafe(char *buffer, int count)
+char *getsafe(char *buffer, int count)  //Gets a number of characters up to count (the size of the buffer in this case)
 {
     char *result = buffer, *np;
-    if ((buffer == NULL) || (count < 1))
+    if ((buffer == NULL) || (count < 1))    //if we have neither a buffer or any space to put it, return null
     {
         result = NULL;
     }
-
     else
     {
         result = fgets(buffer, count, stdin);
-        if (result == NULL)
+        if (result == NULL)       //a check for EOF (indicating that whatever is running Willow (OB etc.) has been killed and it's time to exit)
         {
             free(TT);
             exit(0);
         }
     }
-    if ((np = strchr(buffer, '\n')))
+    if ((np = strchr(buffer, '\n')))    //remove trailing newline
         *np = '\0';
     return result;
 }
 
-long long unsigned int perft(int depth, struct board_info *board, bool color, bool first)
+long long unsigned int perft(int depth, struct board_info *board, bool color, bool first)   //Performs a perft search to the desired depth, displaying results for each move at the root.
 {
     if (!depth)
     {
-        return 1;
+        return 1;       //a terminal node
     }
     struct list list[LISTSIZE];
     int nmoves, i;
     long long unsigned int l = 0;
     nmoves = movegen(board, list, color, false);
-    for (i = 0; i < nmoves; i++)
+    for (i = 0; i < nmoves; i++)                    //Loop through all of the moves, skipping illegal ones.
     {
         struct board_info board2 = *board;
         move(&board2, list[i].move, color);
@@ -62,6 +60,7 @@ long long unsigned int perft(int depth, struct board_info *board, bool color, bo
 
 void move_uci(char *command, int i, struct board_info *board, struct movelist *movelst, int *key, bool *color)
 {
+    //parses a uci move such as "e2e4" internally and plays it.
     while (command[i] != '\0' && command[i] != '\n')
     {
         while (isblank(command[i]) && command[i] != '\0')
@@ -79,7 +78,7 @@ void move_uci(char *command, int i, struct board_info *board, struct movelist *m
         buf[a] = '\0';
         struct move temp;
         convto(buf, &temp, board);
-        bool iscap = (temp.flags == 0xC || board->board[temp.move & 0xFF]);
+        bool iscap = (temp.flags == 0xC || board->board[temp.move & 0xFF]); //captures reset the halfmove clock for 50-move rule draws, so it's important to check that the move is a capture.
         move(board, temp, *color);
 
         move_add(board, movelst, key, temp, *color, iscap);
@@ -88,7 +87,7 @@ void move_uci(char *command, int i, struct board_info *board, struct movelist *m
     }
 }
 
-int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *color)
+int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *color)  //handles various UCI options.
 { // assumes board+movelist have been already set up under wraps
 
     char command[65536];
@@ -138,7 +137,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
         int a = atoi(&command[26]);
         int target = a * 1024 * 1024;
         int size = 0;
-        while (sizeof(struct ttentry) * (1 << size) < target)
+        while (sizeof(struct ttentry) * (1 << size) < target)   //Set the hash to 2^n entires where n is the largest number that satisfies 2^n < the option that was set
         {
             size++;
         }
@@ -180,7 +179,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     }
     if (strstr(command, "go"))
     {
-        float time = 100;
+        float time = 1;
         if (strstr(command, "infinite"))
         {
             time = 1000000;
@@ -192,8 +191,9 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
             coldturkey = time;
         }
 
-        else if (strstr(command, "wtime"))
-        { // this will be for a game
+        else if (strstr(command, "wtime"))      //the "wtime" command indicates that Willow is playing a game currently. In this case, we use information about
+                                                //our time in order to get an optimal thinking time for the move before searching.
+        {
             int k = 0;
             int movestogo = -1;
             if (strstr(command, "movestogo"))
@@ -311,7 +311,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     return 0;
 }
 
-int bench()
+int bench()     //Benchmarks Willow, printing total nodes and nodes per second.
 {
     MAXDEPTH = 14;
     char positions[50][1024] = {
@@ -376,7 +376,7 @@ int bench()
     TT = (struct ttentry *)malloc(sizeof(struct ttentry) * (1 << size));
     TTSIZE = 1 << size;
     _mask = TTSIZE - 1;
-    for (int i = 0; i < 50; i++)
+    for (int i = 0; i < 50; i++)        //clear all game info between positions
     {
 
         clearTT();
@@ -417,7 +417,7 @@ int com()
     return 0;
 }
 
-int init()
+int init()     //sets up I/O and all the global variables/lookup tables
 {
 
     setvbuf(stdin, NULL, _IONBF, 0);
