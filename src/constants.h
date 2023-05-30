@@ -189,17 +189,21 @@ const int pstbonusese[6][0x80] = {
 };
 
 const int bishop_pair[9] = {55,   70,   47,   47,   40,   34,   31,   34,   37};
-const int passedmgbonus[8] = {4,   -9,  -18,  -11,   10,    1,   19,    0};
-const int passedegbonus[8] = {58,    9,   10,   39,   66,  152,  172,    0};
+const int passedmgbonus[8] = {4,   -9,  -19,  -13,   11,   -1,   11,    0,};
+const int passedegbonus[8] = {58,    9,   12,   40,   68,  154,  174,    0};
 
-const int blockedmgbonus[8] = {4,  -16,  -22,  -20,   -2,    6,  -17,    0};
-const int blockedegbonus[8] = {58,   13,   22,   30,   31,   50,   76,    0};
+const int blockedmgbonus[8] = {4,  -16,  -21,  -18,   -3,    9,  -18,    0,};
+const int blockedegbonus[8] = {58,   13,   21,   27,   27,   45,   78,    0};
 
-const int protectedpassedmg[8] = {0,    0,   11,    7,   18,   66,  130,    0};
-const int protectedpassedeg[8] = {0,    0,    6,    5,   14,   15,  -12,    0};
+const int protectedpassedmg[8] = {0,    0,   15,   11,   17,   64,  131,    0};
+const int protectedpassedeg[8] = {0,    0,    3,    2,    8,    6,  -18,    0};
 
-const int candidatepassedmg[8] = {0,  -29,  -36,    3,   35,   48,    0,    0};
-const int candidatepassedeg[8] = {0,   -6,   22,   37,   61,  106,    0,    0};
+
+const int blockedprotectedmg[8] = {0,    0,    3,   -1,   18,   54,   21,    0,};
+const int blockedprotectedeg[8] = {0,    0,   15,   14,   30,   37,   12,    0,};
+
+const int candidatepassedmg[8] = {0,  -30,  -35,    3,   34,   48,    0,    0};
+const int candidatepassedeg[8] = {0,   -3,   24,   37,   60,  106,    0,    0};
 
 const int mobilitybonusesmg[4][28] = {
  {-32,  -19,   -8,   -2,    3,    8,   15,   22,   34,},
