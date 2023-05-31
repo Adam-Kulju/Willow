@@ -348,9 +348,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     {
                         mgscore += passedmgbonus[wadvanced[7]], egscore += passedegbonus[wadvanced[7]];
                     }
-                    /*if (board->board[pos + SW] == WPAWN){
-                        mgscore += protectedpassedmg[wadvanced[7]], egscore += protectedpassedeg[wadvanced[7]];
-                    }*/
+                    if (board->board[pos + SW] == WPAWN){
+                        if (!board->board[pos + NORTH]){
+                            mgscore += protectedpassedmg[wadvanced[7]], egscore += protectedpassedeg[wadvanced[7]];
+                        }
+                        else{
+                            mgscore += blockedprotectedmg[wadvanced[7]], egscore += blockedprotectedeg[wadvanced[7]];
+                        }
+                    }
                 }
                 else if (!board->board[pos + NORTH])
                 {
@@ -370,9 +375,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     {
                         mgscore -= passedmgbonus[7 - badvanced[7]], egscore -= passedegbonus[7 - badvanced[7]];
                     }
-                    /*if (board->board[pos + NW] == BPAWN){
-                        mgscore -= protectedpassedmg[7 - badvanced[7]], egscore -= protectedpassedeg[7 - badvanced[7]];
-                    }*/
+                    if (board->board[pos + NW] == BPAWN){
+                        if (!board->board[pos + SOUTH]){
+                             mgscore -= protectedpassedmg[7 - badvanced[7]], egscore -= protectedpassedeg[7 - badvanced[7]];
+                        }
+                        else{
+                            mgscore -= blockedprotectedmg[7 - badvanced[7]], egscore -= blockedprotectedeg[7 - badvanced[7]];
+                        }
+                    }
                 }
                 else if (!board->board[pos + SOUTH])
                 {
@@ -421,9 +431,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     {
                         mgscore += passedmgbonus[wadvanced[0]], egscore += passedegbonus[wadvanced[0]];
                     }
-                    /*if (board->board[pos + SE] == WPAWN){
-                        mgscore += protectedpassedmg[wadvanced[0]], egscore += protectedpassedeg[wadvanced[0]];
-                    }*/
+                    if (board->board[pos + SE] == WPAWN){
+                        if (!board->board[pos + NORTH]){
+                            mgscore += protectedpassedmg[wadvanced[0]], egscore += protectedpassedeg[wadvanced[0]];
+                        }
+                        else{
+                            mgscore += blockedprotectedmg[wadvanced[0]], egscore += blockedprotectedeg[wadvanced[0]];
+                        }
+                    }
                 }
                 else if (!board->board[pos + NORTH])
                 {
@@ -443,9 +458,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     {
                         mgscore -= passedmgbonus[7 - badvanced[0]], egscore -= passedegbonus[7 - badvanced[0]];
                     }
-                    /*if (board->board[pos + NE] == BPAWN){
-                        mgscore -= protectedpassedmg[7 - badvanced[0]], egscore -= protectedpassedeg[7 - badvanced[0]];
-                    }*/
+                    if (board->board[pos + NE] == BPAWN){
+                        if (!board->board[pos + SOUTH]){
+                             mgscore -= protectedpassedmg[7 - badvanced[0]], egscore -= protectedpassedeg[7 - badvanced[0]];
+                        }
+                        else{
+                            mgscore -= blockedprotectedmg[7 - badvanced[0]], egscore -= blockedprotectedeg[7 - badvanced[0]];
+                        }
+                    }
                 }
                 else if (!board->board[pos + SOUTH])
                 {
@@ -496,9 +516,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     {
                         mgscore += passedmgbonus[wadvanced[i]], egscore += passedegbonus[wadvanced[i]];
                     }
-                    /*if (board->board[pos + SW] == WPAWN || board->board[pos + SE] == WPAWN){
-                        mgscore += protectedpassedmg[wadvanced[i]], egscore += protectedpassedeg[wadvanced[i]];
-                    }*/
+                    if (board->board[pos + SW] == WPAWN || board->board[pos + SE] == WPAWN){
+                        if (!board->board[pos + NORTH]){
+                            mgscore += protectedpassedmg[wadvanced[i]], egscore += protectedpassedeg[wadvanced[i]];
+                        }
+                        else{
+                            mgscore += blockedprotectedmg[wadvanced[i]], egscore += blockedprotectedeg[wadvanced[i]];
+                        }
+                    }
                 }
                 else if (!board->board[pos + NORTH])
                 {
@@ -518,9 +543,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     {
                         mgscore -= passedmgbonus[7 - badvanced[i]], egscore -= passedegbonus[7 - badvanced[i]];
                     }
-                    /*if (board->board[pos + NW] == BPAWN || board->board[pos + NE] == BPAWN){
-                         mgscore -= protectedpassedmg[7 - badvanced[i]], egscore -= protectedpassedeg[7 - badvanced[i]];
-                    }*/
+                    if (board->board[pos + NW] == BPAWN || board->board[pos + NE] == BPAWN){
+                        if (!board->board[pos + SOUTH]){
+                             mgscore -= protectedpassedmg[7 - badvanced[i]], egscore -= protectedpassedeg[7 - badvanced[i]];
+                        }
+                        else{
+                            mgscore -= blockedprotectedmg[7 - badvanced[i]], egscore -= blockedprotectedeg[7 - badvanced[i]];
+                        }
+                    }
                 }
                 else if (!board->board[pos + SOUTH])
                 {
