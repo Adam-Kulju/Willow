@@ -195,12 +195,12 @@ const int passedegbonus[8] = {58,    9,   12,   40,   68,  154,  174,    0};
 const int blockedmgbonus[8] = {4,  -16,  -21,  -18,   -3,    9,  -18,    0,};
 const int blockedegbonus[8] = {58,   13,   21,   27,   27,   45,   78,    0};
 
-const int protectedpassedmg[8] = {0,    0,   15,   11,   17,   64,  131,    0};
-const int protectedpassedeg[8] = {0,    0,    3,    2,    8,    6,  -18,    0};
+const int protectedpassedmg[8] = {0,    0,    9,    6,    9,   51,   29,    0};
+const int protectedpassedeg[8] = {0,    0,    3,    1,    6,    2,   -1,    0};
 
 
-const int blockedprotectedmg[8] = {0,    0,    3,   -1,   18,   54,   21,    0,};
-const int blockedprotectedeg[8] = {0,    0,   15,   14,   30,   37,   12,    0,};
+const int blockedprotectedmg[8] = {0,    0,   -1,   -2,   13,   55,   54,    0};
+const int blockedprotectedeg[8] = {0,    0,   15,   11,   19,   24,   14,    0};
 
 const int candidatepassedmg[8] = {0,  -30,  -35,    3,   34,   48,    0,    0};
 const int candidatepassedeg[8] = {0,   -3,   24,   37,   60,  106,    0,    0};

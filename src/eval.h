@@ -518,10 +518,10 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     }
                     if (board->board[pos + SW] == WPAWN || board->board[pos + SE] == WPAWN){
                         if (!board->board[pos + NORTH]){
-                            mgscore += protectedpassedmg[wadvanced[0]], egscore += protectedpassedeg[wadvanced[i]];
+                            mgscore += protectedpassedmg[wadvanced[i]], egscore += protectedpassedeg[wadvanced[i]];
                         }
                         else{
-                            mgscore += blockedprotectedmg[wadvanced[0]], egscore += blockedprotectedeg[wadvanced[i]];
+                            mgscore += blockedprotectedmg[wadvanced[i]], egscore += blockedprotectedeg[wadvanced[i]];
                         }
                     }
                 }
