@@ -5,7 +5,7 @@
 #include "globals.h"
 #include <stdio.h>
 
-void printfull(struct board_info *board)
+void printfull(struct board_info *board)    //Prints the board
 {
     int i = 0x70;
     while (i >= 0)
@@ -68,7 +68,7 @@ void printfull(struct board_info *board)
     }
     printf("+---+---+---+---+---+---+---+---+\n\n");
 }
-void setfull(struct board_info *board)
+void setfull(struct board_info *board)  //Sets up the board for the start of the game.
 {
     char brd[0x80] = {
         WROOK, WKNIGHT, WBISHOP, WQUEEN, WKING, WBISHOP, WKNIGHT, WROOK,0,0,0,0,0,0,0,0,
@@ -82,16 +82,16 @@ void setfull(struct board_info *board)
 
         };
     memcpy(board->board, brd, 0x80);
-    char count[2][5] = {
+    char count[2][5] = {    //the number of pieces on the board
         {8, 2, 2, 2, 1},
         {8, 2, 2, 2, 1}};
     memcpy(board->pnbrqcount, count, 10);
-    board->castling[0][0] = true, board->castling[0][1] = true, board->castling[1][0] = true, board->castling[1][1] = true;
-    board->kingpos[0] = 0x4, board->kingpos[1] = 0x74;
-    board->epsquare = 0;
+    board->castling[0][0] = true, board->castling[0][1] = true, board->castling[1][0] = true, board->castling[1][1] = true; //castling data
+    board->kingpos[0] = 0x4, board->kingpos[1] = 0x74;  //king position data
+    board->epsquare = 0;    //en passant square
 }
 
-void setmovelist(struct movelist *movelst, int *key)
+void setmovelist(struct movelist *movelst, int *key)    //Sets up the list of moves in the game.
 {
 
     movelst[0].fen = CURRENTPOS;
@@ -102,10 +102,11 @@ void setmovelist(struct movelist *movelst, int *key)
     return;
 }
 
-void setfromfen(struct board_info *board, struct movelist *movelst, int *key, char *fenstring, bool *color, int start)
+void setfromfen(struct board_info *board, struct movelist *movelst, int *key, char *fenstring, bool *color, int start) //Given an FEN, sets up the board to it.
 {
     int i = 7, n = 0;
     int fenkey = start;
+        //Set default board parameters, edit them later on as we add pieces to the board/read more info from the FEN.
     board->castling[WHITE][0] = false, board->castling[BLACK][0] = false, board->castling[WHITE][1] = false, board->castling[BLACK][1] = false;
     for (int i = 0; i < 5; i++)
     {
@@ -114,12 +115,12 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
     }
     while (!isblank(fenstring[fenkey]))
     {
-        if (fenstring[fenkey] == '/')
+        if (fenstring[fenkey] == '/')   //Go to the next rank down.
         {
             i--;
             n = 0;
         }
-        else if (isdigit(fenstring[fenkey]))
+        else if (isdigit(fenstring[fenkey]))    //A number in the FEN (of form P3pp) means there's three empty squares, so we go past them
         {
             for (int b = 0; b < atoi(&fenstring[fenkey]); b++)
             {
@@ -127,7 +128,7 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
                 n++;
             }
         }
-        else
+        else            //For each piece, add it to the board and add it to the material count. If it's a king, update king position.
         {
             switch (fenstring[fenkey])
             {
@@ -189,18 +190,17 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
     {
         fenkey++;
     }
-    if (fenstring[fenkey] == 'w')
+    if (fenstring[fenkey] == 'w')   //Gets the color to move.
     {
         *color = WHITE;
     }
     else
     {
-        *color = BLACK; // color to move
+        *color = BLACK;
     }
-
     fenkey++;
 
-    calc_pos(board, *color);
+    calc_pos(board, *color);    //Gets the Zobrist Hash of the position (it doesn't matter that we do it before castling stuff)
 
     setmovelist(movelst, key);
     *key = 0;
@@ -217,7 +217,7 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
 
     else
     {
-        if (fenstring[fenkey] == 'K')
+        if (fenstring[fenkey] == 'K')   //Get castling rights information
         {
             board->castling[WHITE][1] = true;
             fenkey++;
@@ -244,17 +244,14 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
         fenkey++;
     }
 
-    if (fenstring[fenkey] == '-')
-    {
-        board->epsquare = 0;
-    }
-    if (fenstring[fenkey] == '-')
+    if (fenstring[fenkey] == '-')   //Get en passant square information
     {
         board->epsquare = 0;
     }
     else
     {
-        board->epsquare = (atoi(&fenstring[fenkey + 1]) - 1) * 16 + ((fenstring[fenkey] - 97));
+        board->epsquare = (atoi(&fenstring[fenkey + 1]) - 1) * 16 + ((fenstring[fenkey] - 97)); 
+            //In Willow, the en passant square is the square of the piece to be taken en passant, and not the square behind.
         if (*color)
         {
             board->epsquare += NORTH;
@@ -272,11 +269,11 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
         fenkey++;
     }
 
-    movelst[*key].halfmoves = atoi(&fenstring[fenkey]);
+    movelst[*key].halfmoves = atoi(&fenstring[fenkey]); //Get halfmoves information.
     *key += 1;
 }
 
-int move(struct board_info *board, struct move move, bool color)
+int move(struct board_info *board, struct move move, bool color)    //Perform a move on the board.
 {
     if (board->epsquare)
     {
@@ -288,7 +285,7 @@ int move(struct board_info *board, struct move move, bool color)
         board->epsquare = 0;
         return 0;
     }
-    unsigned char from = move.move >> 8, to = move.move & 0xFF;
+    unsigned char from = move.move >> 8, to = move.move & 0xFF; //get the indexes of the move
     unsigned char flag = move.flags >> 2;
     if ((from & 0x88) || (to & 0x88))
     {
@@ -300,7 +297,7 @@ int move(struct board_info *board, struct move move, bool color)
     CURRENTPOS ^= ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from - ((from >> 4) << 3)]; // xor out the piece to be moved
 
     if (flag != 3)
-    { // handle captures and en passant
+    { // handle captures and en passant - this is for normal moves
         if (board->board[to])
         {
             board->pnbrqcount[color ^ 1][((board->board[to] >> 1) - 1)]--;
@@ -308,7 +305,7 @@ int move(struct board_info *board, struct move move, bool color)
         }
     }
     else
-    {
+    {   //and this branch handles en passant
         board->pnbrqcount[color ^ 1][0]--;
         CURRENTPOS ^= ZOBRISTTABLE[(((board->board[board->epsquare] - 2) << 6)) + board->epsquare - ((board->epsquare >> 4) << 3)];
         board->board[board->epsquare] = BLANK;
@@ -373,7 +370,7 @@ int move(struct board_info *board, struct move move, bool color)
     return 0;
 }
 
-void move_add(struct board_info *board, struct movelist *movelst, int *key, struct move mve, bool color, bool iscap)
+void move_add(struct board_info *board, struct movelist *movelst, int *key, struct move mve, bool color, bool iscap)    //Add a move to the list of moves in the game.
 {
     int k = *key;
     movelst[k].move = mve;
@@ -384,15 +381,15 @@ void move_add(struct board_info *board, struct movelist *movelst, int *key, stru
     }
     else
     {
-        movelst[k].halfmoves = movelst[k - 1].halfmoves + 1;
+        movelst[k].halfmoves = movelst[k - 1].halfmoves + 1;    //otherwise increment it
     }
     *key = k + 1;
 }
 
-bool isattacked(struct board_info *board, unsigned char pos, bool encolor)
+bool isattacked(struct board_info *board, unsigned char pos, bool encolor)  //Is a particular square attacked by an enemy piece?
 {
     // pawns
-    if (!encolor)
+    if (!encolor)   
     {
         if ((!((pos + SW) & 0x88) && board->board[pos + SW] == WPAWN) || (!((pos + SE) & 0x88) && board->board[pos + SE] == WPAWN))
         {
@@ -406,13 +403,13 @@ bool isattacked(struct board_info *board, unsigned char pos, bool encolor)
             return true;
         }
     }
-    // knights, kings, and sliders
+    // knights, kings, and sliders. Work outwards from the square until we bump into a piece/edge of board.
     unsigned char d, f;
     for (f = 0; f < 8; f++)
     {
         d = pos + vector[0][f];
 
-        if (!(d & 0x88) && board->board[d] - encolor == WKNIGHT)
+        if (!(d & 0x88) && board->board[d] - encolor == WKNIGHT)    //if we bump into a knight on its vector, we're attacked by it and return true
         {
             return true;
         }
@@ -425,7 +422,7 @@ bool isattacked(struct board_info *board, unsigned char pos, bool encolor)
             continue;
         }
 
-        if (board->board[d] - encolor == WKING)
+        if (board->board[d] - encolor == WKING) //if we hit a king on our first square we're attacked by it
         {
             return true;
         }
@@ -433,6 +430,7 @@ bool isattacked(struct board_info *board, unsigned char pos, bool encolor)
         {
             if (board->board[d])
             {
+                //Queens attack a piece on all diagonals/sides, rooks attack only orthogonally, bishops attack only diagonally
                 if ((board->board[d] & 1) == encolor &&
                     (board->board[d] - encolor == WQUEEN || (((f & 1) && board->board[d] - encolor == WROOK) || (!(f & 1) && board->board[d] - encolor == WBISHOP))))
                 {
@@ -447,6 +445,7 @@ bool isattacked(struct board_info *board, unsigned char pos, bool encolor)
     return false;
 }
 char isattacked_mv(struct board_info *board, unsigned char pos, bool encolor)
+    //Same as above, but ignores kings. Slight speed boost for eval purposes.
 {
     char flag = 0;
     // pawns
@@ -506,7 +505,7 @@ char isattacked_mv(struct board_info *board, unsigned char pos, bool encolor)
     return flag;
 }
 
-bool checkdraw1(struct board_info *board)
+bool checkdraw1(struct board_info *board)   //checks for material draws.
 {
     if (board->pnbrqcount[0][0] || board->pnbrqcount[0][3] || board->pnbrqcount[0][4] ||
         board->pnbrqcount[1][0] || board->pnbrqcount[1][3] || board->pnbrqcount[1][4])
@@ -527,7 +526,7 @@ bool checkdraw1(struct board_info *board)
     }
     return true;
 }
-int checkdraw2(struct movelist *movelst, int *key)
+int checkdraw2(struct movelist *movelst, int *key)  //checks for repetition draws.
 {
     if (movelst[*key - 1].halfmoves > 99)
     {
@@ -557,7 +556,7 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos, unsigned i
     {
         if (!((pos + SW) & 0x88) && board->board[pos + SW] == WPAWN)
         {
-            *attacker = pos + SW;
+            *attacker = pos + SW;   //immediately return because we're not hitting anything less valuable than a pawn!
             return 1;
         }
         else if (!((pos + SE) & 0x88) && board->board[pos + SE] == WPAWN)
@@ -588,7 +587,7 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos, unsigned i
         if (!(d & 0x88) && board->board[d] - encolor == WKNIGHT)
         {
             *attacker = d;
-            return 2;
+            return 2;   //return if we hit a knight because we already checked for pawns.
         }
 
         char vec = vector[4][f];
