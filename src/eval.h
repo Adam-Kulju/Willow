@@ -667,12 +667,13 @@ int eval(struct board_info *board, bool color)
     evl += pst(board, phase);
     if (evl >= 0 && mtr < 400 && board->pnbrqcount[WHITE][0] < 4 && phase < 5 && phase > 0) // Apply scaling.
     {                                                                            // if White is up material, we want to stop it from trading pawns
-        evl *= (board->pnbrqcount[WHITE][0] + 1) * 2 / 10;
+        evl = evl * (board->pnbrqcount[WHITE][0] + 1) * 2 / 10;
+
     }
 
     if (evl <= 0 && mtr > -400 && board->pnbrqcount[BLACK][0] < 4 && phase < 5 && phase > 0) // Same to Black.
     {                                                                            
-        evl *= (board->pnbrqcount[BLACK][0] + 1) * 2 / 10;
+        evl = evl * (board->pnbrqcount[BLACK][0] + 1) * 2 / 10;
     }
 
     if (color == BLACK)
