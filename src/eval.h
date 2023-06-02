@@ -139,16 +139,6 @@ int material(struct board_info *board, int *phase)
     }
 
     val = ((*phase) * mgscore + (24 - (*phase)) * egscore) / 24;
-
-    // Add bishop pair bonuses
-    if (board->pnbrqcount[WHITE][2] > 1)
-    {
-        val += bishop_pair[board->pnbrqcount[WHITE][0]];
-    }
-    if (board->pnbrqcount[BLACK][2] > 1)
-    {
-        val -= bishop_pair[board->pnbrqcount[BLACK][0]];
-    }
     return val;
 }
 
@@ -215,8 +205,8 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             }
             if ((piececolor))
             { // black piece
-                mgscore -= pstbonusesmg[indx][piecetype][i ^ 112];
-                egscore -= pstbonuseseg[indx][piecetype][i ^ 112];
+                mgscore -= pstbonusesmg[indx][piecetype][i ^ 112 /*^ ((indx == 1 || indx == 2) * 7)*/];
+                egscore -= pstbonuseseg[indx][piecetype][i ^ 112 /*^ ((indx == 1 || indx == 2) * 7)*/];
                 if (mobilitybonus)
                 {
                     mgscore -= mobilitybonusesmg[piecetype - 1][moves];
@@ -662,30 +652,30 @@ int eval(struct board_info *board, bool color)
     king_attack_count[0] = 0, king_attack_count[1] = 0;
     int phase = 0;
     int evl = material(board, &phase);
+    int mtr = evl;
+
+    // Add bishop pair bonuses
+    if (board->pnbrqcount[WHITE][2] > 1)
+    {
+        evl += bishop_pair[board->pnbrqcount[WHITE][0]];
+    }
+    if (board->pnbrqcount[BLACK][2] > 1)
+    {
+        evl -= bishop_pair[board->pnbrqcount[BLACK][0]];
+    }
 
     evl += pst(board, phase);
-    if (board->pnbrqcount[WHITE][0] <= 1 && evl >= 0 && evl < 400 && phase != 0) // Apply scaling.
-    {                                                                            // if White is up material, we want to stop it from trading pawns
-        if (board->pnbrqcount[WHITE][0] == 0)
-        {
-            evl >>= 2;
-        }
-        else
-        {
-            evl >>= 1;
-        }
+    if (evl >= 0 && mtr < 350 && board->pnbrqcount[WHITE][0] < 3 && phase < 7 && phase > 0) // Apply scaling.
+    {           
+
+        evl = evl * ((board->pnbrqcount[WHITE][0] + 1) * 3 - 1) / 10;
     }
-    if (board->pnbrqcount[BLACK][0] <= 1 && evl <= 0 && evl > -400 && phase != 0)
-    {
-        if (board->pnbrqcount[BLACK][0] == 0)
-        {
-            evl >>= 2;
-        }
-        else
-        {
-            evl >>= 1;
-        }
+
+    if (evl <= 0 && mtr > -350 && board->pnbrqcount[BLACK][0] < 3 && phase < 7 && phase > 0) // Same to Black.
+    {                                                                         
+        evl = evl * ((board->pnbrqcount[BLACK][0] + 1) * 3 - 1) / 10;
     }
+
     if (color == BLACK)
     {
         evl = -evl;
