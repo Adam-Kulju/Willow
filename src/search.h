@@ -7,6 +7,14 @@
 #include "movegen.h"
 #include <time.h>
 
+
+struct nodeinfo{
+    long int total_nodes;
+    long int best_nodes;
+};
+
+struct nodeinfo info;
+
 int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthleft, bool color, bool incheck)      
     //Performs a quiescence search on the given position.
 {
@@ -179,10 +187,14 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depthleft, int depth, bool color, bool isnull, bool incheck)
 {
     nodes++;
+
     if (depth == 0)
     {
         maxdepth = 0;
+        info.total_nodes = 0;
+        info.best_nodes = 0;
     }
+
     if (!((nodes) & (CHECKTIME)))   //Timeout detection
     {
         float rightnow = ((float)(clock() - start_time)) / CLOCKS_PER_SEC;
@@ -423,6 +435,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         bool ischeck = isattacked(&board2, board2.kingpos[color ^ 1], color);
         move_add(&board2, movelst, key, list[i].move, color, iscap);
 
+        long int current_nodes = nodes;
+
         if (ispv == true && !betacount)     //The first move of a PV node gets searched to full depth with a full window.
         {
             list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft - 1, depth + 1, color ^ 1, false, ischeck);
@@ -516,6 +530,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
                     return TIMEOUT;
                 }
+            }
+        }
+
+        if (depth == 0){
+            info.total_nodes += nodes-current_nodes;
+            if (list[i].eval > bestscore){
+                info.best_nodes = nodes-current_nodes;
             }
         }
 
@@ -672,6 +693,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
 
     nodes = 0;
     maximumtime = maxtime * 2;
+    float opttime = maxtime * 0.6;
     start_time = clock();
     clearHistory(false);
     clearKiller();
@@ -779,15 +801,19 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         printf("\n");
         CURRENTPOS = op;
 
-        if ((float)time2 / CLOCKS_PER_SEC > maxtime * 0.6 || depth >= MAXDEPTH)     //If we've hit the soft cap for time, finish after the iteration.
-        {
-            break;
-        }
         if (depth > 6)      //Update the aspiration window
         {
+            double besttimefraction = (double) info.best_nodes / info.total_nodes;
+            opttime = MIN(maxtime * 0.6 * (1.5 - besttimefraction) * 1.35, maximumtime);
             alpha = evl - 12;
             beta = evl + 12;
         }
+
+        if ((float)time2 / CLOCKS_PER_SEC > opttime || depth >= MAXDEPTH)     //If we've hit the soft cap for time, finish after the iteration.
+        {
+            break;
+        }
+
     }
     char temp[8], temp2[8];
     printf("bestmove %s\n", conv(currentmove, temp));
