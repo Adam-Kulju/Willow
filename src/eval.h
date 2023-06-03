@@ -205,8 +205,8 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             }
             if ((piececolor))
             { // black piece
-                mgscore -= pstbonusesmg[indx][piecetype][i ^ 112 /*^ ((indx == 1 || indx == 2) * 7)*/];
-                egscore -= pstbonuseseg[indx][piecetype][i ^ 112 /*^ ((indx == 1 || indx == 2) * 7)*/];
+                mgscore -= pstbonusesmg[indx][piecetype][i ^ 112 ^ ((indx == 1 || indx == 2) * 7)];
+                egscore -= pstbonuseseg[indx][piecetype][i ^ 112 ^ ((indx == 1 || indx == 2) * 7)];
                 if (mobilitybonus)
                 {
                     mgscore -= mobilitybonusesmg[piecetype - 1][moves];
