@@ -4,7 +4,7 @@
 #include "globals.h"
 #include "board.h"
 
-int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *score)
+int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *mgscore, int *egscore)
 {
     // Gets the mobility of a piece, as well as info about attacks on the enemy king and other pieces.
 
@@ -83,7 +83,8 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                 { // knight
                     if (board->board[pos] > BKNIGHT && board->board[pos] / 2 != KING)
                     { // knights get bonuses for attacking queens, rooks, and bishops. No point attacking an enemy knight as it can just take your knight!
-                        *score += pieceattacksbonus[1][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *mgscore += pieceattacksbonusmg[1][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *egscore += pieceattacksbonuseg[1][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
                         attacking_pieces[color]++;
                     }
                 }
@@ -91,7 +92,8 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                 { // bishops get bonuses for attacking queens, rooks, and knights.
                     if ((board->board[pos] > BBISHOP || board->board[pos] / 2 == KNIGHT) && board->board[pos] / 2 != KING)
                     {
-                        *score += pieceattacksbonus[2][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *mgscore += pieceattacksbonusmg[2][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *egscore += pieceattacksbonuseg[2][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
                         attacking_pieces[color]++;
                     }
                 }
@@ -99,7 +101,8 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                 {
                     if (board->board[pos] / 2 == QUEEN)
                     { // rooks get bonuses for attacking queens.
-                        *score += pieceattacksbonus[3][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *mgscore += pieceattacksbonusmg[3][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *egscore += pieceattacksbonuseg[3][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
                         attacking_pieces[color]++;
                     }
                 }
@@ -200,7 +203,7 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             unsigned char piecetype = (board->board[i] >> 1) - 1, piececolor = (board->board[i] & 1);
             if (piecetype != 0 && piecetype != 5)
             { // pawns or kings
-                moves = piece_mobility(board, i, piececolor, piecetype - 1, &score);
+                moves = piece_mobility(board, i, piececolor, piecetype - 1, &mgscore, &egscore);
                 mobilitybonus = true;
             }
             if ((piececolor))
@@ -225,12 +228,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     if (!((i + SW) & 0x88) && board->board[i + SW] > BPAWN && board->board[i + SW] < WKING && !(board->board[i + SW] & 1))
                     {
                         attacking_pieces[BLACK]++;
-                        score -= pieceattacksbonus[0][board->board[i + SW] / 2 - 2];
+                        mgscore -= pieceattacksbonusmg[0][board->board[i + SW] / 2 - 2];
+                        egscore -= pieceattacksbonuseg[0][board->board[i + SW] / 2 - 2];
                     }
                     if (!((i + SE) & 0x88) && board->board[i + SE] > BPAWN && board->board[i + SE] < WKING && !(board->board[i + SE] & 1))
                     {
                         attacking_pieces[BLACK]++;
-                        score -= pieceattacksbonus[0][board->board[i + SE] / 2 - 2];
+                        mgscore -= pieceattacksbonusmg[0][board->board[i + SE] / 2 - 2];
+                        egscore -= pieceattacksbonuseg[0][board->board[i + SE] / 2 - 2];
                     }
                     // update pawn structure array - if we already have a pawn on that file, we've found a doubled pawn.
                     if (badvanced[(i & 7)] == 9)
@@ -268,12 +273,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     if (!((i + NW) & 0x88) && board->board[i + NW] > BPAWN && board->board[i + NW] < WKING && (board->board[i + NW] & 1))
                     {
                         attacking_pieces[WHITE]++;
-                        score += pieceattacksbonus[0][board->board[i + NW] / 2 - 2];
+                        mgscore += pieceattacksbonusmg[0][board->board[i + NW] / 2 - 2];
+                        egscore += pieceattacksbonuseg[0][board->board[i + NW] / 2 - 2];
                     }
                     if (!((i + NE) & 0x88) && board->board[i + NE] > BPAWN && board->board[i + NE] < WKING && (board->board[i + NE] & 1))
                     {
                         attacking_pieces[WHITE]++;
-                        score += pieceattacksbonus[0][board->board[i + NE] / 2 - 2];
+                        mgscore += pieceattacksbonusmg[0][board->board[i + NE] / 2 - 2];
+                        egscore += pieceattacksbonuseg[0][board->board[i + NE] / 2 - 2];
                     }
                     if (wbackwards[(i & 7)] == 9)
                     {
@@ -632,16 +639,19 @@ int pst(struct board_info *board, int phase) // A whale of a function.
         }
         mgscore += kingdangertablemg[pawnshield][king_attack_count[WHITE]], egscore += kingdangertableeg[pawnshield][king_attack_count[WHITE]];
     }
-    score += (phase * mgscore + (24 - phase) * egscore) / 24;
-
+    
     if (attacking_pieces[WHITE] > 1) // Having multiple threats at once is good.
     {
-        score += multattacksbonus * (attacking_pieces[WHITE] - 1);
+        mgscore += multattacksbonus[0] * (attacking_pieces[WHITE] - 1);
+        egscore += multattacksbonus[1] * (attacking_pieces[WHITE] - 1);
     }
     if (attacking_pieces[BLACK] > 1)
     {
-        score -= multattacksbonus * (attacking_pieces[BLACK] - 1);
+        mgscore -= multattacksbonus[0] * (attacking_pieces[BLACK] - 1);
+        egscore -= multattacksbonus[1] * (attacking_pieces[BLACK] - 1);
     }
+
+    score += (phase * mgscore + (24 - phase) * egscore) / 24;
 
     return score;
 }

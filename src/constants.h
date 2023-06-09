@@ -799,11 +799,18 @@ const int listsize = sizeof(struct list);
 const int movesize = sizeof(struct move);
 const int attacknums[4] = {2, 2, 3, 5};
 
-const int pieceattacksbonus[4][4] = {   //Bonuses for threats by pawns, knights, bishops, and rooks on other pieces.
-    {27, 38, 24, 29},
-    {0, 16, 13, 8},
-    {9, 0, 14, 39},
+const int pieceattacksbonusmg[4][4] = {   //Bonuses for threats by pawns, knights, bishops, and rooks on other pieces.
+    {39, 43, 39, 39},
+    {0, 14, 13, 8},
+    {11, 0, 14, 38},
     {0, 0, 0, 42}};
-const int multattacksbonus = 24;    //bonuses for multiple attacks at once
+
+const int pieceattacksbonuseg[4][4] = { 
+    {14, 33, 8, 6},
+    {0, 0, 1, -5},
+    {-2, 0, 2, 3},
+    {0, 0, 0, -6}}; 
+    
+const int multattacksbonus[2] = {29, 8};    //bonuses for multiple attacks at once
 
 #endif
