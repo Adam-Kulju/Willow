@@ -602,12 +602,7 @@ const int pstbonuseseg[4][6][0x80] = {
     },
 };
 
-const int bishop_pair[2][9] =
-{
-
- {55, 70, 46, 47, 41, 35, 32, 35, 39},
- {55, 70, 46, 47, 41, 35, 32, 35, 39},
-};    //Bishop pair bonus (indexed by number of pawns)
+const int bishop_pair[9] = {55, 70, 46, 47, 41, 35, 32, 35, 39};    //Bishop pair bonus (indexed by number of pawns)
 const int passedmgbonus[8] = {0,  -10,  -19,  -15,    8,   -6,   22,    0}; //passed unblocked middlegame bonus
 const int passedegbonus[8] = {0,    8,   11,   40,   68,  155,  174,    0};
 
@@ -634,9 +629,9 @@ const int mobilitybonuseseg[4][28] = {
     {-45, -21, -4, 10, 20, 30, 35, 39, 43, 42, 35, 32, 46, 32},
     {-19, 14, 28, 34, 44, 48, 54, 58, 62, 67, 70, 74, 76, 74, 87},
     {0, -2, -6, -9, -13, -17, -16, -12, -10, -7, -3, 0, 0, 4, 4, 5, 27, 25, 21, 14, 15, 2, 5, 13, 16, 12, 3, -1}};
-const int doubledpen[2] = {-16, -16};     //doubled pawn penalty
-const int isopen[2] = {-12, -12};         //Isolated pawn penalty
-const int backwardspen[2] = {-4, -4};    //Backwards pawn penalty
+const int doubledpen = -16;     //doubled pawn penalty
+const int isopen = -12;         //Isolated pawn penalty
+const int backwardspen = -4;    //Backwards pawn penalty
 
 const int kingdangertablemg[4][100] = {     //King attack table, indexed by number of friendly pawns shielding the enemy king.
 
