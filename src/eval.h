@@ -247,8 +247,8 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                         if (bbackwards[(i & 7)] != -1)
                         {
 
-                            mgscore -= doubledpen;
-                            egscore -= doubledpen;
+                            mgscore -= doubledpen[0];
+                            egscore -= doubledpen[1];
                         }
                         bbackwards[(i & 7)] = (i >> 4);
                     }
@@ -290,8 +290,8 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     {
                         if (wadvanced[(i & 7)] != -1)
                         {
-                            egscore += doubledpen;
-                            mgscore += doubledpen;
+                            egscore += doubledpen[0];
+                            mgscore += doubledpen[1];
                         }
                         wadvanced[(i & 7)] = (i >> 4);
                     }
@@ -309,12 +309,13 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 // If we have no pawns on the g-file at all, the h-pawn is isolated. If instead the furthest backwards one is further up the board, it's a backwards pawn.
                 if (wadvanced[6] == -1)
                 {
-                    score += isopen;
+                    mgscore += isopen[0];
+                    egscore += isopen[1];
                 }
                 else if (wbackwards[7] < wbackwards[6])
                 {
 
-                    score += backwardspen;
+                    mgscore += backwardspen[0]; egscore += backwardspen[1];
                 }
             }
 
@@ -322,11 +323,11 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             {
                 if (badvanced[6] == 9)
                 {
-                    score -= isopen;
+                    mgscore -= isopen[0]; egscore -= isopen[1];
                 }
                 else if (bbackwards[7] > bbackwards[6])
                 {
-                    score -= backwardspen;
+                    mgscore -= backwardspen[0]; egscore -= backwardspen[1];
                 }
             }
 
@@ -401,22 +402,22 @@ int pst(struct board_info *board, int phase) // A whale of a function.
 
                 if (wadvanced[1] == -1)
                 { // evaluates isolated pawns for a+passed
-                    score += isopen;
+                    mgscore += isopen[0]; egscore += isopen[1];
                 }
                 else if (wbackwards[0] < wbackwards[1])
                 {
-                    score += backwardspen;
+                    mgscore += backwardspen[0]; egscore += backwardspen[1];
                 }
             }
             if (badvanced[0] != 9)
             {
                 if (badvanced[6] == 9)
                 {
-                    score -= isopen;
+                    mgscore -= isopen[0]; egscore -= isopen[1];
                 }
                 else if (bbackwards[0] > bbackwards[1])
                 {
-                    score -= backwardspen;
+                    mgscore -= backwardspen[0]; egscore -= backwardspen[1];
                 }
             }
 
@@ -489,11 +490,11 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             {
                 if (wadvanced[i - 1] == -1 && wadvanced[i + 1] == -1)
                 { // evaluates isolated pawns for b-g files + passed pawns
-                    score += isopen;
+                    mgscore += isopen[0]; egscore += isopen[1];
                 }
                 else if (wbackwards[i] < wbackwards[i + 1] && wbackwards[i] < wbackwards[i - 1])
                 {
-                    score += backwardspen;
+                    mgscore += backwardspen[0]; egscore += backwardspen[1];
                 }
             }
 
@@ -502,11 +503,11 @@ int pst(struct board_info *board, int phase) // A whale of a function.
 
                 if (badvanced[i - 1] == 9 && badvanced[i + 1] == 9)
                 {
-                    score -= isopen;
+                    mgscore -= isopen[0]; egscore -= isopen[1];
                 }
                 else if (bbackwards[i] > bbackwards[i + 1] && bbackwards[i] > bbackwards[i - 1])
                 {
-                    score -= backwardspen;
+                    mgscore -= backwardspen[0]; egscore -= backwardspen[1];
                 }
             }
 
@@ -651,6 +652,18 @@ int pst(struct board_info *board, int phase) // A whale of a function.
         egscore -= multattacksbonus[1] * (attacking_pieces[BLACK] - 1);
     }
 
+    // Add bishop pair bonuses
+    if (board->pnbrqcount[WHITE][2] > 1)
+    {
+        mgscore += bishop_pair[0][board->pnbrqcount[WHITE][0]];
+        egscore += bishop_pair[1][board->pnbrqcount[WHITE][0]];
+    }
+    if (board->pnbrqcount[BLACK][2] > 1)
+    {
+        mgscore -= bishop_pair[0][board->pnbrqcount[BLACK][0]];
+        egscore -= bishop_pair[1][board->pnbrqcount[BLACK][0]];
+    }
+
     score += (phase * mgscore + (24 - phase) * egscore) / 24;
 
     return score;
@@ -663,16 +676,6 @@ int eval(struct board_info *board, bool color)
     int phase = 0;
     int evl = material(board, &phase);
     int mtr = evl;
-
-    // Add bishop pair bonuses
-    if (board->pnbrqcount[WHITE][2] > 1)
-    {
-        evl += bishop_pair[board->pnbrqcount[WHITE][0]];
-    }
-    if (board->pnbrqcount[BLACK][2] > 1)
-    {
-        evl -= bishop_pair[board->pnbrqcount[BLACK][0]];
-    }
 
     evl += pst(board, phase);
     if (evl >= 0 && mtr < 350 && board->pnbrqcount[WHITE][0] < 3 && phase < 7 && phase > 0) // Apply scaling.
