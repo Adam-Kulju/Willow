@@ -592,7 +592,7 @@ int pst(struct board_info *board, int phase) // A whale of a function.
         weight1 = MAX(0, weight1 - 3 + 1 + blockedpawns);
 
         int space = ((((spacew * weight0 * weight0) >> 4) - ((spaceb * weight1 * weight1) >> 4))) >> 1;
-        score += space * 5 / 10; // This final weight is what the tuner spits out after everything else is calculated as a multiplier.
+        mgscore += space * 5 / 10, egscore += space * 5 / 10; // This final weight is what the tuner spits out after everything else is calculated as a multiplier.
     }
 
     if (attackers[BLACK] > 1)
