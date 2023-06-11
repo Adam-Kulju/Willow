@@ -605,8 +605,8 @@ const int pstbonuseseg[4][6][0x80] = {
 const int bishop_pair[2][9] =
 {
 
- {55, 70, 46, 47, 41, 35, 32, 35, 39},
- {55, 70, 46, 47, 41, 35, 32, 35, 39},
+ {48,   64,   48,   36,   31,   28,   26,   30,   32},
+ {36,   60,   59,   62,   57,   52,   51,   53,   37},
 };    //Bishop pair bonus (indexed by number of pawns)
 const int passedmgbonus[8] = {0,  -10,  -19,  -15,    8,   -6,   22,    0}; //passed unblocked middlegame bonus
 const int passedegbonus[8] = {0,    8,   11,   40,   68,  155,  174,    0};
