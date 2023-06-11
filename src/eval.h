@@ -149,7 +149,6 @@ int pst(struct board_info *board, int phase) // A whale of a function.
 {
     attacking_pieces[0] = 0, attacking_pieces[1] = 0;
     int indx = (2*((board->kingpos[WHITE] & 7) > 3)) + ((board->kingpos[BLACK] & 7) > 3);
-    int score = 0;
     unsigned char spacew = 0, spaceb = 0; // represents the space area that White and Black have.
     int mgscore = 0, egscore = 0;
     int blockedpawns = 0; // the amount of blocked pawns in the position, gives space a weight.
@@ -664,9 +663,7 @@ int pst(struct board_info *board, int phase) // A whale of a function.
         egscore -= bishop_pair[1][board->pnbrqcount[BLACK][0]];
     }
 
-    score += (phase * mgscore + (24 - phase) * egscore) / 24;
-
-    return score;
+    return (phase * mgscore + (24 - phase) * egscore) / 24;
 }
 
 int eval(struct board_info *board, bool color)

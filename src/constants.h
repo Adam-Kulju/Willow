@@ -634,9 +634,9 @@ const int mobilitybonuseseg[4][28] = {
     {-45, -21, -4, 10, 20, 30, 35, 39, 43, 42, 35, 32, 46, 32},
     {-19, 14, 28, 34, 44, 48, 54, 58, 62, 67, 70, 74, 76, 74, 87},
     {0, -2, -6, -9, -13, -17, -16, -12, -10, -7, -3, 0, 0, 4, 4, 5, 27, 25, 21, 14, 15, 2, 5, 13, 16, 12, 3, -1}};
-const int doubledpen[2] = {-16, -16};     //doubled pawn penalty
-const int isopen[2] = {-12, -12};         //Isolated pawn penalty
-const int backwardspen[2] = {-4, -4};    //Backwards pawn penalty
+const int doubledpen[2] = {-10, -24};     //doubled pawn penalty
+const int isopen[2] = {-13, -10};         //Isolated pawn penalty
+const int backwardspen[2] = {-6, 2};    //Backwards pawn penalty
 
 const int kingdangertablemg[4][100] = {     //King attack table, indexed by number of friendly pawns shielding the enemy king.
 
