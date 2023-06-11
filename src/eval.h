@@ -4,7 +4,7 @@
 #include "globals.h"
 #include "board.h"
 
-int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *mgscore, int *egscore)
+int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *mgscore, int *egscore )
 {
     // Gets the mobility of a piece, as well as info about attacks on the enemy king and other pieces.
 
@@ -84,7 +84,7 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                     if (board->board[pos] > BKNIGHT && board->board[pos] / 2 != KING)
                     { // knights get bonuses for attacking queens, rooks, and bishops. No point attacking an enemy knight as it can just take your knight!
                         *mgscore += pieceattacksbonusmg[1][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
-                        *egscore += pieceattacksbonuseg[1][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *egscore  += pieceattacksbonuseg[1][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
                         attacking_pieces[color]++;
                     }
                 }
@@ -93,7 +93,7 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                     if ((board->board[pos] > BBISHOP || board->board[pos] / 2 == KNIGHT) && board->board[pos] / 2 != KING)
                     {
                         *mgscore += pieceattacksbonusmg[2][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
-                        *egscore += pieceattacksbonuseg[2][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *egscore  += pieceattacksbonuseg[2][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
                         attacking_pieces[color]++;
                     }
                 }
@@ -102,7 +102,7 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                     if (board->board[pos] / 2 == QUEEN)
                     { // rooks get bonuses for attacking queens.
                         *mgscore += pieceattacksbonusmg[3][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
-                        *egscore += pieceattacksbonuseg[3][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
+                        *egscore  += pieceattacksbonuseg[3][board->board[pos] / 2 - 2] * (-color + (color ^ 1));
                         attacking_pieces[color]++;
                     }
                 }
@@ -113,10 +113,9 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
     return mobility;
 }
 
-int material(struct board_info *board, int *phase)
+void material(struct board_info *board, int *phase, int *mgscore, int *egscore )
 {
     // Evaluates material and bishop pair bonus, and gets the phase of the game.
-    int mgscore = 0, egscore = 0;
     int val = 0;
     for (int i = 0; i < 5; i++)
     {
@@ -130,10 +129,10 @@ int material(struct board_info *board, int *phase)
             *phase += ((i + 1) >> 1) * board->pnbrqcount[WHITE][i];
             *phase += ((i + 1) >> 1) * board->pnbrqcount[BLACK][i];
         }
-        mgscore += VALUES[i] * board->pnbrqcount[WHITE][i];
-        mgscore -= VALUES[i] * board->pnbrqcount[BLACK][i];
-        egscore += VALUES2[i] * board->pnbrqcount[WHITE][i];
-        egscore -= VALUES2[i] * board->pnbrqcount[BLACK][i];
+        *mgscore += VALUES[i] * board->pnbrqcount[WHITE][i];
+        *mgscore -= VALUES[i] * board->pnbrqcount[BLACK][i];
+        *egscore  += VALUES2[i] * board->pnbrqcount[WHITE][i];
+        *egscore  -= VALUES2[i] * board->pnbrqcount[BLACK][i];
     }
     // 0 represents an entirely pieceless board (only kings and pawns), while MAXPHASE is at least the starting number of pieces on the board.
     if (*phase > MAXPHASE)
@@ -141,16 +140,13 @@ int material(struct board_info *board, int *phase)
         *phase = MAXPHASE;
     }
 
-    val = ((*phase) * mgscore + (24 - (*phase)) * egscore) / 24;
-    return val;
 }
 
-int pst(struct board_info *board, int phase) // A whale of a function.
+void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A whale of a function.
 {
     attacking_pieces[0] = 0, attacking_pieces[1] = 0;
     int indx = (2*((board->kingpos[WHITE] & 7) > 3)) + ((board->kingpos[BLACK] & 7) > 3);
     unsigned char spacew = 0, spaceb = 0; // represents the space area that White and Black have.
-    int mgscore = 0, egscore = 0;
     int blockedpawns = 0; // the amount of blocked pawns in the position, gives space a weight.
 
     short int wbackwards[8], wadvanced[8], bbackwards[8], badvanced[8]; // gets the most advanced and furthest backwards pawns on the file - useful for pawn structure detection
@@ -202,17 +198,17 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             unsigned char piecetype = (board->board[i] >> 1) - 1, piececolor = (board->board[i] & 1);
             if (piecetype != 0 && piecetype != 5)
             { // pawns or kings
-                moves = piece_mobility(board, i, piececolor, piecetype - 1, &mgscore, &egscore);
+                moves = piece_mobility(board, i, piececolor, piecetype - 1, mgscore, egscore );
                 mobilitybonus = true;
             }
             if ((piececolor))
             { // black piece
-                mgscore -= pstbonusesmg[indx][piecetype][i ^ 112 ^ ((indx == 1 || indx == 2) * 7)];
-                egscore -= pstbonuseseg[indx][piecetype][i ^ 112 ^ ((indx == 1 || indx == 2) * 7)];
+                *mgscore -= pstbonusesmg[indx][piecetype][i ^ 112 ^ ((indx == 1 || indx == 2) * 7)];
+                *egscore  -= pstbonuseseg[indx][piecetype][i ^ 112 ^ ((indx == 1 || indx == 2) * 7)];
                 if (mobilitybonus)
                 {
-                    mgscore -= mobilitybonusesmg[piecetype - 1][moves];
-                    egscore -= mobilitybonuseseg[piecetype - 1][moves];
+                    *mgscore -= mobilitybonusesmg[piecetype - 1][moves];
+                    *egscore  -= mobilitybonuseseg[piecetype - 1][moves];
                 }
 
                 // Blocked pawns are any pawns that either have an enemy pawn right in front of it, or two pawns a knight's move forwards
@@ -227,14 +223,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     if (!((i + SW) & 0x88) && board->board[i + SW] > BPAWN && board->board[i + SW] < WKING && !(board->board[i + SW] & 1))
                     {
                         attacking_pieces[BLACK]++;
-                        mgscore -= pieceattacksbonusmg[0][board->board[i + SW] / 2 - 2];
-                        egscore -= pieceattacksbonuseg[0][board->board[i + SW] / 2 - 2];
+                        *mgscore -= pieceattacksbonusmg[0][board->board[i + SW] / 2 - 2];
+                        *egscore  -= pieceattacksbonuseg[0][board->board[i + SW] / 2 - 2];
                     }
                     if (!((i + SE) & 0x88) && board->board[i + SE] > BPAWN && board->board[i + SE] < WKING && !(board->board[i + SE] & 1))
                     {
                         attacking_pieces[BLACK]++;
-                        mgscore -= pieceattacksbonusmg[0][board->board[i + SE] / 2 - 2];
-                        egscore -= pieceattacksbonuseg[0][board->board[i + SE] / 2 - 2];
+                        *mgscore -= pieceattacksbonusmg[0][board->board[i + SE] / 2 - 2];
+                        *egscore  -= pieceattacksbonuseg[0][board->board[i + SE] / 2 - 2];
                     }
                     // update pawn structure array - if we already have a pawn on that file, we've found a doubled pawn.
                     if (badvanced[(i & 7)] == 9)
@@ -246,8 +242,8 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                         if (bbackwards[(i & 7)] != -1)
                         {
 
-                            mgscore -= doubledpen[0];
-                            egscore -= doubledpen[1];
+                            *mgscore -= doubledpen[0];
+                            *egscore  -= doubledpen[1];
                         }
                         bbackwards[(i & 7)] = (i >> 4);
                     }
@@ -256,12 +252,12 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             else
             {
                 // The same thing as above, but for white pieces.
-                mgscore += pstbonusesmg[indx][piecetype][i];
-                egscore += pstbonuseseg[indx][piecetype][i];
+                *mgscore += pstbonusesmg[indx][piecetype][i];
+                *egscore  += pstbonuseseg[indx][piecetype][i];
                 if (mobilitybonus)
                 {
-                    mgscore += mobilitybonusesmg[piecetype - 1][moves];
-                    egscore += mobilitybonuseseg[piecetype - 1][moves];
+                    *mgscore += mobilitybonusesmg[piecetype - 1][moves];
+                    *egscore  += mobilitybonuseseg[piecetype - 1][moves];
                 }
                 if (!piecetype && (board->board[i + NORTH] == BPAWN || ((((i + NNW) & 0x88) || board->board[i + NNW] == BPAWN) && (((i + NNE) & 0x88) || board->board[i + NNE] == BPAWN))))
                 {
@@ -272,14 +268,14 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     if (!((i + NW) & 0x88) && board->board[i + NW] > BPAWN && board->board[i + NW] < WKING && (board->board[i + NW] & 1))
                     {
                         attacking_pieces[WHITE]++;
-                        mgscore += pieceattacksbonusmg[0][board->board[i + NW] / 2 - 2];
-                        egscore += pieceattacksbonuseg[0][board->board[i + NW] / 2 - 2];
+                        *mgscore += pieceattacksbonusmg[0][board->board[i + NW] / 2 - 2];
+                        *egscore  += pieceattacksbonuseg[0][board->board[i + NW] / 2 - 2];
                     }
                     if (!((i + NE) & 0x88) && board->board[i + NE] > BPAWN && board->board[i + NE] < WKING && (board->board[i + NE] & 1))
                     {
                         attacking_pieces[WHITE]++;
-                        mgscore += pieceattacksbonusmg[0][board->board[i + NE] / 2 - 2];
-                        egscore += pieceattacksbonuseg[0][board->board[i + NE] / 2 - 2];
+                        *mgscore += pieceattacksbonusmg[0][board->board[i + NE] / 2 - 2];
+                        *egscore  += pieceattacksbonuseg[0][board->board[i + NE] / 2 - 2];
                     }
                     if (wbackwards[(i & 7)] == 9)
                     {
@@ -289,8 +285,8 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                     {
                         if (wadvanced[(i & 7)] != -1)
                         {
-                            egscore += doubledpen[0];
-                            mgscore += doubledpen[1];
+                            *egscore  += doubledpen[0];
+                            *mgscore += doubledpen[1];
                         }
                         wadvanced[(i & 7)] = (i >> 4);
                     }
@@ -308,13 +304,13 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 // If we have no pawns on the g-file at all, the h-pawn is isolated. If instead the furthest backwards one is further up the board, it's a backwards pawn.
                 if (wadvanced[6] == -1)
                 {
-                    mgscore += isopen[0];
-                    egscore += isopen[1];
+                    *mgscore += isopen[0];
+                    *egscore  += isopen[1];
                 }
                 else if (wbackwards[7] < wbackwards[6])
                 {
 
-                    mgscore += backwardspen[0]; egscore += backwardspen[1];
+                    *mgscore += backwardspen[0]; *egscore  += backwardspen[1];
                 }
             }
 
@@ -322,11 +318,11 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             {
                 if (badvanced[6] == 9)
                 {
-                    mgscore -= isopen[0]; egscore -= isopen[1];
+                    *mgscore -= isopen[0]; *egscore  -= isopen[1];
                 }
                 else if (bbackwards[7] > bbackwards[6])
                 {
-                    mgscore -= backwardspen[0]; egscore -= backwardspen[1];
+                    *mgscore -= backwardspen[0]; *egscore  -= backwardspen[1];
                 }
             }
 
@@ -339,27 +335,27 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 {
                     if (board->board[pos + NORTH]) // If the square in front of the passed pawn is occupied, it's a blocked passed pawn and gets a bit less of a bonus.
                     {
-                        mgscore += blockedmgbonus[wadvanced[7]], egscore += blockedegbonus[wadvanced[7]];
+                        *mgscore += blockedmgbonus[wadvanced[7]], *egscore  += blockedegbonus[wadvanced[7]];
                     }
                     else
                     {
-                        mgscore += passedmgbonus[wadvanced[7]], egscore += passedegbonus[wadvanced[7]];
+                        *mgscore += passedmgbonus[wadvanced[7]], *egscore  += passedegbonus[wadvanced[7]];
                     }
                     if (board->board[pos + SW] == WPAWN)
                     { // Protected passed pawns get an additional bonus.
                         if (!board->board[pos + NORTH])
                         {
-                            mgscore += protectedpassedmg[wadvanced[7]], egscore += protectedpassedeg[wadvanced[7]];
+                            *mgscore += protectedpassedmg[wadvanced[7]], *egscore  += protectedpassedeg[wadvanced[7]];
                         }
                         else
                         {
-                            mgscore += blockedprotectedmg[wadvanced[7]], egscore += blockedprotectedeg[wadvanced[7]];
+                            *mgscore += blockedprotectedmg[wadvanced[7]], *egscore  += blockedprotectedeg[wadvanced[7]];
                         }
                     }
                 }
                 else if (!board->board[pos + NORTH]) // And candidate passed pawns (ie pawns that are one square away from being passed) also get bonuses if the square in front is empty.
                 {
-                    mgscore += candidatepassedmg[wadvanced[7]], egscore += candidatepassedeg[wadvanced[7]];
+                    *mgscore += candidatepassedmg[wadvanced[7]], *egscore  += candidatepassedeg[wadvanced[7]];
                 }
             }
             if (badvanced[7] != 9 && badvanced[7] <= wbackwards[7] && badvanced[7] <= wbackwards[6] + 1)
@@ -369,27 +365,27 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 {
                     if (board->board[pos + SOUTH])
                     {
-                        mgscore -= blockedmgbonus[7 - badvanced[7]], egscore -= blockedegbonus[7 - badvanced[7]];
+                        *mgscore -= blockedmgbonus[7 - badvanced[7]], *egscore  -= blockedegbonus[7 - badvanced[7]];
                     }
                     else
                     {
-                        mgscore -= passedmgbonus[7 - badvanced[7]], egscore -= passedegbonus[7 - badvanced[7]];
+                        *mgscore -= passedmgbonus[7 - badvanced[7]], *egscore  -= passedegbonus[7 - badvanced[7]];
                     }
                     if (board->board[pos + NW] == BPAWN)
                     {
                         if (!board->board[pos + SOUTH])
                         {
-                            mgscore -= protectedpassedmg[7 - badvanced[7]], egscore -= protectedpassedeg[7 - badvanced[7]];
+                            *mgscore -= protectedpassedmg[7 - badvanced[7]], *egscore  -= protectedpassedeg[7 - badvanced[7]];
                         }
                         else
                         {
-                            mgscore -= blockedprotectedmg[7 - badvanced[7]], egscore -= blockedprotectedeg[7 - badvanced[7]];
+                            *mgscore -= blockedprotectedmg[7 - badvanced[7]], *egscore  -= blockedprotectedeg[7 - badvanced[7]];
                         }
                     }
                 }
                 else if (!board->board[pos + SOUTH])
                 {
-                    mgscore -= candidatepassedmg[7 - badvanced[7]], egscore -= candidatepassedeg[7 - badvanced[7]];
+                    *mgscore -= candidatepassedmg[7 - badvanced[7]], *egscore  -= candidatepassedeg[7 - badvanced[7]];
                 }
             }
         }
@@ -401,22 +397,22 @@ int pst(struct board_info *board, int phase) // A whale of a function.
 
                 if (wadvanced[1] == -1)
                 { // evaluates isolated pawns for a+passed
-                    mgscore += isopen[0]; egscore += isopen[1];
+                    *mgscore += isopen[0]; *egscore  += isopen[1];
                 }
                 else if (wbackwards[0] < wbackwards[1])
                 {
-                    mgscore += backwardspen[0]; egscore += backwardspen[1];
+                    *mgscore += backwardspen[0]; *egscore  += backwardspen[1];
                 }
             }
             if (badvanced[0] != 9)
             {
                 if (badvanced[6] == 9)
                 {
-                    mgscore -= isopen[0]; egscore -= isopen[1];
+                    *mgscore -= isopen[0]; *egscore  -= isopen[1];
                 }
                 else if (bbackwards[0] > bbackwards[1])
                 {
-                    mgscore -= backwardspen[0]; egscore -= backwardspen[1];
+                    *mgscore -= backwardspen[0]; *egscore  -= backwardspen[1];
                 }
             }
 
@@ -428,27 +424,27 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 {
                     if (board->board[pos + NORTH])
                     {
-                        mgscore += blockedmgbonus[wadvanced[0]], egscore += blockedegbonus[wadvanced[0]];
+                        *mgscore += blockedmgbonus[wadvanced[0]], *egscore  += blockedegbonus[wadvanced[0]];
                     }
                     else
                     {
-                        mgscore += passedmgbonus[wadvanced[0]], egscore += passedegbonus[wadvanced[0]];
+                        *mgscore += passedmgbonus[wadvanced[0]], *egscore  += passedegbonus[wadvanced[0]];
                     }
                     if (board->board[pos + SE] == WPAWN)
                     {
                         if (!board->board[pos + NORTH])
                         {
-                            mgscore += protectedpassedmg[wadvanced[0]], egscore += protectedpassedeg[wadvanced[0]];
+                            *mgscore += protectedpassedmg[wadvanced[0]], *egscore  += protectedpassedeg[wadvanced[0]];
                         }
                         else
                         {
-                            mgscore += blockedprotectedmg[wadvanced[0]], egscore += blockedprotectedeg[wadvanced[0]];
+                            *mgscore += blockedprotectedmg[wadvanced[0]], *egscore  += blockedprotectedeg[wadvanced[0]];
                         }
                     }
                 }
                 else if (!board->board[pos + NORTH])
                 {
-                    mgscore += candidatepassedmg[wadvanced[0]], egscore += candidatepassedeg[wadvanced[0]];
+                    *mgscore += candidatepassedmg[wadvanced[0]], *egscore  += candidatepassedeg[wadvanced[0]];
                 }
             }
             if (badvanced[0] != 9 && badvanced[0] <= wbackwards[0] && badvanced[0] <= wbackwards[1] + 1)
@@ -458,27 +454,27 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 {
                     if (board->board[pos + SOUTH])
                     {
-                        mgscore -= blockedmgbonus[7 - badvanced[0]], egscore -= blockedegbonus[7 - badvanced[0]];
+                        *mgscore -= blockedmgbonus[7 - badvanced[0]], *egscore  -= blockedegbonus[7 - badvanced[0]];
                     }
                     else
                     {
-                        mgscore -= passedmgbonus[7 - badvanced[0]], egscore -= passedegbonus[7 - badvanced[0]];
+                        *mgscore -= passedmgbonus[7 - badvanced[0]], *egscore  -= passedegbonus[7 - badvanced[0]];
                     }
                     if (board->board[pos + NE] == BPAWN)
                     {
                         if (!board->board[pos + SOUTH])
                         {
-                            mgscore -= protectedpassedmg[7 - badvanced[0]], egscore -= protectedpassedeg[7 - badvanced[0]];
+                            *mgscore -= protectedpassedmg[7 - badvanced[0]], *egscore  -= protectedpassedeg[7 - badvanced[0]];
                         }
                         else
                         {
-                            mgscore -= blockedprotectedmg[7 - badvanced[0]], egscore -= blockedprotectedeg[7 - badvanced[0]];
+                            *mgscore -= blockedprotectedmg[7 - badvanced[0]], *egscore  -= blockedprotectedeg[7 - badvanced[0]];
                         }
                     }
                 }
                 else if (!board->board[pos + SOUTH])
                 {
-                    mgscore -= candidatepassedmg[7 - badvanced[0]], egscore -= candidatepassedeg[7 - badvanced[0]];
+                    *mgscore -= candidatepassedmg[7 - badvanced[0]], *egscore  -= candidatepassedeg[7 - badvanced[0]];
                 }
             }
         }
@@ -489,11 +485,11 @@ int pst(struct board_info *board, int phase) // A whale of a function.
             {
                 if (wadvanced[i - 1] == -1 && wadvanced[i + 1] == -1)
                 { // evaluates isolated pawns for b-g files + passed pawns
-                    mgscore += isopen[0]; egscore += isopen[1];
+                    *mgscore += isopen[0]; *egscore  += isopen[1];
                 }
                 else if (wbackwards[i] < wbackwards[i + 1] && wbackwards[i] < wbackwards[i - 1])
                 {
-                    mgscore += backwardspen[0]; egscore += backwardspen[1];
+                    *mgscore += backwardspen[0]; *egscore  += backwardspen[1];
                 }
             }
 
@@ -502,11 +498,11 @@ int pst(struct board_info *board, int phase) // A whale of a function.
 
                 if (badvanced[i - 1] == 9 && badvanced[i + 1] == 9)
                 {
-                    mgscore -= isopen[0]; egscore -= isopen[1];
+                    *mgscore -= isopen[0]; *egscore  -= isopen[1];
                 }
                 else if (bbackwards[i] > bbackwards[i + 1] && bbackwards[i] > bbackwards[i - 1])
                 {
-                    mgscore -= backwardspen[0]; egscore -= backwardspen[1];
+                    *mgscore -= backwardspen[0]; *egscore  -= backwardspen[1];
                 }
             }
 
@@ -519,27 +515,27 @@ int pst(struct board_info *board, int phase) // A whale of a function.
 
                     if (board->board[pos + NORTH])
                     {
-                        mgscore += blockedmgbonus[wadvanced[i]], egscore += blockedegbonus[wadvanced[i]];
+                        *mgscore += blockedmgbonus[wadvanced[i]], *egscore  += blockedegbonus[wadvanced[i]];
                     }
                     else
                     {
-                        mgscore += passedmgbonus[wadvanced[i]], egscore += passedegbonus[wadvanced[i]];
+                        *mgscore += passedmgbonus[wadvanced[i]], *egscore  += passedegbonus[wadvanced[i]];
                     }
                     if (board->board[pos + SW] == WPAWN || board->board[pos + SE] == WPAWN)
                     {
                         if (!board->board[pos + NORTH])
                         {
-                            mgscore += protectedpassedmg[wadvanced[i]], egscore += protectedpassedeg[wadvanced[i]];
+                            *mgscore += protectedpassedmg[wadvanced[i]], *egscore  += protectedpassedeg[wadvanced[i]];
                         }
                         else
                         {
-                            mgscore += blockedprotectedmg[wadvanced[i]], egscore += blockedprotectedeg[wadvanced[i]];
+                            *mgscore += blockedprotectedmg[wadvanced[i]], *egscore  += blockedprotectedeg[wadvanced[i]];
                         }
                     }
                 }
                 else if (!board->board[pos + NORTH])
                 {
-                    mgscore += candidatepassedmg[wadvanced[i]], egscore += candidatepassedeg[wadvanced[i]];
+                    *mgscore += candidatepassedmg[wadvanced[i]], *egscore  += candidatepassedeg[wadvanced[i]];
                 }
             }
             if (badvanced[i] != 9 && badvanced[i] <= wbackwards[i - 1] + 1 && badvanced[i] <= wbackwards[i] && badvanced[i] <= wbackwards[i + 1] + 1)
@@ -549,27 +545,27 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 {
                     if (board->board[pos + SOUTH])
                     {
-                        mgscore -= blockedmgbonus[7 - badvanced[i]], egscore -= blockedegbonus[7 - badvanced[i]];
+                        *mgscore -= blockedmgbonus[7 - badvanced[i]], *egscore  -= blockedegbonus[7 - badvanced[i]];
                     }
                     else
                     {
-                        mgscore -= passedmgbonus[7 - badvanced[i]], egscore -= passedegbonus[7 - badvanced[i]];
+                        *mgscore -= passedmgbonus[7 - badvanced[i]], *egscore  -= passedegbonus[7 - badvanced[i]];
                     }
                     if (board->board[pos + NW] == BPAWN || board->board[pos + NE] == BPAWN)
                     {
                         if (!board->board[pos + SOUTH])
                         {
-                            mgscore -= protectedpassedmg[7 - badvanced[i]], egscore -= protectedpassedeg[7 - badvanced[i]];
+                            *mgscore -= protectedpassedmg[7 - badvanced[i]], *egscore  -= protectedpassedeg[7 - badvanced[i]];
                         }
                         else
                         {
-                            mgscore -= blockedprotectedmg[7 - badvanced[i]], egscore -= blockedprotectedeg[7 - badvanced[i]];
+                            *mgscore -= blockedprotectedmg[7 - badvanced[i]], *egscore  -= blockedprotectedeg[7 - badvanced[i]];
                         }
                     }
                 }
                 else if (!board->board[pos + SOUTH])
                 {
-                    mgscore -= candidatepassedmg[7 - badvanced[i]], egscore -= candidatepassedeg[7 - badvanced[i]];
+                    *mgscore -= candidatepassedmg[7 - badvanced[i]], *egscore  -= candidatepassedeg[7 - badvanced[i]];
                 }
             }
         }
@@ -591,7 +587,7 @@ int pst(struct board_info *board, int phase) // A whale of a function.
         weight1 = MAX(0, weight1 - 3 + 1 + blockedpawns);
 
         int space = ((((spacew * weight0 * weight0) >> 4) - ((spaceb * weight1 * weight1) >> 4))) >> 1;
-        mgscore += space * 5 / 10, egscore += space * 5 / 10; // This final weight is what the tuner spits out after everything else is calculated as a multiplier.
+        *mgscore += space * 5 / 10, *egscore  += space * 5 / 10; // This final weight is what the tuner spits out after everything else is calculated as a multiplier.
     }
 
     if (attackers[BLACK] > 1)
@@ -615,7 +611,7 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 pawnshield++;
             }
         }
-        mgscore -= kingdangertablemg[pawnshield][king_attack_count[BLACK]], egscore -= kingdangertableeg[pawnshield][king_attack_count[BLACK]];
+        *mgscore -= kingdangertablemg[pawnshield][king_attack_count[BLACK]], *egscore  -= kingdangertableeg[pawnshield][king_attack_count[BLACK]];
     }
 
     if (attackers[WHITE] > 1)
@@ -637,33 +633,32 @@ int pst(struct board_info *board, int phase) // A whale of a function.
                 pawnshield++;
             }
         }
-        mgscore += kingdangertablemg[pawnshield][king_attack_count[WHITE]], egscore += kingdangertableeg[pawnshield][king_attack_count[WHITE]];
+        *mgscore += kingdangertablemg[pawnshield][king_attack_count[WHITE]], *egscore  += kingdangertableeg[pawnshield][king_attack_count[WHITE]];
     }
     
     if (attacking_pieces[WHITE] > 1) // Having multiple threats at once is good.
     {
-        mgscore += multattacksbonus[0] * (attacking_pieces[WHITE] - 1);
-        egscore += multattacksbonus[1] * (attacking_pieces[WHITE] - 1);
+        *mgscore += multattacksbonus[0] * (attacking_pieces[WHITE] - 1);
+        *egscore  += multattacksbonus[1] * (attacking_pieces[WHITE] - 1);
     }
     if (attacking_pieces[BLACK] > 1)
     {
-        mgscore -= multattacksbonus[0] * (attacking_pieces[BLACK] - 1);
-        egscore -= multattacksbonus[1] * (attacking_pieces[BLACK] - 1);
+        *mgscore -= multattacksbonus[0] * (attacking_pieces[BLACK] - 1);
+        *egscore  -= multattacksbonus[1] * (attacking_pieces[BLACK] - 1);
     }
 
     // Add bishop pair bonuses
     if (board->pnbrqcount[WHITE][2] > 1)
     {
-        mgscore += bishop_pair[0][board->pnbrqcount[WHITE][0]];
-        egscore += bishop_pair[1][board->pnbrqcount[WHITE][0]];
+        *mgscore += bishop_pair[0][board->pnbrqcount[WHITE][0]];
+        *egscore  += bishop_pair[1][board->pnbrqcount[WHITE][0]];
     }
     if (board->pnbrqcount[BLACK][2] > 1)
     {
-        mgscore -= bishop_pair[0][board->pnbrqcount[BLACK][0]];
-        egscore -= bishop_pair[1][board->pnbrqcount[BLACK][0]];
+        *mgscore -= bishop_pair[0][board->pnbrqcount[BLACK][0]];
+        *egscore  -= bishop_pair[1][board->pnbrqcount[BLACK][0]];
     }
 
-    return (phase * mgscore + (24 - phase) * egscore) / 24;
 }
 
 int eval(struct board_info *board, bool color)
@@ -671,10 +666,13 @@ int eval(struct board_info *board, bool color)
     attackers[0] = 0, attackers[1] = 0;
     king_attack_count[0] = 0, king_attack_count[1] = 0;
     int phase = 0;
-    int evl = material(board, &phase);
-    int mtr = evl;
+    int mgscore = 0, egscore  = 0;
+    material(board, &phase, &mgscore, &egscore );
+    int mtr = (phase * mgscore + (24 - phase) * egscore ) / 24;
 
-    evl += pst(board, phase);
+    pst(board, phase, &mgscore, &egscore);
+
+    int evl = (phase * mgscore + (24 - phase) * egscore ) / 24;
     if (evl >= 0 && mtr < 350 && board->pnbrqcount[WHITE][0] < 3 && phase < 7 && phase > 0) // Apply scaling.
     {           
 
