@@ -163,7 +163,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
             i += 7;
             continue;
         }
-        if (phase > 16)
+        /*if (phase > 16)
         {
             if (CENTERWHITE[i]) // If we're in the middlegame, and we have a pawn in the center, or control squares in the center behind a friendly pawn, it's good for us.
             {
@@ -189,7 +189,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                     }
                 }
             }
-        }
+        }*/
 
         if (board->board[i])
         {
@@ -571,7 +571,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
         }
     }
 
-    if (phase > 16)
+    /*if (phase > 16)
     {
         // If we're still early in the game, calculate space.
         int weight0 = 0, weight1 = 0;
@@ -588,7 +588,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
 
         int space = ((((spacew * weight0 * weight0) >> 4) - ((spaceb * weight1 * weight1) >> 4))) >> 1;
         *mgscore += space * 5 / 10, *egscore  += space * 5 / 10; // This final weight is what the tuner spits out after everything else is calculated as a multiplier.
-    }
+    }*/
 
     if (attackers[BLACK] > 1)
     {
@@ -671,7 +671,6 @@ int eval(struct board_info *board, bool color)
     int mtr = (phase * mgscore + (24 - phase) * egscore ) / 24;
 
     pst(board, phase, &mgscore, &egscore);
-
     int evl = (phase * mgscore + (24 - phase) * egscore ) / 24;
     if (evl >= 0 && mtr < 350 && board->pnbrqcount[WHITE][0] < 3 && phase < 7 && phase > 0) // Apply scaling.
     {           
