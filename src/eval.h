@@ -163,33 +163,6 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
             i += 7;
             continue;
         }
-        /*if (phase > 16)
-        {
-            if (CENTERWHITE[i]) // If we're in the middlegame, and we have a pawn in the center, or control squares in the center behind a friendly pawn, it's good for us.
-            {
-
-                if (board->board[i] != WPAWN && ((((i + NW) & 0x88) || board->board[i + NW] != BPAWN) && (((i + NE) & 0x88) || board->board[i + NE] != BPAWN)))
-                {
-
-                    spacew++;
-                    if ((board->board[i + NORTH] == WPAWN || board->board[i + (NORTH * 2)] == WPAWN || board->board[i + (NORTH * 3)] == WPAWN) && !isattacked(board, i, BLACK))
-                    {
-                        spacew++;
-                    }
-                }
-            }
-            else if (CENTERBLACK[i])
-            {
-                if (board->board[i] != BPAWN && ((((i + SW) & 0x88) || board->board[i + SW] != WPAWN) && (((i + SE) & 0x88) || board->board[i + SE] != WPAWN)))
-                {
-                    spaceb++;
-                    if ((board->board[i + SOUTH] == BPAWN || board->board[i + (SOUTH * 2)] == BPAWN || board->board[i + (SOUTH * 3)] == BPAWN) && !isattacked(board, i, WHITE))
-                    {
-                        spaceb++;
-                    }
-                }
-            }
-        }*/
 
         if (board->board[i])
         {
@@ -570,25 +543,6 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
             }
         }
     }
-
-    /*if (phase > 16)
-    {
-        // If we're still early in the game, calculate space.
-        int weight0 = 0, weight1 = 0;
-
-        for (int i = 0; i < 5; i++) // One of the weights is dependent on the amount of material on the board...
-        {
-            weight0 += board->pnbrqcount[WHITE][i];
-            weight1 += board->pnbrqcount[BLACK][i];
-        }
-        blockedpawns = MIN(blockedpawns, 9); // and the other one is on how blocked up the position is (up to a limit).
-
-        weight0 = MAX(0, weight0 - 3 + 1 + blockedpawns);
-        weight1 = MAX(0, weight1 - 3 + 1 + blockedpawns);
-
-        int space = ((((spacew * weight0 * weight0) >> 4) - ((spaceb * weight1 * weight1) >> 4))) >> 1;
-        *mgscore += space * 5 / 10, *egscore  += space * 5 / 10; // This final weight is what the tuner spits out after everything else is calculated as a multiplier.
-    }*/
 
     if (attackers[BLACK] > 1)
     {
