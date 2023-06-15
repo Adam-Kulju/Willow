@@ -144,6 +144,7 @@ void material(struct board_info *board, int *phase, int *mgscore, int *egscore )
 
 void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A whale of a function.
 {
+    int tropism_nums[2][5] = {{0,0,0,0,0}, {0,0,0,0,0}};
     attacking_pieces[0] = 0, attacking_pieces[1] = 0;
     int indx = (2*((board->kingpos[WHITE] & 7) > 3)) + ((board->kingpos[BLACK] & 7) > 3);
     unsigned char spacew = 0, spaceb = 0; // represents the space area that White and Black have.
@@ -183,7 +184,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                     *mgscore -= mobilitybonusesmg[piecetype - 1][moves];
                     *egscore  -= mobilitybonuseseg[piecetype - 1][moves];
                 }
-
+                if (piecetype != 5 && KINGZONES[WHITE][board->kingpos[WHITE]][i]){
+                    tropism_nums[BLACK][piecetype]++;
+                }
                 // Blocked pawns are any pawns that either have an enemy pawn right in front of it, or two pawns a knight's move forwards
                 // eg a white pawn on e4 gets blocked by black pawns on d6 and f6
                 if (!piecetype && (board->board[i + SOUTH] == WPAWN || ((((i + SSW) & 0x88) || board->board[i + SSW] == WPAWN) && (((i + SSE) & 0x88) || board->board[i + SSE] == WPAWN))))
@@ -231,6 +234,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                 {
                     *mgscore += mobilitybonusesmg[piecetype - 1][moves];
                     *egscore  += mobilitybonuseseg[piecetype - 1][moves];
+                }
+                if (piecetype != 5 && KINGZONES[BLACK][board->kingpos[BLACK]][i]){
+                    tropism_nums[WHITE][piecetype]++;
                 }
                 if (!piecetype && (board->board[i + NORTH] == BPAWN || ((((i + NNW) & 0x88) || board->board[i + NNW] == BPAWN) && (((i + NNE) & 0x88) || board->board[i + NNE] == BPAWN))))
                 {
@@ -566,6 +572,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
             }
         }
         *mgscore -= kingdangertablemg[pawnshield][king_attack_count[BLACK]], *egscore  -= kingdangertableeg[pawnshield][king_attack_count[BLACK]];
+        for (int i = 0; i < 5; i++){
+            *mgscore -= tropism[0][i] * tropism_nums[BLACK][i], *egscore -= tropism[1][i] * tropism_nums[BLACK][i];
+        }
     }
 
     if (attackers[WHITE] > 1)
@@ -588,6 +597,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
             }
         }
         *mgscore += kingdangertablemg[pawnshield][king_attack_count[WHITE]], *egscore  += kingdangertableeg[pawnshield][king_attack_count[WHITE]];
+        for (int i = 0; i < 5; i++){
+            *mgscore += tropism[0][i] * tropism_nums[WHITE][i], *egscore += tropism[1][i] * tropism_nums[WHITE][i];
+        }
     }
     
     if (attacking_pieces[WHITE] > 1) // Having multiple threats at once is good.
@@ -626,6 +638,12 @@ int eval(struct board_info *board, bool color)
 
     pst(board, phase, &mgscore, &egscore);
     int evl = (phase * mgscore + (24 - phase) * egscore ) / 24;
+    if (color){
+        mgscore -= tempo[0], egscore -= tempo[1];
+    }
+    else{
+        mgscore += tempo[0], egscore += tempo[1];
+    }
     if (evl >= 0 && mtr < 350 && board->pnbrqcount[WHITE][0] < 3 && phase < 7 && phase > 0) // Apply scaling.
     {           
 
@@ -641,7 +659,7 @@ int eval(struct board_info *board, bool color)
     {
         evl = -evl;
     }
-    return evl + TEMPO;
+    return evl;
 }
 
 #endif
