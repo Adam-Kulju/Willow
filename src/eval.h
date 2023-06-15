@@ -4,12 +4,13 @@
 #include "globals.h"
 #include "board.h"
 
-int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *mgscore, int *egscore )
+int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *mgscore, int *egscore, int *fmobility)
 {
     // Gets the mobility of a piece, as well as info about attacks on the enemy king and other pieces.
 
     isattacker = false;
     unsigned char mobility = 0;
+    *fmobility = 0;
     for (unsigned char dir = 0; dir < vectors[piecetype]; dir++)
     {
         // Move in each direction the piece can go to.
@@ -29,12 +30,18 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
                 if ((((pos + SE) & 0x88) || (board->board[pos + SE] != WPAWN)) && (((pos + SW) & 0x88) || (board->board[pos + SW] != WPAWN)))
                 {
                     mobility++;
+                    if (vector[piecetype][dir] < WEST){ //forward mobility - it is better to go forwards than backwards.
+                        *fmobility += 1;
+                    }
                 }
             }
             else
             {
                 if ((((pos + NE) & 0x88) || (board->board[pos + NE] != BPAWN)) && (((pos + NW) & 0x88) || (board->board[pos + NW] != BPAWN)))
                 {
+                    if (vector[piecetype][dir] > EAST){
+                        *fmobility += 1;
+                    }
                     mobility++;
                 }
             }
@@ -113,7 +120,7 @@ int piece_mobility(struct board_info *board, unsigned char i, bool color, unsign
     return mobility;
 }
 
-void material(struct board_info *board, int *phase, int *mgscore, int *egscore )
+void material(struct board_info *board, int *phase, int *mgscore, int *egscore)
 {
     // Evaluates material and bishop pair bonus, and gets the phase of the game.
     int val = 0;
@@ -144,11 +151,10 @@ void material(struct board_info *board, int *phase, int *mgscore, int *egscore )
 
 void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A whale of a function.
 {
+    int fmobility = 0;
     int tropism_nums[2][5] = {{0,0,0,0,0}, {0,0,0,0,0}};
     attacking_pieces[0] = 0, attacking_pieces[1] = 0;
     int indx = (2*((board->kingpos[WHITE] & 7) > 3)) + ((board->kingpos[BLACK] & 7) > 3);
-    unsigned char spacew = 0, spaceb = 0; // represents the space area that White and Black have.
-    int blockedpawns = 0; // the amount of blocked pawns in the position, gives space a weight.
 
     short int wbackwards[8], wadvanced[8], bbackwards[8], badvanced[8]; // gets the most advanced and furthest backwards pawns on the file - useful for pawn structure detection
 
@@ -172,7 +178,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
             unsigned char piecetype = (board->board[i] >> 1) - 1, piececolor = (board->board[i] & 1);
             if (piecetype != 0 && piecetype != 5)
             { // pawns or kings
-                moves = piece_mobility(board, i, piececolor, piecetype - 1, mgscore, egscore );
+                moves = piece_mobility(board, i, piececolor, piecetype - 1, mgscore, egscore, &fmobility);
                 mobilitybonus = true;
             }
             if ((piececolor))
@@ -183,16 +189,14 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                 {
                     *mgscore -= mobilitybonusesmg[piecetype - 1][moves];
                     *egscore  -= mobilitybonuseseg[piecetype - 1][moves];
+                    *mgscore -= fmobilitybonusesmg[piecetype-1][fmobility];
+                    *egscore -= fmobilitybonuseseg[piecetype-1][fmobility];
                 }
                 if (piecetype != 5 && KINGZONES[WHITE][board->kingpos[WHITE]][i]){
                     tropism_nums[BLACK][piecetype]++;
                 }
                 // Blocked pawns are any pawns that either have an enemy pawn right in front of it, or two pawns a knight's move forwards
                 // eg a white pawn on e4 gets blocked by black pawns on d6 and f6
-                if (!piecetype && (board->board[i + SOUTH] == WPAWN || ((((i + SSW) & 0x88) || board->board[i + SSW] == WPAWN) && (((i + SSE) & 0x88) || board->board[i + SSE] == WPAWN))))
-                {
-                    blockedpawns++;
-                }
                 if (piecetype == 0)
                 {
                     // if we're evaluating a pawn, is it attacking a piece of greater value?
@@ -234,13 +238,11 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                 {
                     *mgscore += mobilitybonusesmg[piecetype - 1][moves];
                     *egscore  += mobilitybonuseseg[piecetype - 1][moves];
+                    *mgscore += fmobilitybonusesmg[piecetype - 1][fmobility];
+                    *egscore  += fmobilitybonuseseg[piecetype - 1][fmobility];
                 }
                 if (piecetype != 5 && KINGZONES[BLACK][board->kingpos[BLACK]][i]){
                     tropism_nums[WHITE][piecetype]++;
-                }
-                if (!piecetype && (board->board[i + NORTH] == BPAWN || ((((i + NNW) & 0x88) || board->board[i + NNW] == BPAWN) && (((i + NNE) & 0x88) || board->board[i + NNE] == BPAWN))))
-                {
-                    blockedpawns++;
                 }
                 if (piecetype == 0)
                 {
@@ -633,7 +635,7 @@ int eval(struct board_info *board, bool color)
     king_attack_count[0] = 0, king_attack_count[1] = 0;
     int phase = 0;
     int mgscore = 0, egscore  = 0;
-    material(board, &phase, &mgscore, &egscore );
+    material(board, &phase, &mgscore, &egscore);
     int mtr = (phase * mgscore + (24 - phase) * egscore ) / 24;
 
     pst(board, phase, &mgscore, &egscore);
