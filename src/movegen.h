@@ -3,8 +3,6 @@
 #include "constants.h"
 #include "board.h"
 
-int SEEVALUES[7] = {0, 100, 450, 450, 650, 1250, 10000};
-
 void pawnmoves(struct board_info *board, struct list *list, int *key, unsigned char pos, bool color)
 {
 
