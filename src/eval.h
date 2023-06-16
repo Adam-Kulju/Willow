@@ -200,17 +200,27 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                 if (piecetype == 0)
                 {
                     // if we're evaluating a pawn, is it attacking a piece of greater value?
-                    if (!((i + SW) & 0x88) && board->board[i + SW] > BPAWN && board->board[i + SW] < WKING && !(board->board[i + SW] & 1))
-                    {
-                        attacking_pieces[BLACK]++;
-                        *mgscore -= pieceattacksbonusmg[0][board->board[i + SW] / 2 - 2];
-                        *egscore  -= pieceattacksbonuseg[0][board->board[i + SW] / 2 - 2];
+                    if (!((i + SW) & 0x88)){
+                        if (board->board[i + SW] > BPAWN && board->board[i + SW] < WKING && !(board->board[i + SW] & 1))
+                        {
+                            attacking_pieces[BLACK]++;
+                            *mgscore -= pieceattacksbonusmg[0][board->board[i + SW] / 2 - 2];
+                            *egscore  -= pieceattacksbonuseg[0][board->board[i + SW] / 2 - 2];
+                        }
+                        else if (board->board[i+SW] == BPAWN){
+                            *mgscore -= protectingpawn[0], *egscore -= protectingpawn[1];
+                        }
                     }
-                    if (!((i + SE) & 0x88) && board->board[i + SE] > BPAWN && board->board[i + SE] < WKING && !(board->board[i + SE] & 1))
-                    {
-                        attacking_pieces[BLACK]++;
-                        *mgscore -= pieceattacksbonusmg[0][board->board[i + SE] / 2 - 2];
-                        *egscore  -= pieceattacksbonuseg[0][board->board[i + SE] / 2 - 2];
+                    if (!((i + SE) & 0x88)){
+                        if (board->board[i + SE] > BPAWN && board->board[i + SE] < WKING && !(board->board[i + SE] & 1))
+                        {
+                            attacking_pieces[BLACK]++;
+                            *mgscore -= pieceattacksbonusmg[0][board->board[i + SE] / 2 - 2];
+                            *egscore  -= pieceattacksbonuseg[0][board->board[i + SE] / 2 - 2];
+                        }
+                        else if (board->board[i+SE] == BPAWN){
+                            *mgscore -= protectingpawn[0], *egscore -= protectingpawn[1];
+                        }
                     }
                     // update pawn structure array - if we already have a pawn on that file, we've found a doubled pawn.
                     if (badvanced[(i & 7)] == 9)
@@ -228,7 +238,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                         bbackwards[(i & 7)] = (i >> 4);
                     }
                     if (board->board[i+NORTH] == BKNIGHT || board->board[i+NORTH] == BBISHOP){
-                       *mgscore -= minbehpiece[0], *egscore -= minbehpiece[1];
+                       *mgscore -= minbehpawn[0], *egscore -= minbehpawn[1];
                     }
                 }
             }
@@ -249,17 +259,27 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                 }
                 if (piecetype == 0)
                 {
-                    if (!((i + NW) & 0x88) && board->board[i + NW] > BPAWN && board->board[i + NW] < WKING && (board->board[i + NW] & 1))
-                    {
-                        attacking_pieces[WHITE]++;
-                        *mgscore += pieceattacksbonusmg[0][board->board[i + NW] / 2 - 2];
-                        *egscore  += pieceattacksbonuseg[0][board->board[i + NW] / 2 - 2];
+                    if (!((i + NW) & 0x88)){
+                        if( board->board[i + NW] > BPAWN && board->board[i + NW] < WKING && (board->board[i + NW] & 1))
+                        {
+                            attacking_pieces[WHITE]++;
+                            *mgscore += pieceattacksbonusmg[0][board->board[i + NW] / 2 - 2];
+                            *egscore  += pieceattacksbonuseg[0][board->board[i + NW] / 2 - 2];
+                        }
+                        else if (board->board[i+NW] == WPAWN){
+                            *mgscore += minbehpawn[0], *egscore += minbehpawn[1];
+                        }
                     }
-                    if (!((i + NE) & 0x88) && board->board[i + NE] > BPAWN && board->board[i + NE] < WKING && (board->board[i + NE] & 1))
-                    {
-                        attacking_pieces[WHITE]++;
-                        *mgscore += pieceattacksbonusmg[0][board->board[i + NE] / 2 - 2];
-                        *egscore  += pieceattacksbonuseg[0][board->board[i + NE] / 2 - 2];
+                    if (!((i + NE) & 0x88)){
+                        if (board->board[i + NE] > BPAWN && board->board[i + NE] < WKING && (board->board[i + NE] & 1))
+                        {
+                            attacking_pieces[WHITE]++;
+                            *mgscore += pieceattacksbonusmg[0][board->board[i + NE] / 2 - 2];
+                            *egscore  += pieceattacksbonuseg[0][board->board[i + NE] / 2 - 2];
+                        }
+                        else if (board->board[i+NE] == WPAWN){
+                            *mgscore += minbehpawn[0], *egscore += minbehpawn[1];
+                        }
                     }
                     if (wbackwards[(i & 7)] == 9)
                     {
@@ -275,7 +295,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                         wadvanced[(i & 7)] = (i >> 4);
                     }
                     if (board->board[i+SOUTH] == WKNIGHT || board->board[i+SOUTH] == WBISHOP){
-                        *mgscore += minbehpiece[0], *egscore +=  minbehpiece[1];
+                        *mgscore += minbehpawn[0], *egscore +=  minbehpawn[1];
                     }
                 }
             }
