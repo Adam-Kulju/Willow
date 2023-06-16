@@ -227,6 +227,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                         }
                         bbackwards[(i & 7)] = (i >> 4);
                     }
+                    if (board->board[i+NORTH] == BKNIGHT || board->board[i+NORTH] == BBISHOP){
+                       *mgscore -= minbehpiece[0], *egscore -= minbehpiece[1];
+                    }
                 }
             }
             else
@@ -270,6 +273,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                             *mgscore += doubledpen[1];
                         }
                         wadvanced[(i & 7)] = (i >> 4);
+                    }
+                    if (board->board[i+SOUTH] == WKNIGHT || board->board[i+SOUTH] == WBISHOP){
+                        *mgscore += minbehpiece[0], *egscore +=  minbehpiece[1];
                     }
                 }
             }
