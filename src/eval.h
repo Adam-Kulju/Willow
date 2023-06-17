@@ -240,6 +240,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                     if (board->board[i+NORTH] == BKNIGHT || board->board[i+NORTH] == BBISHOP){
                        *mgscore -= minbehpawn[0], *egscore -= minbehpawn[1];
                     }
+                    if (board->board[i+EAST] == BPAWN){
+                        *mgscore -= phalanx[0][7 - i/16], *egscore -= phalanx[1][7 - i/16];
+                    }
                 }
             }
             else
@@ -296,6 +299,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                     }
                     if (board->board[i+SOUTH] == WKNIGHT || board->board[i+SOUTH] == WBISHOP){
                         *mgscore += minbehpawn[0], *egscore +=  minbehpawn[1];
+                    }
+                    if (board->board[i+EAST] == WPAWN){
+                        *mgscore += phalanx[0][i/16], *egscore += phalanx[1][i/16];
                     }
                 }
             }
