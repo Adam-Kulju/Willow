@@ -267,7 +267,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                             *egscore  += pieceattacksbonuseg[0][board->board[i + NW] / 2 - 2];
                         }
                         else if (board->board[i+NW] == WPAWN){
-                            *mgscore += minbehpawn[0], *egscore += minbehpawn[1];
+                            *mgscore += protectingpawn[0], *egscore += protectingpawn[1];
                         }
                     }
                     if (!((i + NE) & 0x88)){
@@ -278,7 +278,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                             *egscore  += pieceattacksbonuseg[0][board->board[i + NE] / 2 - 2];
                         }
                         else if (board->board[i+NE] == WPAWN){
-                            *mgscore += minbehpawn[0], *egscore += minbehpawn[1];
+                            *mgscore += protectingpawn[0], *egscore += protectingpawn[1];
                         }
                     }
                     if (wbackwards[(i & 7)] == 9)
