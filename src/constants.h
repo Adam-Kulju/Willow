@@ -775,9 +775,9 @@ const int tropism[2][5] = {
        {-7, -20, -11, -41, -17}
 };
 
-const int minbehpawn[2] = {5, 15};
+const int minbehpawn[2] = {8, 8};
 
-const int protectingpawn[2] = {10, 6};
+const int protectingpawn[2] = {15, 10};
 
 const int phalanx[2][8] = {
   {0, -3, 11, 20, 44, 10, 1, 0,},
