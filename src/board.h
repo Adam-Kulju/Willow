@@ -185,6 +185,11 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
         } // sets up the board based on fen
         fenkey++;
     }
+    for (int i = 0; i < 8; i++){
+        for (int n = 8; n < 16; n++){
+            board->board[i*16 + n] = BLANK;
+        }
+    }
 
     while (isblank(fenstring[fenkey]))
     {
