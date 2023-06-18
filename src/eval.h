@@ -149,7 +149,7 @@ void material(struct board_info *board, int *phase, int *mgscore, int *egscore)
 
 }
 
-void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A whale of a function.
+void pst(struct board_info *board, int phase, int *mgscore, int *egscore) // A whale of a function.
 {
     int fmobility = 0;
     int tropism_nums[2][5] = {{0,0,0,0,0}, {0,0,0,0,0}};
@@ -243,6 +243,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                     if (board->board[i+EAST] == BPAWN){
                         *mgscore -= phalanx[0][7 - i/16], *egscore -= phalanx[1][7 - i/16];
                     }
+                    if (board->board[i+SOUTH]){
+                        *mgscore -= blockedpawn[0][i&7], *egscore -= blockedpawn[1][i&7];
+                    }
                 }
             }
             else
@@ -302,6 +305,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore ) // A 
                     }
                     if (board->board[i+EAST] == WPAWN){
                         *mgscore += phalanx[0][i/16], *egscore += phalanx[1][i/16];
+                    }
+                    if (board->board[i+NORTH]){
+                        *mgscore += blockedpawn[0][i&7], *egscore += blockedpawn[1][i&7];
                     }
                 }
             }
