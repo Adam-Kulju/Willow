@@ -179,13 +179,14 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore) // A w
             if (piecetype != 0 && piecetype != 5)
             { // pawns or kings
                 moves = piece_mobility(board, i, piececolor, piecetype - 1, mgscore, egscore, &fmobility);
+                //get mobility and forward mobility, as well as attack info, for a particular piece
                 mobilitybonus = true;
             }
             if ((piececolor))
             { // black piece
                 *mgscore -= pstbonusesmg[indx][piecetype][i ^ 112 ^ ((indx == 1 || indx == 2) * 7)];
                 *egscore  -= pstbonuseseg[indx][piecetype][i ^ 112 ^ ((indx == 1 || indx == 2) * 7)];
-                if (mobilitybonus)
+                if (mobilitybonus)  //Add mobility bonuses
                 {
                     *mgscore -= mobilitybonusesmg[piecetype - 1][moves];
                     *egscore  -= mobilitybonuseseg[piecetype - 1][moves];
@@ -200,6 +201,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore) // A w
                 if (piecetype == 0)
                 {
                     // if we're evaluating a pawn, is it attacking a piece of greater value?
+                    // if not, is it protecting another friendly pawn?
                     if (!((i + SW) & 0x88)){
                         if (board->board[i + SW] > BPAWN && board->board[i + SW] < WKING && !(board->board[i + SW] & 1))
                         {
@@ -237,12 +239,15 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore) // A w
                         }
                         bbackwards[(i & 7)] = (i >> 4);
                     }
+                    //Give a bonus for a minor piece behind a pawn
                     if (board->board[i+NORTH] == BKNIGHT || board->board[i+NORTH] == BBISHOP){
                        *mgscore -= minbehpawn[0], *egscore -= minbehpawn[1];
                     }
+                    //Give a bonus for pawns side by side
                     if (board->board[i+EAST] == BPAWN){
                         *mgscore -= phalanx[0][7 - i/16], *egscore -= phalanx[1][7 - i/16];
                     }
+                    //Penalize occupying squares in front of your own pawns
                     if (board->board[i+SOUTH]){
                         *mgscore -= blockedpawn[0][i&7], *egscore -= blockedpawn[1][i&7];
                     }
@@ -612,6 +617,7 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore) // A w
             }
         }
         *mgscore -= kingdangertablemg[pawnshield][king_attack_count[BLACK]], *egscore  -= kingdangertableeg[pawnshield][king_attack_count[BLACK]];
+            //Add king tropism values to the mix (gives bonuses for pieces actually in the king zone rather than just being able to attack squares in it
         for (int i = 0; i < 5; i++){
             *mgscore -= tropism[0][i] * tropism_nums[BLACK][i], *egscore -= tropism[1][i] * tropism_nums[BLACK][i];
         }
@@ -673,11 +679,15 @@ int eval(struct board_info *board, bool color)
     king_attack_count[0] = 0, king_attack_count[1] = 0;
     int phase = 0;
     int mgscore = 0, egscore  = 0;
+    //Calculate material.
     material(board, &phase, &mgscore, &egscore);
     int mtr = (phase * mgscore + (24 - phase) * egscore ) / 24;
 
     pst(board, phase, &mgscore, &egscore);
+    //Add other eval terms, and scale by game phase.
     int evl = (phase * mgscore + (24 - phase) * egscore ) / 24;
+    
+    //Add tempo bonus.
     if (color){
         mgscore -= tempo[0], egscore -= tempo[1];
     }
