@@ -59,7 +59,7 @@
 const int VALUES[5] = {75, 299, 297, 409, 819}; //Material middlegame
 const int VALUES2[5] = {82, 338, 349, 584, 1171};   //Material endgame
 
-const int pstbonusesmg[4][6][0x80] = {
+const int pstbonusesmg[4][6][0x80] = {  //Piece-square tables for middlegame, indexed by what side of the boards the white and black kings are on.
     {
     
     {0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
@@ -299,7 +299,7 @@ const int pstbonusesmg[4][6][0x80] = {
 };
 
 
-
+//Endgame piece-square tables.
 const int pstbonuseseg[4][6][0x80] = {
     {
     
@@ -572,7 +572,7 @@ const int mobilitybonuseseg[4][28] = {
  {-10,  -46,  -49,  -26,    3,   19,   38,   52,   62,   71,   80,   89,   91,  101,  103,  105,  112,  110,  102,   89,   82,   42,   32,   26,   30,   31,   14,    5, }};
 
 
-const int fmobilitybonusesmg[4][15] = {
+const int fmobilitybonusesmg[4][15] = {     //Bonuses for forward mobility (more useful to go forwards than backwards!)
  {-24,  -11,   -3,    4,   11,    0,    0,    0,    0, },
  {-22,  -16,  -10,   -4,    1,    4,    9,   15,    0,    0,    0,    0,    0,    0, },
  {-18,  -14,   -6,   -1,    2,    5,   13,   20,    0,    0,    0,    0,    0,    0,    0, },
@@ -768,23 +768,23 @@ const int pieceattacksbonuseg[4][4] = {
     
 const int multattacksbonus[2] = {24, 14};    //bonuses for multiple attacks at once
 
-const int tempo[2] = {28,27};
+const int tempo[2] = {28,27};   //Tempo bonus
 
-const int tropism[2][5] = {
+const int tropism[2][5] = {     //Bonus for pieces near the enemy king
        {33, 32, 31, 30, -11},
        {-7, -21, -12, -41, -19}
 };
 
-const int minbehpawn[2] = {8, 8};
+const int minbehpawn[2] = {8, 8};   //Bonus for a minor piece behind a pawn
 
-const int protectingpawn[2] = {16, 10};
+const int protectingpawn[2] = {16, 10};     //Bonus for one pawn protecting another
 
-const int phalanx[2][8] = {
+const int phalanx[2][8] = {     //Bonuses for two pawns side by side next to each other
   {0, -1, 12, 20, 44, 15, 1, 0,},
   {0, -3, 8, 21, 53, 36, 6, 0,}
 };
 
-const int blockedpawn[2][8] = {
+const int blockedpawn[2][8] = {     //Penalties for the square in front of a pawn being occupied (hurts mobility)
   {-2, -1, -7, -9, -12, -9, -5, -4,},
   {-8, -8, -11, -12, -8, -9, -9, -9,}
 };
