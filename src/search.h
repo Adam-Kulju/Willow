@@ -223,7 +223,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
     int evl;
 
-    bool singularsearch = memcmp(&excludedmove, &nullmove, sizeof(nullmove));
+    bool singularsearch = !ismatch(excludedmove, nullmove);
 
     char type;
     if (!singularsearch && CURRENTPOS == TT[(CURRENTPOS) & (_mask)].zobrist_key)   //Probe the transposition table.
@@ -379,7 +379,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             //First, make sure the move is legal, not skipped by futility pruning or LMP, and that there's no errors making the move.
         selectionsort(list, i, movelen);
         bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]);
-        if ((quietsprune && !iscap) || !memcmp(&excludedmove, &list[i].move, sizeof(excludedmove)))
+        if ((quietsprune && !iscap) || ismatch(excludedmove, list[i].move))
         {
             i++;
             continue;
@@ -440,7 +440,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         int extension = 0;
 
-        if (depth && depth < info.depth * 2 && !memcmp(&nullmove, &excludedmove, sizeof(nullmove))){    //if we're not already in a singular search, do singular search.
+        if (depth && depth < info.depth * 2 && ismatch(nullmove, excludedmove)){    //if we're not already in a singular search, do singular search.
             if (depthleft >= 7 && list[i].eval == 11000000 && evl < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
                 int sBeta = MAX(evl - depthleft * 3, -100000);
                 int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, isnull, incheck, list[i].move);
