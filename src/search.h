@@ -355,7 +355,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
 
         //IID: if we're in a PV node and there's no hash hit, crummy move ordering is going to make the search take a long time; so we first do a reduced depth search to get a likely best move.
-    if (ispv && type == 'n' && depthleft > 3)   
+    if (ispv && type == 'n' && depthleft > 3 && !singularsearch)   
     {
         alphabeta(board, movelst, key, alpha, beta, depthleft - 2, depth, color, false, incheck, nullmove);
         type = TT[CURRENTPOS & _mask].type;
@@ -441,7 +441,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         int extension = 0;
 
         if (depth && depth < info.depth * 2 && ismatch(nullmove, excludedmove)){    //if we're not already in a singular search, do singular search.
-            if (depthleft >= 7 && list[i].eval == 11000000 && evl < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
+            if (depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
                 int sBeta = MAX(evl - depthleft * 3, -100000);
                 int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, isnull, incheck, list[i].move);
 
