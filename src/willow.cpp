@@ -440,7 +440,7 @@ int main(int argc, char *argv[])
         if (!strcmp(argv[1], "bench"))
         {
             bench();
-            printf("%f\n", (float)betas / total);
+            //printf("%f\n", (float)betas / total);
             exit(0);
         }
         else if (!strcmp(argv[1], "perft"))
