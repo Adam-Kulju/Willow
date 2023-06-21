@@ -236,6 +236,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         type = 'n';
         evl = -1024;
     }
+
     bool ispv = (beta != alpha + 1);    //Are we in a PV (i.e. likely best line) node? This affects what type of pruning we can do.
 
     if (!ispv && type != 'n' && TT[(CURRENTPOS) & (_mask)].depth >= depthleft)  //Check to see if we can cutoff
@@ -285,6 +286,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     movelst[*key - 1].staticeval = evl;
 
     bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
+
 
     if (type != 'n')    //Use the evaluation from the transposition table as it is more accurate than the static evaluation.
     {
@@ -443,9 +445,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         if (depth && depth < info.depth * 2 && ismatch(nullmove, excludedmove)){    //if we're not already in a singular search, do singular search.
             if (depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
                 int sBeta = MAX(evl - depthleft * 3, -100000);
-                int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, isnull, incheck, list[i].move);
 
-                excludedmove = nullmove;
+                int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, isnull, incheck, list[i].move);
                 if (sScore < sBeta){
                     extension = 1;
                 }
@@ -457,7 +458,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         if (ispv == true && !betacount)     //The first move of a PV node gets searched to full depth with a full window.
         {
-            list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft - 1, depth + 1, color ^ 1, false, ischeck, nullmove);
+            list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft - 1 + extension, depth + 1, color ^ 1, false, ischeck, nullmove);
             if (abs(list[i].eval) == TIMEOUT)
             {
                 movelst[*key - 1].move = nullmove;
@@ -571,7 +572,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 currentmove = list[i].move;
             }
             bestmove = list[i].move;
-            insert(original_pos, depthleft, bestscore, 2, bestmove, search_age);
+            if (!singularsearch){insert(original_pos, depthleft, bestscore, 2, bestmove, search_age);}
             total++;
             betas += betacount + 1;
 
@@ -660,6 +661,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     if (!ismove)    //if we have no legal moves, it's either checkmate or stalemate.
     {
+        if (singularsearch){
+            return alpha;
+        }
         if (incheck)
         {
             return -100000 + depth;
@@ -669,6 +673,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             return 0;
         }
     }
+    if (!singularsearch){
     if (raisedalpha)        //Insert move into TT table
     {
         insert(original_pos, depthleft, alpha, 3, bestmove, search_age);
@@ -676,6 +681,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     else
     {
         insert(original_pos, depthleft, bestscore, 1, bestmove, search_age);
+    }
     }
 
     return bestscore;
