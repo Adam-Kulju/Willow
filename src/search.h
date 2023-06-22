@@ -283,9 +283,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     {
         evl = eval(board, color);
     }
-    movelst[*key - 1].staticeval = evl;
+    movelst[*key - 1].staticeval = singularsearch ? -100000 : evl;
 
-    bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
+    bool improving = (!singularsearch && depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
 
 
     if (type != 'n')    //Use the evaluation from the transposition table as it is more accurate than the static evaluation.
@@ -424,7 +424,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
             }
                 //Futility Pruning: If our position is bad enough, only search captures after this one.
-            if ((depthleft < 6 && list[i].eval < 1000200 && movelst[*key - 1].staticeval + 90 * (depthleft) + (improving * 40) < alpha))
+            if ((depthleft < 6 && list[i].eval < 1000200 && evl + 90 * (depthleft) + (improving * 40) < alpha))
             {
                 quietsprune = true;
             }
@@ -445,8 +445,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         if (depth && depth < info.depth * 2 && !singularsearch){    //if we're not already in a singular search, do singular search.
             if (depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
                 int sBeta = MAX(evl - depthleft * 3, -100000);
-
+                long long unsigned int temp = CURRENTPOS; //the hash of the position after the move was made
+                CURRENTPOS = original_pos;                  //reset hash of the position for the singular search
                 int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, false, incheck, list[i].move);
+                CURRENTPOS = temp;                          //save hash to the temp number.
                 if (sScore < sBeta){
                     extension = 1;
                 }
