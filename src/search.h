@@ -285,7 +285,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
     movelst[*key - 1].staticeval = evl;
 
-    bool improving = (depth > 1 && !singularsearch && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
+    bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
 
 
     if (type != 'n')    //Use the evaluation from the transposition table as it is more accurate than the static evaluation.
