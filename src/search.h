@@ -2,7 +2,7 @@
 #define __search__
 
 #include "globals.h"
-#include "stdio.h"
+#include <stdio.h>
 #include "eval.h"
 #include "movegen.h"
 #include <time.h>
@@ -11,6 +11,7 @@
 struct nodeinfo{
     long int total_nodes;
     long int best_nodes;
+    int depth;
 };
 
 struct nodeinfo info;
@@ -184,7 +185,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     return bestscore;
 }
 
-int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depthleft, int depth, bool color, bool isnull, bool incheck)
+int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depthleft, int depth, bool color, bool isnull, bool incheck, struct move excludedmove)
 {
     nodes++;
 
@@ -193,6 +194,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         maxdepth = 0;
         info.total_nodes = 0;
         info.best_nodes = 0;
+        info.depth = depthleft;
     }
 
     if (!((nodes) & (CHECKTIME)))   //Timeout detection
@@ -221,8 +223,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
     int evl;
 
+    bool singularsearch = !ismatch(excludedmove, nullmove);
+
     char type;
-    if (CURRENTPOS == TT[(CURRENTPOS) & (_mask)].zobrist_key)   //Probe the transposition table.
+    if (!singularsearch && CURRENTPOS == TT[(CURRENTPOS) & (_mask)].zobrist_key)   //Probe the transposition table.
     {
         type = TT[(CURRENTPOS) & (_mask)].type;
         evl = TT[(CURRENTPOS) & (_mask)].eval;
@@ -232,6 +236,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         type = 'n';
         evl = -1024;
     }
+
     bool ispv = (beta != alpha + 1);    //Are we in a PV (i.e. likely best line) node? This affects what type of pruning we can do.
 
     if (!ispv && type != 'n' && TT[(CURRENTPOS) & (_mask)].depth >= depthleft)  //Check to see if we can cutoff
@@ -278,9 +283,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     {
         evl = eval(board, color);
     }
-    movelst[*key - 1].staticeval = evl;
+    movelst[*key - 1].staticeval = singularsearch ? -100000 : evl;
 
-    bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
+    bool improving = (!singularsearch && depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
+
 
     if (type != 'n')    //Use the evaluation from the transposition table as it is more accurate than the static evaluation.
     {
@@ -288,13 +294,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
 
         //Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
-    if (!ispv && !incheck && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
+    if (!ispv && !incheck && !singularsearch && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
     {
         return evl;
     }
 
         //Null Move Pruning: If our position is good enough that we can give our opponent an extra move and still beat beta with a reduced search, cut off.
-    if (isnull == false && !ispv && !incheck && depthleft > 2 &&
+    if (isnull == false && !ispv && !singularsearch && !incheck && depthleft > 2 &&
         (evl >= beta))
     {
 
@@ -324,7 +330,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             int R = 4 + (depthleft / 6) + MIN((evl - beta) / 200, 3);
 
             //We call it with a null window, because we don't care about what the score is exactly, we only care if it beats beta or not.
-            int nm = -alphabeta(&board2, movelst, key, -beta, -beta + 1, depthleft - R, depth + 1, color ^ 1, true, false);
+            int nm = -alphabeta(&board2, movelst, key, -beta, -beta + 1, depthleft - R, depth + 1, color ^ 1, true, false, nullmove);
 
             CURRENTPOS = a;
 
@@ -351,9 +357,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
 
         //IID: if we're in a PV node and there's no hash hit, crummy move ordering is going to make the search take a long time; so we first do a reduced depth search to get a likely best move.
-    if (ispv && type == 'n' && depthleft > 3)   
+    if (ispv && type == 'n' && depthleft > 3 && !singularsearch)   
     {
-        alphabeta(board, movelst, key, alpha, beta, depthleft - 2, depth, color, false, incheck);
+        alphabeta(board, movelst, key, alpha, beta, depthleft - 2, depth, color, false, incheck, nullmove);
         type = TT[CURRENTPOS & _mask].type;
     }
 
@@ -375,7 +381,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             //First, make sure the move is legal, not skipped by futility pruning or LMP, and that there's no errors making the move.
         selectionsort(list, i, movelen);
         bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]);
-        if (quietsprune && !iscap)
+        if ((quietsprune && !iscap) || ismatch(excludedmove, list[i].move))
         {
             i++;
             continue;
@@ -418,7 +424,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
             }
                 //Futility Pruning: If our position is bad enough, only search captures after this one.
-            if ((depthleft < 6 && list[i].eval < 1000200 && movelst[*key - 1].staticeval + 90 * (depthleft) + (improving * 40) < alpha))
+            if ((depthleft < 6 && list[i].eval < 1000200 && evl + 90 * (depthleft) + (improving * 40) < alpha))
             {
                 quietsprune = true;
             }
@@ -433,13 +439,28 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             continue;
         }
         bool ischeck = isattacked(&board2, board2.kingpos[color ^ 1], color);
-        move_add(&board2, movelst, key, list[i].move, color, iscap);
+
+        int extension = 0;
+
+        if (depth && depth < info.depth * 2 && !singularsearch){    //if we're not already in a singular search, do singular search.
+            if (depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
+                int sBeta = MAX(evl - depthleft * 3, -100000);
+                long long unsigned int temp = CURRENTPOS; //the hash of the position after the move was made
+                CURRENTPOS = original_pos;                  //reset hash of the position for the singular search
+                int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, false, incheck, list[i].move);
+                CURRENTPOS = temp;                          //save hash to the temp number.
+                if (sScore < sBeta){
+                    extension = 1;
+                }
+            }
+        }
 
         long int current_nodes = nodes;
+        move_add(&board2, movelst, key, list[i].move, color, iscap);
 
         if (ispv == true && !betacount)     //The first move of a PV node gets searched to full depth with a full window.
         {
-            list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft - 1, depth + 1, color ^ 1, false, ischeck);
+            list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft - 1 + extension, depth + 1, color ^ 1, false, ischeck, nullmove);
             if (abs(list[i].eval) == TIMEOUT)
             {
                 movelst[*key - 1].move = nullmove;
@@ -491,7 +512,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
                 //Search at a reduced depth with null window
 
-            list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, depthleft - 1 - R, depth + 1, color ^ 1, false, ischeck); 
+            list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, depthleft - 1 - R + extension, depth + 1, color ^ 1, false, ischeck, nullmove); 
             if (abs(list[i].eval) == TIMEOUT)
             {
                 movelst[*key - 1].move = nullmove;
@@ -505,7 +526,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (list[i].eval > alpha && R > 0)
             {
-                list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, depthleft - 1, depth + 1, color ^ 1, false, ischeck);
+                list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, depthleft - 1 + extension, depth + 1, color ^ 1, false, ischeck, nullmove);
                 if (abs(list[i].eval) == TIMEOUT)
                 {
                     movelst[*key - 1].move = nullmove;
@@ -521,7 +542,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             if (list[i].eval > alpha && ispv)
             {
 
-                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft - 1, depth + 1, color ^ 1, false, ischeck);
+                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft - 1 + extension, depth + 1, color ^ 1, false, ischeck, nullmove);
                 if (abs(list[i].eval) == TIMEOUT)
                 {
                     movelst[*key - 1].move = nullmove;
@@ -553,7 +574,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 currentmove = list[i].move;
             }
             bestmove = list[i].move;
-            insert(original_pos, depthleft, bestscore, 2, bestmove, search_age);
+            if (!singularsearch){insert(original_pos, depthleft, bestscore, 2, bestmove, search_age);}
             total++;
             betas += betacount + 1;
 
@@ -642,6 +663,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     if (!ismove)    //if we have no legal moves, it's either checkmate or stalemate.
     {
+        if (singularsearch){
+            return alpha;
+        }
         if (incheck)
         {
             return -100000 + depth;
@@ -651,6 +675,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             return 0;
         }
     }
+    if (!singularsearch){
     if (raisedalpha)        //Insert move into TT table
     {
         insert(original_pos, depthleft, alpha, 3, bestmove, search_age);
@@ -658,6 +683,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     else
     {
         insert(original_pos, depthleft, bestscore, 1, bestmove, search_age);
+    }
     }
 
     return bestscore;
@@ -709,7 +735,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         int delta = 12;     //Aspiration windows: searching with a reduced window allows us to search less nodes, though it means we have to research if the score falls outside of those bounds.
 
         int tempdepth = depth;
-        int evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck);
+        int evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, nullmove);
 
         while (abs(evl) != TIMEOUT && (evl <= alpha || evl >= beta))
         {
@@ -720,7 +746,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
                 alpha -= delta;
                 beta = (alpha + 3 * beta) / 4;
                 delta += delta * 2 / 3;
-                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck);
+                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, nullmove);
 
                 if (abs(evl) == TIMEOUT)
                 {
@@ -743,7 +769,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
                     //Reduce the depth by 1 (up to a max of 3 below the original depth). The reason for this is that fail highs are usually
                     //not caused by something really deep in the search, but rather a move early on that had previously been overlooked due to depth conditions.
                 tempdepth = MAX(tempdepth - 1, depth - 3);
-                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck);
+                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, nullmove);
                 if (abs(evl) == TIMEOUT)
                 {
                     currentmove = pvmove;
