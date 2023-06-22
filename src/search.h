@@ -275,7 +275,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
         return b;
     }
-    if (incheck || singularsearch)        //we cannot evaluate the position when in check, because there may be no good move to get out. Otherwise, the evaluation of a position is very useful for pruning.
+    if (incheck)        //we cannot evaluate the position when in check, because there may be no good move to get out. Otherwise, the evaluation of a position is very useful for pruning.
     {
         evl = -1000000;
     }
@@ -285,7 +285,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
     movelst[*key - 1].staticeval = evl;
 
-    bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
+    bool improving = (depth > 1 && !singularsearch && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval);    //Is our position better than it was during our last move?
 
 
     if (type != 'n')    //Use the evaluation from the transposition table as it is more accurate than the static evaluation.
@@ -294,13 +294,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
 
         //Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
-    if (!ispv && !incheck && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
+    if (!ispv && !incheck && !singularsearch && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
     {
         return evl;
     }
 
         //Null Move Pruning: If our position is good enough that we can give our opponent an extra move and still beat beta with a reduced search, cut off.
-    if (isnull == false && !ispv && !incheck && depthleft > 2 &&
+    if (isnull == false && !ispv && !singularsearch && !incheck && depthleft > 2 &&
         (evl >= beta))
     {
 
@@ -442,11 +442,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         int extension = 0;
 
-        if (depth && depth < info.depth * 2 && ismatch(nullmove, excludedmove)){    //if we're not already in a singular search, do singular search.
+        if (depth && depth < info.depth * 2 && !singularsearch){    //if we're not already in a singular search, do singular search.
             if (depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
                 int sBeta = MAX(evl - depthleft * 3, -100000);
 
-                int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, isnull, incheck, list[i].move);
+                int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, false, incheck, list[i].move);
                 if (sScore < sBeta){
                     extension = 1;
                 }
