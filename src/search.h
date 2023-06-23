@@ -262,7 +262,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
     }
 
-    if (depthleft <= 0 || depth >= MAXDEPTH)     //if we're too deep drop into qsearch, adjusting based on depth if we get a mate score.
+    if (depthleft <= 0 || depth >= 99)     //if we're too deep drop into qsearch, adjusting based on depth if we get a mate score.
     {
         int b = quiesce(board, alpha, beta, depth, 15, color, incheck);
         if (b == -100000)
