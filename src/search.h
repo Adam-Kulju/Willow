@@ -262,7 +262,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
     }
 
-    if (depthleft <= 0)     //if we're too deep drop into qsearch, adjusting based on depth if we get a mate score.
+    if (depthleft <= 0 || depth >= MAXDEPTH)     //if we're too deep drop into qsearch, adjusting based on depth if we get a mate score.
     {
         int b = quiesce(board, alpha, beta, depth, 15, color, incheck);
         if (b == -100000)
@@ -379,6 +379,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool quietsprune = false;
     int bestscore = -100000;
 
+    KILLERTABLE[depth+1][0] = nullmove, KILLERTABLE[depth+1][1] = nullmove;
+
     while (i < movelen)
     {
             //First, make sure the move is legal, not skipped by futility pruning or LMP, and that there's no errors making the move.
@@ -445,16 +447,22 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         int extension = 0;
 
-        if (depth && depth < info.depth * 2 && !singularsearch){    //if we're not already in a singular search, do singular search.
-            if (depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
+        if (depth && depth < info.depth * 2){    //if we're not already in a singular search, do singular search.
+            if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
                 int sBeta = MAX(evl - depthleft * 3, -100000);
                 long long unsigned int temp = CURRENTPOS; //the hash of the position after the move was made
                 CURRENTPOS = original_pos;                  //reset hash of the position for the singular search
                 int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, false, incheck, list[i].move);
-                CURRENTPOS = temp;                          //save hash to the temp number.
+
                 if (sScore < sBeta){
                     extension = 1;
                 }
+                /*else if (sBeta >= beta){
+                    CURRENTPOS = original_pos;
+                    return sBeta;
+                }*/
+
+                CURRENTPOS = temp;                          //save hash to the temp number.
             }
         }
 
