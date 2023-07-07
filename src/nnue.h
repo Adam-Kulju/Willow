@@ -133,7 +133,7 @@ public:
     void reset_nnue(struct board_info *board);
 };
 
-INCBIN(nnue, "gemstone.nnue");
+INCBIN(nnue, "src/gemstone.nnue");
 const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(gnnueData);
 
 
