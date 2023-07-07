@@ -2,7 +2,7 @@ EXE := willow
 
 SOURCES := src/willow.cpp
 
-CXX := clang
+CXX := clang++
 
 CXXFLAGS := -O3 -march=native -std=c++20
 
