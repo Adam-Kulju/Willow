@@ -3,6 +3,14 @@
 #include "constants.h"
 #include "globals.h"
 #include "board.h"
+#include "nnue.h"
+
+NNUE_State nnue_state{};
+
+int nnue(struct board_info *board, bool color){
+    nnue_state.reset_nnue(board);
+    return nnue_state.evaluate(color);
+}
 
 int piece_mobility(struct board_info *board, unsigned char i, bool color, unsigned char piecetype, int *mgscore, int *egscore, int *fmobility)
 {
@@ -669,6 +677,9 @@ void pst(struct board_info *board, int phase, int *mgscore, int *egscore) // A w
 
 int eval(struct board_info *board, bool color)
 {
+    int n = nnue(board, color);
+    return n;
+
     attackers[0] = 0, attackers[1] = 0;
     king_attack_count[0] = 0, king_attack_count[1] = 0;
     int phase = 0;

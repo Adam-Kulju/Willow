@@ -381,6 +381,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     KILLERTABLE[depth+1][0] = nullmove, KILLERTABLE[depth+1][1] = nullmove;
 
+
     while (i < movelen)
     {
             //First, make sure the move is legal, not skipped by futility pruning or LMP, and that there's no errors making the move.
@@ -460,6 +461,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 /*else if (sBeta >= beta){
                     CURRENTPOS = original_pos;
                     return sBeta;
+                }
+                else if (evl >= beta || evl <= alpha){
+                    extension = -1;
                 }*/
 
                 CURRENTPOS = temp;                          //save hash to the temp number.
@@ -496,7 +500,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 R = LMRTABLE[depthleft - 1][betacount];
                 if (iscap)      //Captures get reduced less as even losing ones are more likely to be good than bad quiet moves
                 {
-                    R >>= 1;
+                    R /= 2;
                 }
                 if (ischeck || incheck || list[i].eval > 1000190)       //Reduce reduction for checks or moves made in check
                 {
@@ -601,7 +605,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     KILLERTABLE[depth][1] = list[i].move;
                 }
 
-                // printf("%s\n", conv(list[i].move, b));
                 HISTORYTABLE[color][(list[i].move.move >> 8)][list[i].move.move & 0xFF] += c;
 
                 if (HISTORYTABLE[color][(list[i].move.move >> 8)][(list[i].move.move & 0xFF)] > 1000000)
