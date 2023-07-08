@@ -136,17 +136,22 @@ public:
 INCBIN(nnue, "src/gemstone.nnue");
 const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(gnnueData);
 
+NNUE_State nnue_state{};
+
 
 void NNUE_State::push()
 {
     m_accumulator_stack.push_back(*m_curr);
     m_curr = &m_accumulator_stack.back();
+    //printf("makemove - %i\n", nnue_state.evaluate(WHITE));
 }
 
 void NNUE_State::pop()
 {
     m_accumulator_stack.pop_back();
     m_curr = &m_accumulator_stack.back();
+    //printf("unmakemove - %i\n", nnue_state.evaluate(WHITE));
+    //exit(0);
 }
 
 

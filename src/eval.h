@@ -5,10 +5,7 @@
 #include "board.h"
 #include "nnue.h"
 
-NNUE_State nnue_state{};
-
 int nnue(struct board_info *board, bool color){
-    nnue_state.reset_nnue(board);
     return nnue_state.evaluate(color);
 }
 

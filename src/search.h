@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "eval.h"
 #include "movegen.h"
+#include "nnue.h"
 #include <time.h>
 
 
@@ -137,18 +138,22 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             exit(1);
         }
 
+
         if (isattacked(&board2, board2.kingpos[color], color ^ 1))  //skip illegal moves
         {
             CURRENTPOS = original_pos;
+            nnue_state.pop();
             i++;
             continue;
         }
+
 
         list[i].eval = -quiesce(&board2, -beta, -alpha, depth + 1, depthleft - 1, color ^ 1, isattacked(board, board->kingpos[color ^ 1], color));
 
         if (abs(list[i].eval) == TIMEOUT)   //timeout detection
         {
             CURRENTPOS = original_pos;
+            nnue_state.pop();
             return TIMEOUT;
         }
         if (list[i].eval > bestscore)   //update best move
@@ -159,6 +164,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         if (list[i].eval >= beta)    //handle fail high
         {
             CURRENTPOS = original_pos;
+            nnue_state.pop();
             insert(original_pos, 0, list[i].eval, 2, list[i].move, search_age);
             return list[i].eval;
         }
@@ -167,6 +173,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             alpha = list[i].eval;
         }
         CURRENTPOS = original_pos;
+        nnue_state.pop();
+
         i++;
     }
 
@@ -408,6 +416,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         if (isattacked(&board2, board2.kingpos[color], color ^ 1))
         {
             CURRENTPOS = original_pos;
+            nnue_state.pop();
             i++;
             continue;
         }
@@ -441,6 +450,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             !static_exchange_evaluation(board, list[i].move, color, depthleft * ((iscap || list[i].move.flags >> 2 == 1) ? -90 : -50)))
         {
             CURRENTPOS = original_pos;
+            nnue_state.pop();
             i++;
             continue;
         }
@@ -452,7 +462,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
                 int sBeta = MAX(evl - depthleft * 3, -100000);
                 long long unsigned int temp = CURRENTPOS; //the hash of the position after the move was made
-                CURRENTPOS = original_pos;                  //reset hash of the position for the singular search
+                CURRENTPOS = original_pos;            //reset hash of the position for the singular search
                 int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, false, incheck, list[i].move);
 
                 if (sScore < sBeta){
@@ -481,6 +491,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 movelst[*key - 1].move = nullmove;
                 *key = *key - 1;
                 CURRENTPOS = original_pos;
+                nnue_state.pop();
 
                 return TIMEOUT;
             }
@@ -533,6 +544,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 movelst[*key - 1].move = nullmove;
                 *key = *key - 1;
                 CURRENTPOS = original_pos;
+                nnue_state.pop();
 
                 return TIMEOUT;
             }
@@ -547,6 +559,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     movelst[*key - 1].move = nullmove;
                     *key = *key - 1;
                     CURRENTPOS = original_pos;
+                    nnue_state.pop();
 
                     return TIMEOUT;
                 }
@@ -563,6 +576,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     movelst[*key - 1].move = nullmove;
                     *key = *key - 1;
                     CURRENTPOS = original_pos;
+                    nnue_state.pop();
 
                     return TIMEOUT;
                 }
@@ -648,7 +662,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             movelst[(*key) - 1].move.flags = 0;
             *key = *key - 1;
             CURRENTPOS = original_pos;
-            return beta;
+            nnue_state.pop();
+            return list[i].eval;
         }
 
         movelst[*key - 1].move = nullmove;
@@ -667,10 +682,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         {
             insert(original_pos, depthleft, list[i].eval, 1, list[i].move, search_age);
             CURRENTPOS = original_pos;
+            nnue_state.pop();
             return list[i].eval;
         }
 
         CURRENTPOS = original_pos;
+        nnue_state.pop();
         betacount++;
         i++;
     }
@@ -716,7 +733,9 @@ bool verifypv(struct board_info *board, struct move pvmove, bool incheck, bool c
             unsigned long long int c = CURRENTPOS;
             struct board_info board2 = *board;
             move(&board2, pvmove, color);
+            nnue_state.pop();
             CURRENTPOS = c;
+
             if (isattacked(&board2, board2.kingpos[color], color ^ 1))
             {
                 return false;
@@ -752,7 +771,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         int evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, nullmove);
 
         while (abs(evl) != TIMEOUT && (evl <= alpha || evl >= beta))
-        {
+        {;
             if (evl <= alpha)   //If we fail low, print, widen the window, and try again.
             {
                 char temp[6];
@@ -835,11 +854,12 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
             char temp[6];
             printf("%s ", conv(TT[CURRENTPOS & _mask].bestmove, temp));
             move(&board2, TT[CURRENTPOS & _mask].bestmove, c);
+            nnue_state.pop();
             c ^= 1;
             d--;
         }
         printf("\n");
-        CURRENTPOS = op;
+        CURRENTPOS = op; 
 
         if (depth > 6)      //Update the aspiration window
         {

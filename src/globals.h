@@ -1,6 +1,7 @@
 #ifndef __globals__
 #define __globals__
 #include "constants.h"
+#include "nnue.h"
 #include <math.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -50,6 +51,7 @@ long int _mask;
 
 void initglobals()  //Initialize all our global variable stuff.
 {
+    nnue_state.m_accumulator_stack.reserve(MOVESIZE);
     for (unsigned char i = 0; i < 0x80; i++)
     {
         if (i & 0x88)

@@ -3,6 +3,7 @@
 
 #include "constants.h"
 #include "globals.h"
+#include "nnue.h"
 #include <stdio.h>
 
 void printfull(struct board_info *board)    //Prints the board
@@ -206,6 +207,7 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
     fenkey++;
 
     calc_pos(board, *color);    //Gets the Zobrist Hash of the position (it doesn't matter that we do it before castling stuff)
+    nnue_state.reset_nnue(board);
 
     setmovelist(movelst, key);
     *key = 0;
@@ -280,6 +282,7 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
 
 int move(struct board_info *board, struct move move, bool color)    //Perform a move on the board.
 {
+
     if (board->epsquare)
     {
         CURRENTPOS ^= ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it is not.
@@ -290,6 +293,7 @@ int move(struct board_info *board, struct move move, bool color)    //Perform a 
         board->epsquare = 0;
         return 0;
     }
+    nnue_state.push();
     unsigned char from = move.move >> 8, to = move.move & 0xFF; //get the indexes of the move
     unsigned char flag = move.flags >> 2;
     if ((from & 0x88) || (to & 0x88))
@@ -300,6 +304,7 @@ int move(struct board_info *board, struct move move, bool color)    //Perform a 
     }
 
     CURRENTPOS ^= ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from - ((from >> 4) << 3)]; // xor out the piece to be moved
+    nnue_state.update_feature<false>(board->board[from], MAILBOX_TO_STANDARD[from]);
 
     if (flag != 3)
     { // handle captures and en passant - this is for normal moves
@@ -307,12 +312,14 @@ int move(struct board_info *board, struct move move, bool color)    //Perform a 
         {
             board->pnbrqcount[color ^ 1][((board->board[to] >> 1) - 1)]--;
             CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)];
+            nnue_state.update_feature<false>(board->board[to], MAILBOX_TO_STANDARD[to]);
         }
     }
     else
     {   //and this branch handles en passant
         board->pnbrqcount[color ^ 1][0]--;
         CURRENTPOS ^= ZOBRISTTABLE[(((board->board[board->epsquare] - 2) << 6)) + board->epsquare - ((board->epsquare >> 4) << 3)];
+        nnue_state.update_feature<false>(board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare]);
         board->board[board->epsquare] = BLANK;
     }
 
@@ -345,6 +352,7 @@ int move(struct board_info *board, struct move move, bool color)    //Perform a 
     board->board[to] = board->board[from];
     board->board[from] = BLANK;
     CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)]; // xor in the piece that has been moved
+    nnue_state.update_feature<true>(board->board[to], MAILBOX_TO_STANDARD[to]);
 
     if (flag == 2)
     { // castle
@@ -354,6 +362,8 @@ int move(struct board_info *board, struct move move, bool color)    //Perform a 
             board->board[to - 1] = board->board[to + 1];
             CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
             CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
+            nnue_state.update_feature<true>(board->board[to-1], MAILBOX_TO_STANDARD[to-1]);
+            nnue_state.update_feature<false>(board->board[to+1], MAILBOX_TO_STANDARD[to+1]);
             board->board[to + 1] = BLANK;
         }
         else
@@ -361,6 +371,8 @@ int move(struct board_info *board, struct move move, bool color)    //Perform a 
             board->board[to + 1] = board->board[to - 2];
             CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
             CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
+            nnue_state.update_feature<false>(board->board[to-2], MAILBOX_TO_STANDARD[to-2]);
+            nnue_state.update_feature<true>(board->board[to+1], MAILBOX_TO_STANDARD[to+1]);
             board->board[to - 2] = BLANK;
         }
     }
