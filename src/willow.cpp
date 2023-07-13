@@ -380,11 +380,11 @@ int bench()     //Benchmarks Willow, printing total nodes and nodes per second.
         struct movelist movelst[MOVESIZE];
         int key;
         bool color;
-        setfull(&board);
+        /*setfull(&board);
         nnue_state.reset_nnue(&board);
         printfull(&board);
-        printf("%i\n", eval(&board, WHITE));
-        exit(0);
+        printf("%i\n", eval(&board, BLACK));
+        exit(0);*/
 
         setfromfen(&board, movelst, &key, positions[i], &color, 0);
 
