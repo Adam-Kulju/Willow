@@ -265,7 +265,7 @@ float game(std::ofstream& file){
     for (int i = 0; i < fkey; i++){
         num_fens++;
         if (num_fens % 100000 == 0){
-            printf("%i fens generated\n", num_fens);
+            printf("%li fens generated\n", num_fens);
         }
         file << fens[i] << result << "\n";
     }
