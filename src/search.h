@@ -38,7 +38,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             return TIMEOUT;
         }
     }
-    if (NODES_IID && !((nodes) & (NODES_IID))){
+    if (NODES_IID && !((nodes) % (NODES_IID))){
         return TIMEOUT;
     }
     int evl = 0;
@@ -216,7 +216,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             return TIMEOUT;
         }
     }
-    if (NODES_IID && !((nodes) & (NODES_IID))){
+    if (NODES_IID && !((nodes) % (NODES_IID))){
         return TIMEOUT;
     }
     if (depth > 0)

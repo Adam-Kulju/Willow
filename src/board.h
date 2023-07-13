@@ -300,6 +300,7 @@ int move(struct board_info *board, struct move move, bool color)    //Perform a 
     {
         printf("out of board index! %4x %x %i %x\n", move.move, (board->epsquare), color, move.flags);
         printfull(board);
+        exit(0);
         return 1;
     }
 
