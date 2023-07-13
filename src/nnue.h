@@ -34,14 +34,14 @@ constexpr int STANDARD_TO_MAILBOX[64] = {
 };
 
 constexpr int MAILBOX_TO_STANDARD[0x80] = {
-        56, 57, 58, 59, 60, 61, 62, 63, 99, 99, 99, 99, 99, 99, 99, 99,
-        48, 49, 50, 51, 52, 53, 54, 55, 99, 99, 99, 99, 99, 99, 99, 99,
-        40, 41, 42, 43, 44, 45, 46, 47, 99, 99, 99, 99, 99, 99, 99, 99,
-        32, 33, 34, 35, 36, 37, 38, 39, 99, 99, 99, 99, 99, 99, 99, 99,
-        24, 25, 26, 27, 28, 29, 30, 31, 99, 99, 99, 99, 99, 99, 99, 99,
-        16, 17, 18, 19, 20, 21, 22, 23, 99, 99, 99, 99, 99, 99, 99, 99,
-        8, 9, 10, 11, 12, 13, 14, 15, 99, 99, 99, 99, 99, 99, 99, 99,
-        0, 1, 2, 3, 4, 5, 6, 7, 99, 99, 99, 99, 99, 99, 99, 99,
+    0, 1, 2, 3, 4, 5, 6, 7, 99, 99, 99, 99, 99, 99, 99, 99,
+    8, 9, 10, 11, 12, 13, 14, 15, 99, 99, 99, 99, 99, 99, 99, 99,
+    16, 17, 18, 19, 20, 21, 22, 23, 99, 99, 99, 99, 99, 99, 99, 99,
+    24, 25, 26, 27, 28, 29, 30, 31, 99, 99, 99, 99, 99, 99, 99, 99,
+    32, 33, 34, 35, 36, 37, 38, 39, 99, 99, 99, 99, 99, 99, 99, 99,
+    40, 41, 42, 43, 44, 45, 46, 47, 99, 99, 99, 99, 99, 99, 99, 99,
+    48, 49, 50, 51, 52, 53, 54, 55, 99, 99, 99, 99, 99, 99, 99, 99,
+    56, 57, 58, 59, 60, 61, 62, 63, 99, 99, 99, 99, 99, 99, 99, 99,
 };
 
 struct alignas(64) NNUE_Params {
@@ -91,13 +91,13 @@ public:
 
         if constexpr (Activate)
         {
-            add_to_all(m_accumulator_stack.back().white, g_nnue.feature_weights, white_idx * LAYER1_SIZE);
-            add_to_all(m_accumulator_stack.back().black, g_nnue.feature_weights, black_idx * LAYER1_SIZE);
+            add_to_all(m_curr->white, g_nnue.feature_weights, white_idx * LAYER1_SIZE);
+            add_to_all(m_curr->black, g_nnue.feature_weights, black_idx * LAYER1_SIZE);
         }
         else
         {
-            subtract_from_all(m_accumulator_stack.back().white, g_nnue.feature_weights, white_idx * LAYER1_SIZE);
-            subtract_from_all(m_accumulator_stack.back().black, g_nnue.feature_weights, black_idx * LAYER1_SIZE);
+            subtract_from_all(m_curr->white, g_nnue.feature_weights, white_idx * LAYER1_SIZE);
+            subtract_from_all(m_curr->black, g_nnue.feature_weights, black_idx * LAYER1_SIZE);
         }
     }
 
@@ -158,8 +158,8 @@ void NNUE_State::pop()
 int NNUE_State::evaluate(int color) const
 {
     const auto output = color == WHITE
-                        ? crelu_flatten(m_accumulator_stack.back().white, m_accumulator_stack.back().black, g_nnue.output_weights)
-                        : crelu_flatten(m_accumulator_stack.back().black, m_accumulator_stack.back().white, g_nnue.output_weights);
+                        ? crelu_flatten(m_curr->white, m_curr->black, g_nnue.output_weights)
+                        : crelu_flatten(m_curr->black, m_curr->white, g_nnue.output_weights);
     return (output + g_nnue.output_bias) * SCALE / QAB;
 }
 
@@ -191,7 +191,7 @@ int32_t NNUE_State::crelu_flatten(const std::array<int16_t, LAYER1_SIZE> &us,
         sum += crelu(them[i]) * weights[LAYER1_SIZE + i];
     }
 
-    return sum / QA;
+    return sum;
 }
 
 void NNUE_State::reset_nnue(struct board_info *board)
@@ -199,11 +199,11 @@ void NNUE_State::reset_nnue(struct board_info *board)
     m_accumulator_stack.clear();
     m_curr = &m_accumulator_stack.emplace_back();
 
-    m_accumulator_stack.back().init(g_nnue.feature_bias);
+    m_curr->init(g_nnue.feature_bias);
 
     for (int square : STANDARD_TO_MAILBOX) {
         if (board->board[square]) {
-            //printf("%i\n", MAILBOX_TO_STANDARD[square]);
+            printf("%i\n", MAILBOX_TO_STANDARD[square]);
             update_feature<true>(board->board[square], MAILBOX_TO_STANDARD[square]);
         }
     }
