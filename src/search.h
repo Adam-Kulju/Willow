@@ -38,6 +38,9 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             return TIMEOUT;
         }
     }
+    if (NODES_IID && !((nodes) & (NODES_IID))){
+        return TIMEOUT;
+    }
     int evl = 0;
     char type;
     if (CURRENTPOS == TT[(CURRENTPOS) & (_mask)].zobrist_key)       
@@ -212,6 +215,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         { // you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
+    }
+    if (NODES_IID && !((nodes) & (NODES_IID))){
+        return TIMEOUT;
     }
     if (depth > 0)
     {
@@ -654,7 +660,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
             }
 
-            if (depth > 1 && !isnull && !iscap)
+            if (depth > 1 && !isnull && !iscap && movelst[(*key-2)].move.move != 0)
             { // key-1 is the move you made, key-2 is the move the opponent made
 
                 COUNTERMOVES[(board->board[movelst[(*key) - 2].move.move & 0xFF] >> 1) - 1][movelst[(*key) - 2].move.move & 0xFF] = list[i].move;
@@ -746,8 +752,9 @@ bool verifypv(struct board_info *board, struct move pvmove, bool incheck, bool c
     return false;
 }
 
-float iid_time(struct board_info *board, struct movelist *movelst, float maxtime, int *key, bool color, bool ismove)
+int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, int *key, bool color, bool ismove, bool isprint, struct move excludedmove)
 {
+    nnue_state.reset_nnue(board);
     //Performs an Iterative Deepening search on the current position.
 
     nodes = 0;
@@ -768,18 +775,20 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         int delta = 12;     //Aspiration windows: searching with a reduced window allows us to search less nodes, though it means we have to research if the score falls outside of those bounds.
 
         int tempdepth = depth;
-        int evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, nullmove);
+        int evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, excludedmove);
 
         while (abs(evl) != TIMEOUT && (evl <= alpha || evl >= beta))
         {;
             if (evl <= alpha)   //If we fail low, print, widen the window, and try again.
             {
                 char temp[6];
-                printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC, conv(pvmove, temp));
+                if (isprint){
+                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC, conv(pvmove, temp));
+                }
                 alpha -= delta;
                 beta = (alpha + 3 * beta) / 4;
                 delta += delta * 2 / 3;
-                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, nullmove);
+                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, excludedmove);
 
                 if (abs(evl) == TIMEOUT)
                 {
@@ -794,7 +803,9 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
             else if (evl >= beta)   //If we fail high, widen the window
             {
                 char temp[6];
-                printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC, conv(currentmove, temp));
+                if (isprint){
+                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC, conv(currentmove, temp));
+                }
                 pvmove = currentmove;
                 beta += delta;
                 delta += delta * 2 / 3;
@@ -802,7 +813,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
                     //Reduce the depth by 1 (up to a max of 3 below the original depth). The reason for this is that fail highs are usually
                     //not caused by something really deep in the search, but rather a move early on that had previously been overlooked due to depth conditions.
                 tempdepth = MAX(tempdepth - 1, depth - 3);
-                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, nullmove);
+                evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, excludedmove);
                 if (abs(evl) == TIMEOUT)
                 {
                     currentmove = pvmove;
@@ -825,6 +836,7 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         pvmove = currentmove;
 
             //Print search results, handling mate scores
+        if (isprint){
         if (g > 99900)
         {
             printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (100001 - g) / 2, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC);
@@ -837,6 +849,9 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
         {
             printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv ", depth, maxdepth, g, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC);
         }
+        }
+
+        if (isprint){
 
         int d = depth;
         unsigned long long int op = CURRENTPOS;
@@ -859,7 +874,9 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
             d--;
         }
         printf("\n");
+
         CURRENTPOS = op; 
+        }
 
         if (depth > 6)      //Update the aspiration window
         {
@@ -876,7 +893,9 @@ float iid_time(struct board_info *board, struct movelist *movelst, float maxtime
 
     }
     char temp[8], temp2[8];
+    if (isprint){
     printf("bestmove %s\n", conv(currentmove, temp));
+    }
     search_age++;
     return g;
 }
