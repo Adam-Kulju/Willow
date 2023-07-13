@@ -12,6 +12,7 @@ SUFFIX :=
 
 ifeq ($(OS), Windows_NT)
 	SUFFIX := .exe
+	LINKER := -fuse-ld=lld
 else
 	SUFFIX :=
 	LINKER := -lm
