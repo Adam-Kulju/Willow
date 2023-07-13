@@ -69,7 +69,7 @@ struct alignas(64) Accumulator
 constexpr int32_t crelu(int16_t x)
 {
     const auto clipped = std::clamp(static_cast<int32_t>(x), CRELU_MIN, CRELU_MAX);
-    return clipped * clipped;
+    return clipped;
 }
 
 class NNUE_State {
