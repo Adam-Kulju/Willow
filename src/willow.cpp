@@ -305,7 +305,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
 
         time = MAX(time, 0.001);
         printf("%f %f\n", coldturkey, time);
-        iid_time(board, movelst, time, key, *color, false);
+        iid_time(board, movelst, time, key, *color, false, true, nullmove);
     }
     // fflush(hstdin);
     return 0;
@@ -367,15 +367,6 @@ int bench()     //Benchmarks Willow, printing total nodes and nodes per second.
         {"2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93\0"}};
     unsigned long int t = 0;
     clock_t start = clock();
-    int target = 32 * 1024 * 1024;
-    int size = 0;
-    while (sizeof(struct ttentry) * (1 << size) < target)
-    {
-        size++;
-    }
-    TT = (struct ttentry *)malloc(sizeof(struct ttentry) * (1 << size));
-    TTSIZE = 1 << size;
-    _mask = TTSIZE - 1;
     for (int i = 0; i < 50; i++)        //clear all game info between positions
     {
 
@@ -389,11 +380,17 @@ int bench()     //Benchmarks Willow, printing total nodes and nodes per second.
         struct movelist movelst[MOVESIZE];
         int key;
         bool color;
+        /*setfull(&board);
+        nnue_state.reset_nnue(&board);
+        printfull(&board);
+        printf("%i\n", eval(&board, BLACK));
+        exit(0);*/
+
         setfromfen(&board, movelst, &key, positions[i], &color, 0);
 
         printfull(&board);
 
-        iid_time(&board, movelst, 1000000, &key, color, false);
+        iid_time(&board, movelst, 1000000, &key, color, false, true, nullmove);
         t += nodes;
     }
     printf("Bench: %lu nodes %i nps\n", t, (int)(t / ((clock() - start) / (float)CLOCKS_PER_SEC)));

@@ -1,6 +1,7 @@
 #ifndef __globals__
 #define __globals__
 #include "constants.h"
+#include "nnue.h"
 #include <math.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -13,6 +14,8 @@ bool isattacker;            //a temp global for if a piece is an attacker on kin
 int maxdepth;               //used for selective depth
 
 int attackers[2];           //the number of attackers on king
+
+int NODES_IID = 0;
 
 struct move currentmove;    //The engine's current best move at root
 short int search_age;       //search age for TT purposes
@@ -50,6 +53,19 @@ long int _mask;
 
 void initglobals()  //Initialize all our global variable stuff.
 {
+
+    int target = 32 * 1024 * 1024;
+    int size = 0;
+    while (sizeof(struct ttentry) * (1 << size) < target)
+    {
+        size++;
+    }
+    TT = (struct ttentry *)malloc(sizeof(struct ttentry) * (1 << size));
+    TTSIZE = 1 << size;
+    _mask = TTSIZE - 1;
+    
+    nnue_state.m_accumulator_stack.reserve(MOVESIZE);
+
     for (unsigned char i = 0; i < 0x80; i++)
     {
         if (i & 0x88)
