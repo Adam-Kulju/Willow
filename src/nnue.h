@@ -44,7 +44,8 @@ constexpr int MAILBOX_TO_STANDARD[0x80] = {
         0, 1, 2, 3, 4, 5, 6, 7, 99, 99, 99, 99, 99, 99, 99, 99,
 };
 
-struct alignas(64) NNUE_Params {
+struct alignas(64) NNUE_Params
+{
     std::array<int16_t, INPUT_SIZE * LAYER1_SIZE> feature_weights;
     std::array<int16_t, LAYER1_SIZE> feature_bias;
     std::array<int16_t, LAYER1_SIZE * 2> output_weights;
@@ -72,7 +73,8 @@ constexpr int32_t crelu(int16_t x)
     return clipped;
 }
 
-class NNUE_State {
+class NNUE_State
+{
 public:
     explicit NNUE_State()
     {
@@ -86,7 +88,8 @@ public:
     void pop();
 
     template <bool Activate>
-    inline void update_feature(int piece, int square) {
+    inline void update_feature(int piece, int square)
+    {
         const auto [white_idx, black_idx] = feature_indices(piece, square);
 
         if constexpr (Activate)
@@ -124,11 +127,11 @@ public:
         }
     }
 
-    static std::pair<size_t , size_t> feature_indices(int piece, int sq);
+    static std::pair<size_t, size_t> feature_indices(int piece, int sq);
 
     static int32_t crelu_flatten(const std::array<int16_t, LAYER1_SIZE> &us,
-                                         const std::array<int16_t, LAYER1_SIZE> &them,
-                                         const std::array<int16_t, LAYER1_SIZE * 2> &weights);
+                                 const std::array<int16_t, LAYER1_SIZE> &them,
+                                 const std::array<int16_t, LAYER1_SIZE * 2> &weights);
 
     void reset_nnue(struct board_info *board);
 };
@@ -138,33 +141,30 @@ const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(gnnueData);
 
 NNUE_State nnue_state{};
 
-
 void NNUE_State::push()
 {
     m_accumulator_stack.push_back(*m_curr);
     m_curr = &m_accumulator_stack.back();
-    //printf("makemove - %i\n", nnue_state.evaluate(WHITE));
+    // printf("makemove - %i\n", nnue_state.evaluate(WHITE));
 }
 
 void NNUE_State::pop()
 {
     m_accumulator_stack.pop_back();
     m_curr = &m_accumulator_stack.back();
-    //printf("unmakemove - %i\n", nnue_state.evaluate(WHITE));
-    //exit(0);
+    // printf("unmakemove - %i\n", nnue_state.evaluate(WHITE));
+    // exit(0);
 }
-
 
 int NNUE_State::evaluate(int color) const
 {
     const auto output = color == WHITE
-                        ? crelu_flatten(m_curr->white, m_curr->black, g_nnue.output_weights)
-                        : crelu_flatten(m_curr->black, m_curr->white, g_nnue.output_weights);
+                            ? crelu_flatten(m_curr->white, m_curr->black, g_nnue.output_weights)
+                            : crelu_flatten(m_curr->black, m_curr->white, g_nnue.output_weights);
     return (output + g_nnue.output_bias) * SCALE / QAB;
 }
 
-
-std::pair<size_t , size_t> NNUE_State::feature_indices(int piece, int sq)
+std::pair<size_t, size_t> NNUE_State::feature_indices(int piece, int sq)
 {
     constexpr size_t color_stride = 64 * 6;
     constexpr size_t piece_stride = 64;
@@ -173,21 +173,21 @@ std::pair<size_t , size_t> NNUE_State::feature_indices(int piece, int sq)
     const size_t color = piece & 1;
 
     // std::cout << piece << " " << sq << " " << base << " " << color << std::endl;
-    const auto whiteIdx =  color * color_stride + base * piece_stride +  static_cast<size_t>(sq ^ 56);
-    const auto blackIdx =  (color ^ 1) * color_stride + base * piece_stride + (static_cast<size_t>(sq));
+    const auto whiteIdx = color * color_stride + base * piece_stride + static_cast<size_t>(sq ^ 56);
+    const auto blackIdx = (color ^ 1) * color_stride + base * piece_stride + (static_cast<size_t>(sq));
 
     // std::cout << whiteIdx << " " << blackIdx << std::endl;
     return {whiteIdx, blackIdx};
 }
 
 int32_t NNUE_State::crelu_flatten(const std::array<int16_t, LAYER1_SIZE> &us,
-                                     const std::array<int16_t, LAYER1_SIZE> &them, const std::array<int16_t, LAYER1_SIZE * 2> &weights)
+                                  const std::array<int16_t, LAYER1_SIZE> &them, const std::array<int16_t, LAYER1_SIZE * 2> &weights)
 {
     int32_t sum = 0;
 
     for (size_t i = 0; i < LAYER1_SIZE; ++i)
     {
-        sum += crelu(  us[i]) * weights[              i];
+        sum += crelu(us[i]) * weights[i];
         sum += crelu(them[i]) * weights[LAYER1_SIZE + i];
     }
 
@@ -201,9 +201,11 @@ void NNUE_State::reset_nnue(struct board_info *board)
 
     m_curr->init(g_nnue.feature_bias);
 
-    for (int square : STANDARD_TO_MAILBOX) {
-        if (board->board[square]) {
-            //printf("%i\n", MAILBOX_TO_STANDARD[square]);
+    for (int square : STANDARD_TO_MAILBOX)
+    {
+        if (board->board[square])
+        {
+            // printf("%i\n", MAILBOX_TO_STANDARD[square]);
             update_feature<true>(board->board[square], MAILBOX_TO_STANDARD[square]);
         }
     }

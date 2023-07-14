@@ -6,37 +6,37 @@
 #include <ctype.h>
 #include <stdio.h>
 
-clock_t start_time;        //stores the time that the engine started a search
-float maximumtime;          //the time that the engine has gotten for time management purposes
-float coldturkey;           //the total amount of time that the engine has in the game
-bool isattacker;            //a temp global for if a piece is an attacker on king
+clock_t start_time; // stores the time that the engine started a search
+float maximumtime;  // the time that the engine has gotten for time management purposes
+float coldturkey;   // the total amount of time that the engine has in the game
+bool isattacker;    // a temp global for if a piece is an attacker on king
 
-int maxdepth;               //used for selective depth
+int maxdepth; // used for selective depth
 
-int attackers[2];           //the number of attackers on king
+int attackers[2]; // the number of attackers on king
 
 int NODES_IID = 0;
 
-struct move currentmove;    //The engine's current best move at root
-short int search_age;       //search age for TT purposes
+struct move currentmove; // The engine's current best move at root
+short int search_age;    // search age for TT purposes
 
-short int MAXDEPTH;         //The maximum depth of a position (set to 14 for bench and 99 normally)
+short int MAXDEPTH; // The maximum depth of a position (set to 14 for bench and 99 normally)
 
-unsigned long int nodes;    //self explanatory
-long int totals;            //total number of nodes spent on a search
-int betas, total;           //move ordering trackers
-int king_attack_count[2];   //attacks on king for White and Black
-int attacking_pieces[2];    //number of attacks on pieces for threats purposes
+unsigned long int nodes;  // self explanatory
+long int totals;          // total number of nodes spent on a search
+int betas, total;         // move ordering trackers
+int king_attack_count[2]; // attacks on king for White and Black
+int attacking_pieces[2];  // number of attacks on pieces for threats purposes
 
-int LMRTABLE[100][LISTSIZE];    //LMR constant table
-char KINGZONES[2][0x80][0x80];  //a quick lookup to tell if a square is in the kingzone of a king at a particular square
+int LMRTABLE[100][LISTSIZE];   // LMR constant table
+char KINGZONES[2][0x80][0x80]; // a quick lookup to tell if a square is in the kingzone of a king at a particular square
 
-bool CENTERWHITE[0x88];       //lookup table for White's center
-bool CENTERBLACK[0x88];       //lookup table for Black's center
+bool CENTERWHITE[0x88]; // lookup table for White's center
+bool CENTERBLACK[0x88]; // lookup table for Black's center
 
-struct move KILLERTABLE[100][2];    //Stores killer moves
-struct move COUNTERMOVES[6][128];   //Stores countermoves
-long int HISTORYTABLE[2][0x80][0x80]; //The History table
+struct move KILLERTABLE[100][2];      // Stores killer moves
+struct move COUNTERMOVES[6][128];     // Stores countermoves
+long int HISTORYTABLE[2][0x80][0x80]; // The History table
 
 static unsigned long long mt[NN];
 static int mti = NN + 1;
@@ -51,7 +51,7 @@ struct ttentry *TT;
 long int TTSIZE;
 long int _mask;
 
-void initglobals()  //Initialize all our global variable stuff.
+void initglobals() // Initialize all our global variable stuff.
 {
 
     int target = 32 * 1024 * 1024;
@@ -63,7 +63,7 @@ void initglobals()  //Initialize all our global variable stuff.
     TT = (struct ttentry *)malloc(sizeof(struct ttentry) * (1 << size));
     TTSIZE = 1 << size;
     _mask = TTSIZE - 1;
-    
+
     nnue_state.m_accumulator_stack.reserve(MOVESIZE);
 
     for (unsigned char i = 0; i < 0x80; i++)
@@ -90,7 +90,7 @@ void initglobals()  //Initialize all our global variable stuff.
             KINGZONES[1][i][i - 31] = 3, KINGZONES[1][i][i - 32] = 3, KINGZONES[1][i][i - 33] = 3;
         }
 
-        if ((i & 7) > 1 && (i & 7) < 6 && (i >> 4) > 0 && (i >> 4) < 7) //set center squares
+        if ((i & 7) > 1 && (i & 7) < 6 && (i >> 4) > 0 && (i >> 4) < 7) // set center squares
         {
             if ((i >> 4) >= 4)
             {
@@ -102,7 +102,7 @@ void initglobals()  //Initialize all our global variable stuff.
             }
         }
     }
-    for (int i = 0; i < 100; i++)   //initialize LMR table.
+    for (int i = 0; i < 100; i++) // initialize LMR table.
     {
         for (int n = 0; n < LISTSIZE; n++)
         {
@@ -112,22 +112,21 @@ void initglobals()  //Initialize all our global variable stuff.
     coldturkey = 1000000;
 }
 
+// This copyright notice below applies to the three functions below them. Together they make a Mersenne Twister random number generator.
+// I have little idea how it works, but it does. so.
 
-//This copyright notice below applies to the three functions below them. Together they make a Mersenne Twister random number generator.
-//I have little idea how it works, but it does. so.
-
-/* 
+/*
    A C-program for MT19937-64 (2004/9/29 version).
    Coded by Takuji Nishimura and Makoto Matsumoto.
 
    This is a 64-bit version of Mersenne Twister pseudorandom number
    generator.
 
-   Before using, initialize the state by using init_genrand64(seed)  
+   Before using, initialize the state by using init_genrand64(seed)
    or init_by_array64(init_key, key_length).
 
    Copyright (C) 2004, Makoto Matsumoto and Takuji Nishimura,
-   All rights reserved.                          
+   All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -140,8 +139,8 @@ void initglobals()  //Initialize all our global variable stuff.
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
 
-     3. The names of its contributors may not be used to endorse or promote 
-        products derived from this software without specific prior written 
+     3. The names of its contributors may not be used to endorse or promote
+        products derived from this software without specific prior written
         permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -158,12 +157,12 @@ void initglobals()  //Initialize all our global variable stuff.
 
    References:
    T. Nishimura, ``Tables of 64-bit Mersenne Twisters''
-     ACM Transactions on Modeling and 
+     ACM Transactions on Modeling and
      Computer Simulation 10. (2000) 348--357.
    M. Matsumoto and T. Nishimura,
      ``Mersenne Twister: a 623-dimensionally equidistributed
        uniform pseudorandom number generator''
-     ACM Transactions on Modeling and 
+     ACM Transactions on Modeling and
      Computer Simulation 8. (Jan. 1998) 3--30.
 
    Any feedback is very welcome.
@@ -171,7 +170,7 @@ void initglobals()  //Initialize all our global variable stuff.
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove spaces)
 */
 
-void init_genrand64(unsigned long long seed)   
+void init_genrand64(unsigned long long seed)
 {
     mt[0] = seed;
     for (mti = 1; mti < NN; mti++)
@@ -250,7 +249,7 @@ void init_by_array64(unsigned long long init_key[],
     mt[0] = 1ULL << 63;
 }
 
-void setzobrist()   //Fills the table of Zobrist keys with numbers.
+void setzobrist() // Fills the table of Zobrist keys with numbers.
 {
     for (int i = 0; i < 774; i++)
     {
@@ -258,7 +257,7 @@ void setzobrist()   //Fills the table of Zobrist keys with numbers.
     }
 }
 
-void calc_pos(struct board_info *board, bool color) //Calculates the Zobrist Key for a particular position.
+void calc_pos(struct board_info *board, bool color) // Calculates the Zobrist Key for a particular position.
 {
     CURRENTPOS = 0;
     int i;
@@ -277,7 +276,7 @@ void calc_pos(struct board_info *board, bool color) //Calculates the Zobrist Key
     }
 }
 
-void clearTT()  //Clears the Transposition table.
+void clearTT() // Clears the Transposition table.
 {
     int i;
     for (i = 0; i < TTSIZE; i++)
@@ -286,7 +285,7 @@ void clearTT()  //Clears the Transposition table.
     }
 }
 
-void clearHistory(bool del) //Either divides the entries in the history table by 4 (between searches), or resets it entirely (between games)
+void clearHistory(bool del) // Either divides the entries in the history table by 4 (between searches), or resets it entirely (between games)
 {
     if (!del)
     {
@@ -312,7 +311,7 @@ void clearHistory(bool del) //Either divides the entries in the history table by
         }
     }
 }
-void clearKiller()  //Clears the Killer Table
+void clearKiller() // Clears the Killer Table
 {
     for (int i = 0; i < 100; i++)
     {
@@ -321,7 +320,7 @@ void clearKiller()  //Clears the Killer Table
     }
 }
 
-void clearCounters()    //Clears the countermoves table
+void clearCounters() // Clears the countermoves table
 {
     for (int i = 0; i < 6; i++)
     {
@@ -332,7 +331,7 @@ void clearCounters()    //Clears the countermoves table
     }
 }
 
-bool ismatch(struct move move1, struct move move2)  //Compares two move structs to see if they are equal. Perhaps memcmp() would be faster.
+bool ismatch(struct move move1, struct move move2) // Compares two move structs to see if they are equal. Perhaps memcmp() would be faster.
 {
     if (move1.move == move2.move && move1.flags == move2.flags)
     {
@@ -341,11 +340,11 @@ bool ismatch(struct move move1, struct move move2)  //Compares two move structs 
     return false;
 }
 
-void insert(unsigned long long int position, int depthleft, int eval, char type, struct move bestmove, int search_age)  //Inserts an entry into the transposition table.
+void insert(unsigned long long int position, int depthleft, int eval, char type, struct move bestmove, int search_age) // Inserts an entry into the transposition table.
 {
     int index = (position) & (_mask);
 
-    if (TT[index].zobrist_key == position && !(type == 3 && TT[index].type != 3))   //Overwrite entries of same positions depending on depth, type, and age.
+    if (TT[index].zobrist_key == position && !(type == 3 && TT[index].type != 3)) // Overwrite entries of same positions depending on depth, type, and age.
     {
         int agediff = search_age - TT[index].age;
         int newentryb = depthleft + type + ((agediff * agediff) >> 2);
@@ -363,7 +362,7 @@ void insert(unsigned long long int position, int depthleft, int eval, char type,
     TT[index].bestmove = bestmove;
 }
 
-char *conv(struct move move, char *temp)    //Converts a internally encoded move to a UCI string.
+char *conv(struct move move, char *temp) // Converts a internally encoded move to a UCI string.
 {
     temp[0] = ((move.move >> 8) & 7) + 97, temp[1] = ((move.move >> 8) >> 4) + 1 + '0', temp[2] = ((move.move & 0xFF) & 7) + 97, temp[3] = ((move.move & 0xFF) >> 4) + 1 + '0';
     if (move.flags >> 2 == 1)
@@ -392,7 +391,7 @@ char *conv(struct move move, char *temp)    //Converts a internally encoded move
     return temp;
 }
 
-void convto(char *mve, struct move *to_move, struct board_info *board)  //Converts a UCI string to an internally coded move.
+void convto(char *mve, struct move *to_move, struct board_info *board) // Converts a UCI string to an internally coded move.
 {
     unsigned short int from = ((atoi(&mve[1]) - 1) << 4) + (mve[0] - 97), to = ((atoi(&mve[3]) - 1) << 4) + (mve[2] - 97);
 
