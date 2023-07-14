@@ -465,11 +465,18 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         int extension = 0;
 
         if (depth && depth < info.depth * 2){    //if we're not already in a singular search, do singular search.
+
             if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft-3 && type != 1){
                 int sBeta = MAX(evl - depthleft * 3, -100000);
-                long long unsigned int temp = CURRENTPOS; //the hash of the position after the move was made
+
                 CURRENTPOS = original_pos;            //reset hash of the position for the singular search
+                nnue_state.pop();                     //pop the nnue_state to before we made our move. After singular search, we make the move again to reset the nnue state.
+
                 int sScore = alphabeta(board, movelst, key, sBeta-1, sBeta, (depthleft-1)/2, depth, color, false, incheck, list[i].move);
+
+                board2 = *board;
+                move(&board2, list[i].move, color);
+
 
                 if (sScore < sBeta){
                     extension = 1;
@@ -477,12 +484,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 /*else if (sBeta >= beta){
                     CURRENTPOS = original_pos;
                     return sBeta;
-                }
-                else if (evl >= beta || evl <= alpha){
-                    extension = -1;
                 }*/
-
-                CURRENTPOS = temp;                          //save hash to the temp number.
             }
         }
 
