@@ -14,18 +14,18 @@ void pawnmoves(struct board_info *board, struct list *list, int *key, unsigned c
         if (!board->board[diff])
         { // if the square in front is empty, go forwards
             unsigned short int t = pos << 8;
-                //Brings the current position to the beginning of the integer; if our move was h8-h7, this sets it up as 0x7700 so we can ad the move to h7 (0x7767)
+            // Brings the current position to the beginning of the integer; if our move was h8-h7, this sets it up as 0x7700 so we can ad the move to h7 (0x7767)
             if (((diff) >> 4) == 7)
-            { // we have a promotion, so add all four promotions to the movelist.
-                list[*key].move.move = t + diff, list[(*key)++].move.flags = 4;     //4 = knight, 5 = bishop, 6 = rook, 7 = queen
+            {                                                                   // we have a promotion, so add all four promotions to the movelist.
+                list[*key].move.move = t + diff, list[(*key)++].move.flags = 4; // 4 = knight, 5 = bishop, 6 = rook, 7 = queen
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 5;
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 6;
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 7;
             }
             else
             {
-                list[*key].move.move = t + diff, list[(*key)++].move.flags = 0; 
-                    // go forwards and see if we can go forwards again
+                list[*key].move.move = t + diff, list[(*key)++].move.flags = 0;
+                // go forwards and see if we can go forwards again
 
                 if ((pos >> 4) == 1 && !board->board[diff + NORTH])
                 {
@@ -40,7 +40,7 @@ void pawnmoves(struct board_info *board, struct list *list, int *key, unsigned c
 
             unsigned short int t = pos << 8;
             if (((diff) >> 4) == 7)
-            {       // we have a promotion.
+            { // we have a promotion.
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 4;
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 5;
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 6;
@@ -53,10 +53,10 @@ void pawnmoves(struct board_info *board, struct list *list, int *key, unsigned c
         }
         diff -= 2;
         if (!(diff & 0x88) && board->board[diff] && (board->board[diff] & 1))
-        {   //capture left
+        { // capture left
             unsigned short int t = pos << 8;
             if (((diff) >> 4) == 7)
-            {       // we have a promotion.
+            { // we have a promotion.
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 4;
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 5;
                 list[*key].move.move = t + diff, list[(*key)++].move.flags = 6;
@@ -112,7 +112,7 @@ void pawnmoves(struct board_info *board, struct list *list, int *key, unsigned c
         diff -= 2;
         if (!(diff & 0x88) && board->board[diff] && !(board->board[diff] & 1))
         {
-                //capture left
+            // capture left
             unsigned short int t = pos << 8;
             if (((diff) >> 4) == 0)
             { // we have a promotion.
@@ -151,7 +151,7 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
             {
                 for (unsigned char dir = 0; dir < vectors[piecetype]; dir++)
                 {
-                        //Go in the directions that the piece can move, until we hit another piece or the edge of the board; then move on to the next direction.
+                    // Go in the directions that the piece can move, until we hit another piece or the edge of the board; then move on to the next direction.
                     for (int pos = i;;)
                     {
                         pos += vector[piecetype][dir];
@@ -171,7 +171,7 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
     }
     if (board->epsquare)
     {
-            //handle special moves; en passant and castling. If the en passant square (triggered by opponent moving a pawn two squares) is beside our pawn we can take it en passant.
+        // handle special moves; en passant and castling. If the en passant square (triggered by opponent moving a pawn two squares) is beside our pawn we can take it en passant.
         if (!((board->epsquare + 1) & 0x88) && board->board[board->epsquare + 1] == WPAWN + color)
         {
             if (!color)
@@ -200,8 +200,8 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
         return key;
     }
 
-    if (board->castling[color][0])      //If we have not moved our king or rook, are not in check, and will not castle through check, castling is pseudolegal
-                                        //queenside castling
+    if (board->castling[color][0]) // If we have not moved our king or rook, are not in check, and will not castle through check, castling is pseudolegal
+                                   // queenside castling
     {
         char x = board->kingpos[color];
         if (board->board[x - 4] - color == WROOK && !board->board[x - 3] && !board->board[x - 2] && !board->board[x - 1] && !isattacked(board, x - 1, color ^ 1))
@@ -209,7 +209,7 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
             list[key].move.move = (x << 8) + x + WEST + WEST, list[key++].move.flags = 0x8;
         }
     }
-    if (board->castling[color][1])      //kingside castling
+    if (board->castling[color][1]) // kingside castling
     {
         char x = board->kingpos[color];
         if (board->board[x + 3] - color == WROOK && !board->board[x + 2] && !board->board[x + 1] && !isattacked(board, x + 1, color ^ 1))
@@ -222,7 +222,7 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
 
 bool static_exchange_evaluation(struct board_info *board, struct move mve, bool color, int threshold)
 {
-        //Does a static exchange evaluation of the current position.
+    // Does a static exchange evaluation of the current position.
 
     if (mve.flags && mve.flags >> 2 != 1)
     { // castling and en passant both come out neutral; thus we can return immediately.
@@ -283,20 +283,20 @@ bool static_exchange_evaluation(struct board_info *board, struct move mve, bool 
 
 int see(struct board_info *board, struct move mve, bool color, int threshold)
 {
-        //Orders captures.
-    if (mve.flags == 0xC)       //En passant is rated just above all the other PxP captures.
+    // Orders captures.
+    if (mve.flags == 0xC) // En passant is rated just above all the other PxP captures.
     {
         return 2000000 + 100 * 10;
     }
 
     int attacker = SEEVALUES[board->board[(mve.move >> 8)] >> 1], victim = SEEVALUES[board->board[(mve.move & 0xFF)] >> 1];
-        //Get the values of the victim and the attacker
+    // Get the values of the victim and the attacker
 
-    int v = 2000000;    //ciekce's magic v!
+    int v = 2000000; // ciekce's magic v!
 
     if (victim - attacker < threshold && !static_exchange_evaluation(board, mve, color, threshold))
     {
-            //If the piece we're trying to capture is worth less than the attacker, and a static exchange evaluation also verifies the move looks bad, order it at the very end
+        // If the piece we're trying to capture is worth less than the attacker, and a static exchange evaluation also verifies the move looks bad, order it at the very end
         v = -v;
     }
     return v + victim * 10 - attacker;
@@ -304,7 +304,7 @@ int see(struct board_info *board, struct move mve, bool color, int threshold)
 
 void selectionsort(struct list *list, int k, int t)
 {
-        //Performs a selection sort on the list, starting from index k
+    // Performs a selection sort on the list, starting from index k
     int temp = k;
     int i = k;
     while (i < t)
@@ -322,21 +322,21 @@ void selectionsort(struct list *list, int k, int t)
 
 int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen, int threshold)
 {
-        //Given a list of moves, scores them for move ordering purposes.
+    // Given a list of moves, scores them for move ordering purposes.
 
     int i = 0;
     while (i < movelen)
     {
-        list[i].eval = 1000000; //base
+        list[i].eval = 1000000; // base
 
         if (depth > 1 && lastmove.move != 0 && (board->board[lastmove.move & 0xFF] >> 1) - 1 < 0)
         {
             return 1;
         }
 
-        if (type != 'n' && ismatch(TT[(CURRENTPOS) & (_mask)].bestmove, list[i].move)) //TT hit: gets the largest bonus.
+        if (type != 'n' && ismatch(TT[(CURRENTPOS) & (_mask)].bestmove, list[i].move)) // TT hit: gets the largest bonus.
         {
-        
+
             if (TT[(CURRENTPOS) & (_mask)].bestmove.move == list[i].move.move)
             {
 
@@ -348,15 +348,15 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
             }
         }
 
-        else if (list[i].move.flags == 7)   //Queen promotions are almost certainly good for us, so order them right below the TT move.
+        else if (list[i].move.flags == 7) // Queen promotions are almost certainly good for us, so order them right below the TT move.
         {
             list[i].eval += 5000000 + SEEVALUES[board->board[(list[i].move.move & 0xFF)] >> 1];
         }
-        else if (board->board[list[i].move.move & 0xFF])    //Score captures with MVV-LVA and SEE.
+        else if (board->board[list[i].move.move & 0xFF]) // Score captures with MVV-LVA and SEE.
         {
             list[i].eval = see(board, list[i].move, color, threshold);
         }
-        else if (ismatch(list[i].move, KILLERTABLE[depth][0]))  //Killer moves
+        else if (ismatch(list[i].move, KILLERTABLE[depth][0])) // Killer moves
         {
             list[i].eval += 199;
         }
@@ -365,14 +365,14 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
             list[i].eval += 198;
         }
         else if (depth > 1 && lastmove.move != 0 && ismatch(list[i].move, COUNTERMOVES[(board->board[lastmove.move & 0xFF] >> 1) - 1][lastmove.move & 0xFF]))
-                //The move from the countermoves history table
+        // The move from the countermoves history table
         {
             // the piece that the opponent moved     the square it is on
 
             list[i].eval += 197;
         }
 
-        else    //And if none of those apply, score the move by its history score.
+        else // And if none of those apply, score the move by its history score.
         {
             list[i].eval = HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
         }

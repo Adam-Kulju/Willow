@@ -8,38 +8,38 @@
 #include "movegen.h"
 #include "search.h"
 
-char *getsafe(char *buffer, int count)  //Gets a number of characters up to count (the size of the buffer in this case)
+char *getsafe(char *buffer, int count) // Gets a number of characters up to count (the size of the buffer in this case)
 {
     char *result = buffer, *np;
-    if ((buffer == NULL) || (count < 1))    //if we have neither a buffer or any space to put it, return null
+    if ((buffer == NULL) || (count < 1)) // if we have neither a buffer or any space to put it, return null
     {
         result = NULL;
     }
     else
     {
         result = fgets(buffer, count, stdin);
-        if (result == NULL)       //a check for EOF (indicating that whatever is running Willow (OB etc.) has been killed and it's time to exit)
+        if (result == NULL) // a check for EOF (indicating that whatever is running Willow (OB etc.) has been killed and it's time to exit)
         {
             free(TT);
             exit(0);
         }
     }
-    if ((np = strchr(buffer, '\n')))    //remove trailing newline
+    if ((np = strchr(buffer, '\n'))) // remove trailing newline
         *np = '\0';
     return result;
 }
 
-long long unsigned int perft(int depth, struct board_info *board, bool color, bool first)   //Performs a perft search to the desired depth, displaying results for each move at the root.
+long long unsigned int perft(int depth, struct board_info *board, bool color, bool first) // Performs a perft search to the desired depth, displaying results for each move at the root.
 {
     if (!depth)
     {
-        return 1;       //a terminal node
+        return 1; // a terminal node
     }
     struct list list[LISTSIZE];
     int nmoves, i;
     long long unsigned int l = 0;
     nmoves = movegen(board, list, color, false);
-    for (i = 0; i < nmoves; i++)                    //Loop through all of the moves, skipping illegal ones.
+    for (i = 0; i < nmoves; i++) // Loop through all of the moves, skipping illegal ones.
     {
         struct board_info board2 = *board;
         move(&board2, list[i].move, color);
@@ -60,7 +60,7 @@ long long unsigned int perft(int depth, struct board_info *board, bool color, bo
 
 void move_uci(char *command, int i, struct board_info *board, struct movelist *movelst, int *key, bool *color)
 {
-    //parses a uci move such as "e2e4" internally and plays it.
+    // parses a uci move such as "e2e4" internally and plays it.
     while (command[i] != '\0' && command[i] != '\n')
     {
         while (isblank(command[i]) && command[i] != '\0')
@@ -78,7 +78,7 @@ void move_uci(char *command, int i, struct board_info *board, struct movelist *m
         buf[a] = '\0';
         struct move temp;
         convto(buf, &temp, board);
-        bool iscap = (temp.flags == 0xC || board->board[temp.move & 0xFF]); //captures reset the halfmove clock for 50-move rule draws, so it's important to check that the move is a capture.
+        bool iscap = (temp.flags == 0xC || board->board[temp.move & 0xFF]); // captures reset the halfmove clock for 50-move rule draws, so it's important to check that the move is a capture.
         move(board, temp, *color);
 
         move_add(board, movelst, key, temp, *color, iscap);
@@ -87,8 +87,8 @@ void move_uci(char *command, int i, struct board_info *board, struct movelist *m
     }
 }
 
-int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *color)  //handles various UCI options.
-{ // assumes board+movelist have been already set up under wraps
+int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *color) // handles various UCI options.
+{                                                                                      // assumes board+movelist have been already set up under wraps
 
     char command[65536];
     getsafe(command, sizeof(command));
@@ -137,7 +137,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
         int a = atoi(&command[26]);
         int target = a * 1024 * 1024;
         int size = 0;
-        while (sizeof(struct ttentry) * (1 << size) < target)   //Set the hash to 2^n entires where n is the largest number that satisfies 2^n < the option that was set
+        while (sizeof(struct ttentry) * (1 << size) < target) // Set the hash to 2^n entires where n is the largest number that satisfies 2^n < the option that was set
         {
             size++;
         }
@@ -191,8 +191,8 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
             coldturkey = time;
         }
 
-        else if (strstr(command, "wtime"))      //the "wtime" command indicates that Willow is playing a game currently. In this case, we use information about
-                                                //our time in order to get an optimal thinking time for the move before searching.
+        else if (strstr(command, "wtime")) // the "wtime" command indicates that Willow is playing a game currently. In this case, we use information about
+                                           // our time in order to get an optimal thinking time for the move before searching.
         {
             int k = 0;
             int movestogo = -1;
@@ -311,7 +311,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     return 0;
 }
 
-int bench()     //Benchmarks Willow, printing total nodes and nodes per second.
+int bench() // Benchmarks Willow, printing total nodes and nodes per second.
 {
     MAXDEPTH = 14;
     char positions[50][1024] = {
@@ -367,7 +367,7 @@ int bench()     //Benchmarks Willow, printing total nodes and nodes per second.
         {"2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93\0"}};
     unsigned long int t = 0;
     clock_t start = clock();
-    for (int i = 0; i < 50; i++)        //clear all game info between positions
+    for (int i = 0; i < 50; i++) // clear all game info between positions
     {
 
         clearTT();
@@ -414,7 +414,7 @@ int com()
     return 0;
 }
 
-int init()     //sets up I/O and all the global variables/lookup tables
+int init() // sets up I/O and all the global variables/lookup tables
 {
 
     setvbuf(stdin, NULL, _IONBF, 0);
@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
         if (!strcmp(argv[1], "bench"))
         {
             bench();
-            //printf("%f\n", (float)betas / total);
+            // printf("%f\n", (float)betas / total);
             exit(0);
         }
         else if (!strcmp(argv[1], "perft"))
