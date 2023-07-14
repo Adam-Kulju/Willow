@@ -479,12 +479,15 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (sScore < sBeta)
                 {
                     extension = 1;
+                    if (!ispv && sScore + 20 < sBeta && depth < info.depth){    //Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at
+                        extension++;
+                    }
                 }
-                else if (sBeta >= beta){
+                /*else if (sBeta >= beta){
                     CURRENTPOS = original_pos;
                     nnue_state.pop();
                     return sBeta;
-                }
+                }*/
             }
         }
 
