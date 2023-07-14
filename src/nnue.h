@@ -6,7 +6,20 @@
 #include <vector>
 #include <algorithm>
 #include "constants.h"
+#ifdef _MSC_VER
+#define W_MSVC
+#pragma push_macro("_MSC_VER")
+#undef _MSC_VER
+#endif
+
+#define INCBIN_PREFIX g_
 #include "incbin.h"
+
+#ifdef W_MSVC
+#pragma pop_macro("_MSC_VER")
+#undef W_MSVC
+#endif
+
 class Position;
 
 constexpr size_t INPUT_SIZE = 768;
@@ -137,7 +150,7 @@ public:
 };
 
 INCBIN(nnue, "src/net0001.bin");
-const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(gnnueData);
+const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(g_nnueData);
 
 NNUE_State nnue_state{};
 
