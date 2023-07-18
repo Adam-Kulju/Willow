@@ -155,8 +155,8 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     {
         *color = WHITE;
         setfull(board);
-        setmovelist(movelst, key);
         nnue_state.reset_nnue(board);
+        setmovelist(movelst, key);
         calc_pos(board, WHITE);
         *key = 1;
         if (strstr(command, "moves"))

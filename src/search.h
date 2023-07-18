@@ -79,32 +79,13 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     long long unsigned int original_pos = CURRENTPOS;
 
     int stand_pat;
-    int sstvl = 32767;
-    if (incheck) // we cannot evaluate the position when in check, because there may be no good move to get out. Otherwise, the evaluation of a position is very useful for pruning.
+    if (incheck) // if we're not in check get a stand pat result (i.e. the score that we get by doing nothing)
     {
-        stand_pat = -1000000;
-    }
-
-    else if (type != 'n'){
-        int ttevl = TT[(CURRENTPOS) & (_mask)].staticeval;
-        int ttscore = evl;
-        
-        if (ttevl == 32767){
-            stand_pat = nnue_state.evaluate(color);
-        }
-        else{
-            stand_pat = ttevl;
-        }
-        sstvl = stand_pat;
-        if (type == 3 || (type == 1 && ttscore < evl) || (type == 2 && ttscore > evl)){
-            stand_pat = ttscore;
-        }
-
+        stand_pat = -100000;
     }
     else
     {
         stand_pat = nnue_state.evaluate(color);
-        sstvl = stand_pat;
     }
 
     int bestscore = stand_pat;
@@ -185,7 +166,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         {
             CURRENTPOS = original_pos;
             nnue_state.pop();
-            insert(original_pos, 0, list[i].eval, 2, list[i].move, search_age, sstvl);
+            insert(original_pos, 0, list[i].eval, 2, list[i].move, search_age);
             return list[i].eval;
         }
         if (list[i].eval > alpha) // update alpha
@@ -204,11 +185,11 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     if (falpha != alpha) // Insert entry into the transposition table
     {
-        insert(original_pos, 0, bestscore, 3, bestmove, search_age, sstvl);
+        insert(original_pos, 0, bestscore, 3, bestmove, search_age);
     }
     else
     {
-        insert(original_pos, 0, bestscore, 1, bestmove, search_age, sstvl);
+        insert(original_pos, 0, bestscore, 1, bestmove, search_age);
     }
     return bestscore;
 }
@@ -266,7 +247,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     else
     {
         type = 'n';
+        evl = -1024;
     }
+
+    int ttscore = evl;
 
     bool ispv = (beta != alpha + 1); // Are we in a PV (i.e. likely best line) node? This affects what type of pruning we can do.
 
@@ -306,100 +290,78 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
         return b;
     }
-
-    short int sstvl = 32767;
-
     if (incheck) // we cannot evaluate the position when in check, because there may be no good move to get out. Otherwise, the evaluation of a position is very useful for pruning.
     {
         evl = -1000000;
-        movelst[*key - 1].staticeval = evl;
     }
     else if (singularsearch)
     {
         evl = movelst[*key - 1].staticeval;
     }
-    else if (type != 'n'){
-        int ttevl = TT[(CURRENTPOS) & (_mask)].staticeval;
-        int ttscore = evl;
-
-        if (ttevl == 32767){
-            evl = nnue_state.evaluate(color);
-        }
-        else{
-            evl = ttevl;
-        }
-        sstvl = evl;
-        movelst[*key - 1].staticeval = evl;
-
-        if (type == 3 || (type == 1 && ttscore < evl) || (type == 2 && ttscore > evl)){
-            evl = ttscore;
-        }
-    }
     else
     {
         evl = nnue_state.evaluate(color);
-        sstvl = evl;
-        movelst[*key - 1].staticeval = evl;
     }
-    
+    movelst[*key - 1].staticeval = evl;
 
     bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval); // Is our position better than it was during our last move?
 
-    if (!ispv && !incheck)
+    if (type == 3 || (type == 1 && ttscore < evl) || (type == 2 && ttscore > evl)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
+    {
+        evl = TT[(CURRENTPOS) & (_mask)].eval;
+    }
+
+    // Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
+    if (!ispv && !incheck && !singularsearch && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
+    {
+        return evl;
+    }
+
+    // Null Move Pruning: If our position is good enough that we can give our opponent an extra move and still beat beta with a reduced search, cut off.
+    if (isnull == false && !ispv && !singularsearch && !incheck && depthleft > 2 &&
+        (evl >= beta))
     {
 
-        // Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
-        if (!singularsearch && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
+        bool ispiecew = false, ispieceb = false;
+        for (int i = 1; i < 5; i++)
         {
-            return evl;
-        }
-
-        // Null Move Pruning: If our position is good enough that we can give our opponent an extra move and still beat beta with a reduced search, cut off.
-        if (isnull == false && !singularsearch && depthleft > 2 &&
-            (evl >= beta))
-        {
-
-            bool ispiecew = false, ispieceb = false;
-            for (int i = 1; i < 5; i++)
+            if (board->pnbrqcount[WHITE][i] > 0)
             {
-                if (board->pnbrqcount[WHITE][i] > 0)
-                {
-                    ispiecew = true;
-                }
-                if (board->pnbrqcount[BLACK][i] > 0)
-                {
-                    ispieceb = true;
-                }
+                ispiecew = true;
             }
-            if (ispiecew && ispieceb)
+            if (board->pnbrqcount[BLACK][i] > 0)
             {
-                unsigned long long int a = CURRENTPOS;
-                struct board_info board2 = *board;
-                board2.epsquare = 0;
-                if (board->epsquare)
-                {
-                    CURRENTPOS ^= ZOBRISTTABLE[773];
-                }
-                CURRENTPOS ^= ZOBRISTTABLE[772];
-                move_add(&board2, movelst, key, nullmove, color, false);
-                int R = 4 + (depthleft / 6) + MIN((evl - beta) / 200, 3);
+                ispieceb = true;
+            }
+        }
+        if (ispiecew && ispieceb)
+        {
+            unsigned long long int a = CURRENTPOS;
+            struct board_info board2 = *board;
+            board2.epsquare = 0;
+            if (board->epsquare)
+            {
+                CURRENTPOS ^= ZOBRISTTABLE[773];
+            }
+            CURRENTPOS ^= ZOBRISTTABLE[772];
+            move_add(&board2, movelst, key, nullmove, color, false);
+            int R = 4 + (depthleft / 6) + MIN((evl - beta) / 200, 3);
 
-                // We call it with a null window, because we don't care about what the score is exactly, we only care if it beats beta or not.
-                int nm = -alphabeta(&board2, movelst, key, -beta, -beta + 1, depthleft - R, depth + 1, color ^ 1, true, false, nullmove);
+            // We call it with a null window, because we don't care about what the score is exactly, we only care if it beats beta or not.
+            int nm = -alphabeta(&board2, movelst, key, -beta, -beta + 1, depthleft - R, depth + 1, color ^ 1, true, false, nullmove);
 
-                CURRENTPOS = a;
+            CURRENTPOS = a;
 
-                movelst[*key - 1].move = nullmove;
-                *key = *key - 1;
-                if (abs(nm) == TIMEOUT)
-                {
-                    return TIMEOUT;
-                }
+            movelst[*key - 1].move = nullmove;
+            *key = *key - 1;
+            if (abs(nm) == TIMEOUT)
+            {
+                return TIMEOUT;
+            }
 
-                if (nm >= beta)
-                {
-                    return evl;
-                }
+            if (nm >= beta)
+            {
+                return evl;
             }
         }
     }
@@ -519,8 +481,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (sScore < sBeta)
                 {
                     extension = 1;
-                    if (!ispv && sScore + 20 < sBeta && depth < info.depth)
-                    { // Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at
+                    if (!ispv && sScore + 20 < sBeta && depth < info.depth){    //Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at
                         extension++;
                     }
                 }
@@ -659,7 +620,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             bestmove = list[i].move;
             if (!singularsearch)
             {
-                insert(original_pos, depthleft, bestscore, 2, bestmove, search_age, sstvl);
+                insert(original_pos, depthleft, bestscore, 2, bestmove, search_age);
             }
             total++;
             betas += betacount + 1;
@@ -737,7 +698,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         else if (!betacount && depth == 0)
         {
-            insert(original_pos, depthleft, list[i].eval, 1, list[i].move, search_age, sstvl);
+            insert(original_pos, depthleft, list[i].eval, 1, list[i].move, search_age);
             CURRENTPOS = original_pos;
             nnue_state.pop();
             return list[i].eval;
@@ -768,11 +729,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     {
         if (raisedalpha) // Insert move into TT table
         {
-            insert(original_pos, depthleft, alpha, 3, bestmove, search_age, sstvl);
+            insert(original_pos, depthleft, alpha, 3, bestmove, search_age);
         }
         else
         {
-            insert(original_pos, depthleft, bestscore, 1, bestmove, search_age, sstvl);
+            insert(original_pos, depthleft, bestscore, 1, bestmove, search_age);
         }
     }
 

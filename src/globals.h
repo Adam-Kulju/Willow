@@ -340,7 +340,7 @@ bool ismatch(struct move move1, struct move move2) // Compares two move structs 
     return false;
 }
 
-void insert(unsigned long long int position, int depthleft, int eval, char type, struct move bestmove, int search_age, short int sstvl) // Inserts an entry into the transposition table.
+void insert(unsigned long long int position, int depthleft, int eval, char type, struct move bestmove, int search_age) // Inserts an entry into the transposition table.
 {
     int index = (position) & (_mask);
 
@@ -360,7 +360,6 @@ void insert(unsigned long long int position, int depthleft, int eval, char type,
     TT[index].type = type;
     TT[index].age = search_age;
     TT[index].bestmove = bestmove;
-    TT[index].staticeval = sstvl;
 }
 
 char *conv(struct move move, char *temp) // Converts a internally encoded move to a UCI string.
