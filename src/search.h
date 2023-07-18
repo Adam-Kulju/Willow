@@ -80,9 +80,26 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
     int stand_pat;
     int sstvl = 32767;
-    if (incheck) // if we're not in check get a stand pat result (i.e. the score that we get by doing nothing)
+    if (incheck) // we cannot evaluate the position when in check, because there may be no good move to get out. Otherwise, the evaluation of a position is very useful for pruning.
     {
-        stand_pat = -100000;
+        stand_pat = -1000000;
+    }
+
+    else if (type != 'n'){
+        int ttevl = TT[(CURRENTPOS) & (_mask)].staticeval;
+        int ttscore = evl;
+        
+        if (ttevl == 32767){
+            stand_pat = nnue_state.evaluate(color);
+        }
+        else{
+            stand_pat = ttevl;
+        }
+        sstvl = stand_pat;
+        if (type == 3 || (type == 1 && ttscore < evl) || (type == 2 && ttscore > evl)){
+            stand_pat = ttscore;
+        }
+
     }
     else
     {
@@ -302,26 +319,21 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         evl = movelst[*key - 1].staticeval;
     }
     else if (type != 'n'){
-
         int ttevl = TT[(CURRENTPOS) & (_mask)].staticeval;
         int ttscore = evl;
 
         if (ttevl == 32767){
             evl = nnue_state.evaluate(color);
-            sstvl = evl;
-            movelst[*key - 1].staticeval = evl;
         }
         else{
-
             evl = ttevl;
-            movelst[*key - 1].staticeval = evl;
-            if (type == 3 || (type == 1 && ttscore > evl) || (type == 2 && ttscore < evl)){
-                //printf("%i %i\n", evl, ttscore);
-                evl = ttscore;
-            }
-        
         }
+        sstvl = evl;
+        movelst[*key - 1].staticeval = evl;
 
+        if (type == 3 || (type == 1 && ttscore < evl) || (type == 2 && ttscore > evl)){
+            evl = ttscore;
+        }
     }
     else
     {
@@ -329,7 +341,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         sstvl = evl;
         movelst[*key - 1].staticeval = evl;
     }
-
+    
 
     bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval); // Is our position better than it was during our last move?
 
