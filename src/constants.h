@@ -109,6 +109,7 @@ struct ttentry  //Transposition table entry
     // 2: EXACT, 2: FAIL-HIGH, 1: FAIL-LOW
     struct move bestmove;
     int eval;
+    short int staticeval;
     char depth;
     short int age;
 };
