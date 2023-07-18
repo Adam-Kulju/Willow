@@ -85,7 +85,12 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     else
     {
+        int ttscore = evl;
         stand_pat = nnue_state.evaluate(color);
+        if (type == 3 || (type == 1 && ttscore < stand_pat) || (type == 2 && ttscore > stand_pat)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
+        {
+            stand_pat = TT[(CURRENTPOS) & (_mask)].eval;
+        }
     }
 
     int bestscore = stand_pat;
@@ -250,6 +255,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         evl = -1024;
     }
 
+    int ttscore = evl;
+
     bool ispv = (beta != alpha + 1); // Are we in a PV (i.e. likely best line) node? This affects what type of pruning we can do.
 
     if (!ispv && type != 'n' && TT[(CURRENTPOS) & (_mask)].depth >= depthleft) // Check to see if we can cutoff
@@ -304,7 +311,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval); // Is our position better than it was during our last move?
 
-    if (type != 'n') // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
+    if (type == 3 || (type == 1 && ttscore < evl) || (type == 2 && ttscore > evl)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
     {
         evl = TT[(CURRENTPOS) & (_mask)].eval;
     }
@@ -466,7 +473,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft - 3 && type != 1)
             {
-                int sBeta = MAX(evl - depthleft * 3, -100000);
+                int sBeta = evl - (depthleft * 3);
 
                 CURRENTPOS = original_pos; // reset hash of the position for the singular search
                 nnue_state.pop();          // pop the nnue_state to before we made our move. After singular search, we make the move again to reset the nnue state.

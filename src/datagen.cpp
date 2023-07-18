@@ -258,6 +258,12 @@ float game(std::ofstream &file)
         int g = 0;
 
         int r = rand() % 100;
+        if (board.pnbrqcount[WHITE][1] + board.pnbrqcount[BLACK][1] + board.pnbrqcount[WHITE][2] + board.pnbrqcount[BLACK][2] + 
+            board.pnbrqcount[WHITE][3]*2 + board.pnbrqcount[BLACK][3]*2  + board.pnbrqcount[WHITE][4]*4 + board.pnbrqcount[BLACK][4]*4 < 12){ 
+                //If we are in the endgame (defined as anything less than a queen and a rook on each side, don't do any random moves. There is no such thing as endgame style.)
+                r = 0;
+            }
+
         if (r == 99)
         {
             currentmove = random_move(&board, color, isattacked(&board, board.kingpos[color], color ^ 1));
@@ -271,10 +277,12 @@ float game(std::ofstream &file)
 
                 struct move tmp = currentmove;
                 int d = iid_time(&board, movelst, 5000, &key, color, true, false, tmp);
-                if (d + 75 < g)
+                if (d + 50 + (r-94)*15 < g)     //If the score of the second best move + a number between 50 and 110 is still not enough to beat the score of the best move, reset
                 {
                     currentmove = tmp;
-                    d = g;
+                }
+                else{                           //Otherwise, set eval. (this eval is for position AFTER makemove)
+                    g = d;
                 }
             }
         }
