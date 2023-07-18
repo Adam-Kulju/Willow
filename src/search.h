@@ -85,7 +85,12 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     else
     {
+        int ttscore = evl;
         stand_pat = nnue_state.evaluate(color);
+        if (type == 3 || (type == 1 && ttscore < stand_pat) || (type == 2 && ttscore > stand_pat)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
+        {
+            stand_pat = TT[(CURRENTPOS) & (_mask)].eval;
+        }
     }
 
     int bestscore = stand_pat;
