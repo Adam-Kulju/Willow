@@ -51,16 +51,16 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     else
     {
-        type = 'n';
+        type = None;
         evl = 0;
     }
-    if (type != 'n')
+    if (type != None)
     {
-        if (type == 3)
+        if (type == Exact)
         {
             return evl;
         }
-        else if (type == 2)
+        else if (type == LBound)
         { // a move that caused a beta cutoff
             if (evl >= beta)
             {
@@ -87,7 +87,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     {
         int ttscore = evl;
         stand_pat = nnue_state.evaluate(color);
-        if (type == 3 || (type == 1 && ttscore < stand_pat) || (type == 2 && ttscore > stand_pat)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
+        if (type == 3 || (type == UBound && ttscore < stand_pat) || (type == LBound && ttscore > stand_pat)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
         {
             stand_pat = TT[(CURRENTPOS) & (_mask)].eval;
         }
@@ -115,7 +115,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     struct list list[LISTSIZE];
     int listlen = movegen(board, list, color, incheck);
 
-    movescore(board, list, 99, color, (type != 'n' && TT[CURRENTPOS & _mask].depth == 0) ? type : 'n', nullmove, listlen, -108);
+    movescore(board, list, 99, color, (type != None && TT[CURRENTPOS & _mask].depth == 0) ? type : None, nullmove, listlen, -108);
     // score the moves; if our TT hit was from a qsearch node, use it for those purposes (one from an alpha beta node is not useful because this only searches captures)
 
     struct move bestmove = nullmove;
@@ -171,7 +171,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         {
             CURRENTPOS = original_pos;
             nnue_state.pop();
-            insert(original_pos, 0, list[i].eval, 2, list[i].move, search_age);
+            insert(original_pos, 0, list[i].eval, LBound, list[i].move, search_age);
             return list[i].eval;
         }
         if (list[i].eval > alpha) // update alpha
@@ -190,11 +190,11 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     if (falpha != alpha) // Insert entry into the transposition table
     {
-        insert(original_pos, 0, bestscore, 3, bestmove, search_age);
+        insert(original_pos, 0, bestscore, Exact, bestmove, search_age);
     }
     else
     {
-        insert(original_pos, 0, bestscore, 1, bestmove, search_age);
+        insert(original_pos, 0, bestscore, UBound, bestmove, search_age);
     }
     return bestscore;
 }
@@ -251,7 +251,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
     else
     {
-        type = 'n';
+        type = None;
         evl = -1024;
     }
 
@@ -259,13 +259,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     bool ispv = (beta != alpha + 1); // Are we in a PV (i.e. likely best line) node? This affects what type of pruning we can do.
 
-    if (!ispv && type != 'n' && TT[(CURRENTPOS) & (_mask)].depth >= depthleft) // Check to see if we can cutoff
+    if (!ispv && type != None && TT[(CURRENTPOS) & (_mask)].depth >= depthleft) // Check to see if we can cutoff
     {
-        if (type == 3)
+        if (type == Exact)
         {
             return evl;
         }
-        else if (type == 2)
+        else if (type == LBound)
         { // a move that caused a beta cutoff
             if (evl >= beta)
             {
@@ -311,7 +311,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval); // Is our position better than it was during our last move?
 
-    if (type == 3 || (type == 1 && ttscore < evl) || (type == 2 && ttscore > evl)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
+    if (type == Exact || (type == UBound && ttscore < evl) || (type == LBound && ttscore > evl)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
     {
         evl = TT[(CURRENTPOS) & (_mask)].eval;
     }
@@ -379,7 +379,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     movescore(board, list, depth, color, type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0);
 
     // IID: if we're in a PV node and there's no hash hit, crummy move ordering is going to make the search take a long time; so we first do a reduced depth search to get a likely best move.
-    if (ispv && type == 'n' && depthleft > 3 && !singularsearch)
+    if (ispv && type == None && depthleft > 3 && !singularsearch)
     {
         alphabeta(board, movelst, key, alpha, beta, depthleft - 2, depth, color, false, incheck, nullmove);
         type = TT[CURRENTPOS & _mask].type;
@@ -471,9 +471,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         if (depth && depth < info.depth * 2)
         { // if we're not already in a singular search, do singular search.
 
-            if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft - 3 && type != 1)
+            if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft - 3 && type != UBound)
             {
-                int sBeta = evl - (depthleft * 3);
+                int sBeta = ttscore - (depthleft * 3);
 
                 CURRENTPOS = original_pos; // reset hash of the position for the singular search
                 nnue_state.pop();          // pop the nnue_state to before we made our move. After singular search, we make the move again to reset the nnue state.
@@ -490,11 +490,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         extension++;
                     }
                 }
-                /*else if (sBeta >= beta){
+                else if (sBeta >= beta){
                     CURRENTPOS = original_pos;
                     nnue_state.pop();
                     return sBeta;
-                }*/
+                }
             }
         }
 
@@ -539,7 +539,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R--;
                 }
-                if (!ispv && type != 3) // Increase the reduction if we got a TT hit and we're not in a PV node (we know the TT move is almost certainly best)
+                if (!ispv && type != Exact) // Increase the reduction if we got a TT hit and we're not in a PV node (we know the TT move is almost certainly best)
                 {
                     R++;
                 }
@@ -547,7 +547,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R--;
                 }
-                if (type != 'n' && (list[0].move.flags == 0xC || board->board[list[0].move.move & 0xFF])) // increase the reduction if the TT move was a capture
+                if (type != None && (list[0].move.flags == 0xC || board->board[list[0].move.move & 0xFF])) // increase the reduction if the TT move was a capture
                 {
                     R++;
                 }
@@ -625,7 +625,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             bestmove = list[i].move;
             if (!singularsearch)
             {
-                insert(original_pos, depthleft, bestscore, 2, bestmove, search_age);
+                insert(original_pos, depthleft, bestscore, LBound, bestmove, search_age);
             }
             total++;
             betas += betacount + 1;
@@ -734,11 +734,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     {
         if (raisedalpha) // Insert move into TT table
         {
-            insert(original_pos, depthleft, alpha, 3, bestmove, search_age);
+            insert(original_pos, depthleft, alpha, Exact, bestmove, search_age);
         }
         else
         {
-            insert(original_pos, depthleft, bestscore, 1, bestmove, search_age);
+            insert(original_pos, depthleft, bestscore, UBound, bestmove, search_age);
         }
     }
 
