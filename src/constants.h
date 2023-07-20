@@ -106,7 +106,7 @@ struct ttentry  //Transposition table entry
     unsigned long long int zobrist_key;
     char type;
     // come in three types:
-    // 2: EXACT, 2: FAIL-HIGH, 1: FAIL-LOW
+    // 3: EXACT, 2: FAIL-HIGH, 1: FAIL-LOW
     struct move bestmove;
     int eval;
     char depth;
@@ -123,5 +123,7 @@ const int attacknums[4] = {2, 2, 3, 5};
 
 
 const int SEEVALUES[7] = {0, 100, 450, 450, 650, 1250, 10000};  //move ordering purposes
+
+enum EntryType {None = 0, UBound = 1, LBound = 2, Exact = 3};
 
 #endif
