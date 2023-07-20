@@ -6,16 +6,16 @@ CXX := clang++
 
 CXXFLAGS := -O3 -march=native -std=c++20 -ffast-math -flto
 
-LINKER := -fuse-ld=lld
+LINKER :=
 
 SUFFIX :=
 
 ifeq ($(OS), Windows_NT)
 	SUFFIX := .exe
-	LINKER := 
+	LINKER := -fuse-ld=lld
 else
 	SUFFIX :=
-	LINKER := -lm
+	LINKER := -lm -fuse-ld=lld
 endif
 
 OUT := $(EXE)$(SUFFIX)
