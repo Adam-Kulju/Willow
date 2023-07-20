@@ -45,6 +45,7 @@ long long unsigned int perft(int depth, struct board_info *board, bool color, bo
         move(&board2, list[i].move, color);
         if (isattacked(&board2, board2.kingpos[color], color ^ 1))
         {
+            nnue_state.pop();
             continue;
         }
         long long unsigned int b = perft(depth - 1, &board2, color ^ 1, false);
@@ -53,6 +54,7 @@ long long unsigned int perft(int depth, struct board_info *board, bool color, bo
             char temp[6];
             printf("%llu %s\n", b, conv(list[i].move, temp));
         }
+        nnue_state.pop();
         l += b;
     }
     return l;
@@ -445,6 +447,7 @@ int main(int argc, char *argv[])
         {
             struct board_info board;
             setfull(&board);
+            nnue_state.reset_nnue(&board);
             int depth;
             if (argc == 2)
             {
