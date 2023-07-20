@@ -530,24 +530,25 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 R = 0;
             }
 
-            else if (iscap){
-                if (!ispv){
-                    R = LMRTABLE[depthleft - 1][betacount] / 2 + !improving;
-                }
-                else{
-                    R = 0;
-                }
+            else if (iscap && ispv){
+                 R = 0;            
             }
 
             else
             {
                 R = LMRTABLE[depthleft - 1][betacount];
+
+                if (iscap && !ispv){
+                    R = R / 2;
+                    if (list[i].eval > 100190){
+                        R --;
+                    }
+                }
                 if (ischeck || incheck) // Reduce reduction for checks or moves made in check
                 {
                     R--;
                 }
-                if (list[i].eval > 1000190) // reduce reduction for killers/countermoves
-                {
+                if (list[i].eval > 100190){
                     R--;
                 }
                 if (!ispv && type != Exact) // Increase the reduction if we got a TT hit and we're not in a PV node (we know the TT move is almost certainly best)
@@ -562,8 +563,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R++;
                 }
-                R = MAX(R, 0); // make sure the reduction doesn't go negative!
             }
+            R = MAX(R, 0); // make sure the reduction doesn't go negative!
 
             // Search at a reduced depth with null window
 
