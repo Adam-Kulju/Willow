@@ -495,6 +495,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     nnue_state.pop();
                     return sBeta;
                 }
+                /*else if (ttscore <= alpha || ttscore >= beta){
+                    extension--;
+                }*/
+            }
+            else if (ischeck){
+                //extension = 1;
             }
         }
 
@@ -519,19 +525,24 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         {
             // LMR (Late Move Reductions): search moves sorted later on to a lesser depth, only increasing the depth if they beat alpha at the reduced depth.
             int R;
-            if (list[i].eval > 1000200 || depthleft < 3) // Don't reduce winning captures or near the leaves
+            if (betacount < 1 + ispv || depthleft < 3) // Don't reduce winning captures or near the leaves
             {
                 R = 0;
+            }
+
+            else if (iscap){
+                if (!ispv){
+                    R = LMRTABLE[depthleft - 1][betacount] / 2 + !improving;
+                }
+                else{
+                    R = 0;
+                }
             }
 
             else
             {
                 R = LMRTABLE[depthleft - 1][betacount];
-                if (iscap) // Captures get reduced less as even losing ones are more likely to be good than bad quiet moves
-                {
-                    R /= 2;
-                }
-                if (ischeck || incheck || list[i].eval > 1000190) // Reduce reduction for checks or moves made in check
+                if (ischeck || incheck) // Reduce reduction for checks or moves made in check
                 {
                     R--;
                 }
