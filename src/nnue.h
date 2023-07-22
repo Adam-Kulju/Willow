@@ -23,7 +23,7 @@
 class Position;
 
 constexpr size_t INPUT_SIZE = 768;
-constexpr size_t LAYER1_SIZE = 128;
+constexpr size_t LAYER1_SIZE = 192;
 
 constexpr int CRELU_MIN = 0;
 constexpr int CRELU_MAX = 255;
@@ -149,7 +149,7 @@ public:
     void reset_nnue(struct board_info *board);
 };
 
-INCBIN(nnue, "src/net0002.bin");
+INCBIN(nnue, "src/net0003.bin");
 const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(g_nnueData);
 
 NNUE_State nnue_state{};
