@@ -890,6 +890,9 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
         {
 
             int d = depth;
+            if (abs(g) > 99900){
+                d = MIN(d, (100001 - g));
+            }
             unsigned long long int op = CURRENTPOS;
             struct board_info board2 = *board;
             bool c = color;
