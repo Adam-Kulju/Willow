@@ -20,4 +20,4 @@ Special thanks for @Alex2262 for helping me generate data for the NNUE that Will
 
 # Logo
 
-<img src="LOGO.png" width="300" alt="Willow's logo">
+<img src="willow_logo.png" width="300" alt="Willow's logo">
