@@ -12,8 +12,7 @@ Introducing error into the training dataset has two benefits:
 
 My goal in the future is to further refine the manner in which I go about introducing uncertainty into the training dataset, and to see other engines follow in Lc0's footprints.
 
-#Acknowledgements
-
+# Acknowledgements
 Thank you to all my friends in the OpenBench instance: @cosmobobak, @uwuplant, @crippa1337, @archishou, @Ciekce, @JouanDeag, @GediminasMasaitis, @Alex2262, @lucametehau, @spamdrew128, @lucametehau, @PGG106, @JacquesRW and @dede1751. In addition to providing compute to the instance, allowing Willow to be tested quickly and easily, they have also provided me with so many ideas, as well as inspired me and also simply made my journey through chess programming a fun as well as fulfilling venture.
 
 Special thanks for @Alex2262 for helping me generate data for the NNUE that Willow is trained on.
