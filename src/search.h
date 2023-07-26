@@ -115,7 +115,9 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     struct list list[LISTSIZE];
     int listlen = movegen(board, list, color, incheck);
 
-    movescore(board, list, 99, color, (type != None && TT[CURRENTPOS & _mask].depth == 0) ? type : None, nullmove, listlen, -108);
+    movescore(board, list, 99, color,
+              (type != None && TT[CURRENTPOS & _mask].depth == 0 ? type : None),
+              nullmove, listlen, -108);
     // score the moves; if our TT hit was from a qsearch node, use it for those purposes (one from an alpha beta node is not useful because this only searches captures)
 
     struct move bestmove = nullmove;
@@ -131,13 +133,13 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             {
                 break;
             }
-            if (board->board[list[i].move.move & 0xFF] && futility + VALUES2[(board->board[list[i].move.move & 0xFF] >> 1) - 1] <= alpha)
+            /*if (board->board[list[i].move.move & 0xFF] && futility + VALUES2[(board->board[list[i].move.move & 0xFF] >> 1) - 1] <= alpha)
             {
                 // If even taking the piece for free is not enough to raise alpha, go on to the next move.
                 bestscore = MAX(bestscore, futility + VALUES2[(board->board[list[i].move.move & 0xFF] >> 1) - 1]);
                 i++;
                 continue;
-            }
+            }*/
         }
         struct board_info board2 = *board;
 
@@ -486,11 +488,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (sScore < sBeta)
                 {
                     extension = 1;
-                    if (!ispv && sScore + 20 < sBeta && depth < info.depth){    //Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at
+                    if (!ispv && sScore + 20 < sBeta && depth < info.depth)
+                    { // Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at
                         extension++;
                     }
                 }
-                else if (sBeta >= beta){
+                else if (sBeta >= beta)
+                {
                     CURRENTPOS = original_pos;
                     nnue_state.pop();
                     return sBeta;
@@ -499,8 +503,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     extension--;
                 }*/
             }
-            else if (ischeck){
-                //extension = 1;
+            else if (ischeck)
+            {
+                // extension = 1;
             }
         }
 
@@ -530,25 +535,29 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 R = 0;
             }
 
-            else if (iscap && ispv){
-                 R = 0;            
+            else if (iscap && ispv)
+            {
+                R = 0;
             }
 
             else
             {
                 R = LMRTABLE[depthleft - 1][betacount];
 
-                if (iscap && !ispv){
+                if (iscap && !ispv)
+                {
                     R = R / 2;
-                    if (list[i].eval > 100190){
-                        R --;
+                    if (list[i].eval > 100190)
+                    {
+                        R--;
                     }
                 }
                 if (ischeck || incheck) // Reduce reduction for checks or moves made in check
                 {
                     R--;
                 }
-                if (list[i].eval > 100190){
+                if (list[i].eval > 100190)
+                {
                     R--;
                 }
                 if (!ispv && type != Exact) // Increase the reduction if we got a TT hit and we're not in a PV node (we know the TT move is almost certainly best)
@@ -890,7 +899,8 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
         {
 
             int d = depth;
-            if (abs(g) > 99900){
+            if (abs(g) > 99900)
+            {
                 d = MIN(d, (100001 - g));
             }
             unsigned long long int op = CURRENTPOS;
