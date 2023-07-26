@@ -48,8 +48,8 @@ unsigned long long int ZOBRISTTABLE[774];
 unsigned long long int CURRENTPOS;
 
 struct ttentry *TT;
-long int TTSIZE;
-long int _mask;
+size_t TTSIZE;
+unsigned long long _mask;
 
 void initglobals() // Initialize all our global variable stuff.
 {

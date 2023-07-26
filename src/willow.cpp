@@ -108,7 +108,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
         printf("id name Willow 3.0\n");
         printf("id author Adam Kulju\n");
         // send options
-        printf("option name Hash type spin default 32 min 1 max 1028\n");
+        printf("option name Hash type spin default 32 min 1 max 131072\n");
         printf("option name Threads type spin default 1 min 1 max 1\n");
 
         printf("uciok\n");
@@ -137,20 +137,20 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     if (strstr(command, "setoption name Hash value"))
     {
         int a = atoi(&command[26]);
-        int target = a * 1024 * 1024;
+        size_t target = (size_t)a * 1024 * 1024;
         int size = 0;
-        while (sizeof(struct ttentry) * (1 << size) < target) // Set the hash to 2^n entires where n is the largest number that satisfies 2^n < the option that was set
+        while (sizeof(struct ttentry) * ((size_t)1 << size) <= target) // Set the hash to 2^n entires where n is the largest number that satisfies entry size * 2^n <= the option that was set
         {
             size++;
         }
         size--;
+        TTSIZE = (size_t)1 << size;
+        _mask = TTSIZE - 1;
         if (TT)
         {
             free(TT);
         }
-        TT = (struct ttentry *)malloc(sizeof(struct ttentry) * (1 << size));
-        TTSIZE = 1 << size;
-        _mask = TTSIZE - 1;
+        TT = (struct ttentry *)malloc(sizeof(struct ttentry) * TTSIZE);
     }
 
     if (strstr(command, "position startpos"))
