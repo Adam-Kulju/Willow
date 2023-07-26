@@ -115,9 +115,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     struct list list[LISTSIZE];
     int listlen = movegen(board, list, color, incheck);
 
-    movescore(board, list, 99, color,
-              (type != None && TT[CURRENTPOS & _mask].depth == 0 ? type : None),
-              nullmove, listlen, -108);
+    movescore(board, list, 99, color, type, nullmove, listlen, -108);
     // score the moves; if our TT hit was from a qsearch node, use it for those purposes (one from an alpha beta node is not useful because this only searches captures)
 
     struct move bestmove = nullmove;
@@ -133,13 +131,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             {
                 break;
             }
-            /*if (board->board[list[i].move.move & 0xFF] && futility + VALUES2[(board->board[list[i].move.move & 0xFF] >> 1) - 1] <= alpha)
-            {
-                // If even taking the piece for free is not enough to raise alpha, go on to the next move.
-                bestscore = MAX(bestscore, futility + VALUES2[(board->board[list[i].move.move & 0xFF] >> 1) - 1]);
-                i++;
-                continue;
-            }*/
         }
         struct board_info board2 = *board;
 
