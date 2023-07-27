@@ -94,7 +94,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
 
     int bestscore = stand_pat;
-    int futility = -100000;
 
     if (!incheck) // if stand pat is good enough to beat beta we can cut off immediately.
     {
@@ -107,7 +106,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         {
             alpha = stand_pat;
         }
-        futility = stand_pat + 60;
     }
 
     int falpha = alpha;
@@ -371,11 +369,14 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int movelen = movegen(board, list, color, incheck);
     movescore(board, list, depth, color, type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0);
 
-    // IID: if we're in a PV node and there's no hash hit, crummy move ordering is going to make the search take a long time; so we first do a reduced depth search to get a likely best move.
+    /*// IID: if we're in a PV node and there's no hash hit, crummy move ordering is going to make the search take a long time; so we first do a reduced depth search to get a likely best move.
     if (ispv && type == None && depthleft > 3 && !singularsearch)
     {
         alphabeta(board, movelst, key, alpha, beta, depthleft - 2, depth, color, false, incheck, nullmove);
         type = TT[CURRENTPOS & _mask].type;
+    }*/
+    if (ispv && type == None && depthleft > 3){
+        depthleft--;
     }
 
     int i = 0;
@@ -490,13 +491,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     nnue_state.pop();
                     return sBeta;
                 }
-                /*else if (ttscore <= alpha || ttscore >= beta){
-                    extension--;
-                }*/
-            }
-            else if (ischeck)
-            {
-                // extension = 1;
+                else if (ttscore <= alpha || ttscore >= beta){
+                    //extension--;
+                }
             }
         }
 
