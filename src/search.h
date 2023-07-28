@@ -171,7 +171,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         }
         CURRENTPOS = original_pos;
         nnue_state.pop();
-
         i++;
     }
 
@@ -308,7 +307,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
 
     // Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
-    if (!ispv && !incheck && !singularsearch && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
+    if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
     {
         return evl;
     }
@@ -369,12 +368,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int movelen = movegen(board, list, color, incheck);
     movescore(board, list, depth, color, type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0);
 
-    /*// IID: if we're in a PV node and there's no hash hit, crummy move ordering is going to make the search take a long time; so we first do a reduced depth search to get a likely best move.
-    if (ispv && type == None && depthleft > 3 && !singularsearch)
-    {
-        alphabeta(board, movelst, key, alpha, beta, depthleft - 2, depth, color, false, incheck, nullmove);
-        type = TT[CURRENTPOS & _mask].type;
-    }*/
+
     if (ispv && type == None && depthleft > 3){
         depthleft--;
     }
@@ -387,8 +381,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         currentmove.move = 0;
     }
     struct move bestmove = nullmove;
-    int futility_move_count = (3 + depthleft * depthleft / (1 + (!improving)));
-    int numquiets = 0;
     bool quietsprune = false;
     int bestscore = -100000;
 
@@ -432,18 +424,19 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         if (depth > 0 && !iscap && !ispv)
         {
+            int newdepth = MAX(depthleft - 1 - LMRTABLE[depthleft-1][betacount] + improving, 0);
+            int futility_move_count = (3 + depthleft * depthleft / (1 + (!improving)));
             // Late Move Pruning (LMP): at high depths, we can just not search quiet moves after a while.
             // They are very unlikely to be unavoidable even if they are good and it saves time.
-            if (depthleft < 4)
+            if (newdepth < 4)
             {
-                numquiets++;
-                if (numquiets >= futility_move_count && depth > 0)
+                if (betacount >= futility_move_count && depth > 0)
                 {
                     quietsprune = true;
                 }
             }
             // Futility Pruning: If our position is bad enough, only search captures after this one.
-            if ((depthleft < 6 && list[i].eval < 1000200 && evl + 90 * (depthleft) + (improving * 40) < alpha))
+            if ((!incheck && newdepth < 10 && list[i].eval < 1000200 && evl + 100 + 150 * (depthleft) < alpha))
             {
                 quietsprune = true;
             }
