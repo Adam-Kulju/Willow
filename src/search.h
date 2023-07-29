@@ -16,6 +16,10 @@ struct nodeinfo
 
 struct nodeinfo info;
 
+void updateHistory(long int &entry, int score){
+    entry += score - entry * abs(score) / 16384;
+}
+
 int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthleft, bool color, bool incheck)
 // Performs a quiescence search on the given position.
 {
@@ -430,7 +434,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             // They are very unlikely to be unavoidable even if they are good and it saves time.
             if (newdepth < 4)
             {
-                if (betacount >= futility_move_count && depth > 0)
+                if (betacount >= futility_move_count)
                 {
                     quietsprune = true;
                 }
@@ -644,18 +648,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     KILLERTABLE[depth][1] = list[i].move;
                 }
 
-                HISTORYTABLE[color][(list[i].move.move >> 8)][list[i].move.move & 0xFF] += c;
+                updateHistory(HISTORYTABLE[color][(list[i].move.move >> 8)][list[i].move.move & 0xFF], c);
 
-                if (HISTORYTABLE[color][(list[i].move.move >> 8)][(list[i].move.move & 0xFF)] > 1000000)
-                {
-                    for (int a = 0; a < 0x80; a++)
-                    {
-                        for (int b = 0; b < 0x80; b++) // handle overflows of move scores, so that it doesn't get pushed up above captures/killers etc.
-                        {
-                            HISTORYTABLE[color][a][b] = (HISTORYTABLE[color][a][b] >> 1);
-                        }
-                    }
-                }
 
                 for (int a = 0; a < i; a++)
                 {
@@ -663,18 +657,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     if (!(list[a].move.flags == 0xC || board->board[list[a].move.move & 0xFF]))
                     {
 
-                        HISTORYTABLE[color][(list[a].move.move >> 8)][list[a].move.move & 0xFF] -= c;
+                        updateHistory(HISTORYTABLE[color][(list[a].move.move >> 8)][list[a].move.move & 0xFF], -c);
 
-                        if (HISTORYTABLE[color][(list[a].move.move >> 8)][(list[a].move.move & 0xFF)] < -1000000)
-                        {
-                            for (int c = 0; c < 0x80; c++)
-                            {
-                                for (int b = 0; b < 0x80; b++)
-                                {
-                                    HISTORYTABLE[color][c][b] = (HISTORYTABLE[color][c][b] >> 1);
-                                }
-                            }
-                        }
                     }
                 }
             }

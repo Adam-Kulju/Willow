@@ -186,7 +186,7 @@ struct move random_move(struct board_info *board, bool color, bool incheck)
     return legalmovelist[randIndex].move;
 }
 
-float game(std::ofstream &file)
+float game(std::ofstream &file, std::string filename)
 {
     clearTT();
     clearKiller();
@@ -337,7 +337,7 @@ float game(std::ofstream &file)
         num_fens++;
         if (num_fens % 100000 == 0)
         {
-            printf("%li fens generated\n", num_fens);
+            printf("%li fens written to file %s\n", num_fens, filename.c_str());
         }
         file << fens[i] << result << "\n";
     }
@@ -353,12 +353,12 @@ void run_game()
     {
         std::ofstream fr;
         fr.open(filename, std::ios::out | std::ios::app);
-        game(fr);
+        game(fr, filename);
         fr.close();
     }
 }
 
-int main(int argc, char *argv[])
+int main()
 {
     setvbuf(stdin, NULL, _IONBF, 0);
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -379,13 +379,5 @@ int main(int argc, char *argv[])
     TTSIZE = 1 << size;
     _mask = TTSIZE - 1;
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < atoi(argv[1]); ++i)
-        threads.push_back(std::thread(run_game));
-
-    // do some other stuff
-
-    // loop again to join the threads
-    for (auto &t : threads)
-        t.join();
+    run_game();
 }
