@@ -448,7 +448,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         // SEE pruning: if a quick check shows that we're hanging material, we skip the move.
         if (depth && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 9 &&
-            !static_exchange_evaluation(board, list[i].move, color, depthleft * ((iscap || list[i].move.flags >> 2 == 1) ? -90 : -50)))
+            !static_exchange_evaluation(board, list[i].move, color, depthleft * (iscap ? -30 * depthleft : -80)))
         {
             CURRENTPOS = original_pos;
             nnue_state.pop();
