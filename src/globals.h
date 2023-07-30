@@ -36,7 +36,9 @@ bool CENTERBLACK[0x88]; // lookup table for Black's center
 
 struct move KILLERTABLE[100][2];      // Stores killer moves
 struct move COUNTERMOVES[6][128];     // Stores countermoves
-long int HISTORYTABLE[2][0x80][0x80]; // The History table
+int HISTORYTABLE[2][0x80][0x80]; // The History table
+
+int CONTHIST[6][128][6][128];
 
 static unsigned long long mt[NN];
 static int mti = NN + 1;
@@ -297,6 +299,15 @@ void clearHistory(bool del) // Either divides the entries in the history table b
                 HISTORYTABLE[BLACK][i][n] = (HISTORYTABLE[BLACK][i][n] >> 2);
             }
         }
+        for (int i = 0; i < 6; i++){
+            for (int n = 0; n < 128; n++){
+                for (int a = 0; a < 6; a++){
+                    for (int b = 0; b < 128; b++){
+                        CONTHIST[i][n][a][b] /= 4;
+                    }
+                }
+            }
+        }
     }
     else
     {
@@ -309,6 +320,16 @@ void clearHistory(bool del) // Either divides the entries in the history table b
                 HISTORYTABLE[BLACK][i][n] = 0;
             }
         }
+        for (int i = 0; i < 6; i++){
+            for (int n = 0; n < 128; n++){
+                for (int a = 0; a < 6; a++){
+                    for (int b = 0; b < 128; b++){
+                        CONTHIST[i][n][a][b] = 0;
+                    }
+                }
+            }
+        }
+          
     }
 }
 void clearKiller() // Clears the Killer Table

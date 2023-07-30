@@ -324,6 +324,14 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
 {
     // Given a list of moves, scores them for move ordering purposes.
 
+    int lastpiecetype = 0, lastpiecedest = 0;
+    bool isreply = false;
+    if (!ismatch(lastmove, nullmove)){
+        isreply = true;
+        lastpiecetype = (board->board[lastmove.move & 0xFF] >> 1) - 1;
+        lastpiecedest = lastmove.move & 0xFF;
+    } 
+
     int i = 0;
     while (i < movelen)
     {
@@ -364,7 +372,7 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         {
             list[i].eval += 198;
         }
-        else if (depth > 1 && lastmove.move != 0 && ismatch(list[i].move, COUNTERMOVES[(board->board[lastmove.move & 0xFF] >> 1) - 1][lastmove.move & 0xFF]))
+        else if (depth > 1 && isreply && ismatch(list[i].move, COUNTERMOVES[lastpiecetype][lastpiecedest]))
         // The move from the countermoves history table
         {
             // the piece that the opponent moved     the square it is on
@@ -375,6 +383,9 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         else // And if none of those apply, score the move by its history score.
         {
             list[i].eval = HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
+            if (isreply){
+                list[i].eval += CONTHIST[lastpiecetype][lastpiecedest][board->board[list[i].move.move >> 8] / 2 - 1][list[i].move.move & 0xFF];
+            }
         }
 
         i++;
