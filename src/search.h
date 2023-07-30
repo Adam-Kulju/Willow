@@ -16,7 +16,7 @@ struct nodeinfo
 
 struct nodeinfo info;
 
-void updateHistory(long int &entry, int score){
+void updateHistory(int &entry, int score){
     entry += score - entry * abs(score) / 16384;
 }
 
@@ -636,9 +636,17 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             total++;
             betas += betacount + 1;
 
-            int c = depthleft * depthleft + depthleft - 1; // Update history tables, countermoves, and killer moves.
             if (!iscap)
             {
+
+                int c = depthleft * depthleft + depthleft - 1; // Update history tables, countermoves, and killer moves.
+                int lastpiecetype = 0, lastsquare = 0;
+                bool isreply = false;
+                if (depth > 1 && !isnull && movelst[(*key-2)].move.move != 0){
+                    isreply = true;
+                    lastpiecetype = board->board[movelst[(*key-2)].move.move & 0xFF] / 2 - 1, lastsquare = movelst[(*key-2)].move.move & 0xFF;
+                    COUNTERMOVES[(board->board[movelst[(*key) - 2].move.move & 0xFF] >> 1) - 1][movelst[(*key) - 2].move.move & 0xFF] = list[i].move;
+                }
                 if (!ismatch(KILLERTABLE[depth][0], list[i].move))
                 {
                     KILLERTABLE[depth][0] = list[i].move;
@@ -649,6 +657,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
 
                 updateHistory(HISTORYTABLE[color][(list[i].move.move >> 8)][list[i].move.move & 0xFF], c);
+                if (isreply){
+                    updateHistory(CONTHIST[lastpiecetype][lastsquare][board->board[list[i].move.move >> 8] / 2 - 1][list[i].move.move & 0xFF], c);
+                }
 
 
                 for (int a = 0; a < i; a++)
@@ -663,11 +674,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
             }
 
-            if (depth > 1 && !isnull && !iscap && movelst[(*key - 2)].move.move != 0)
-            { // key-1 is the move you made, key-2 is the move the opponent made
-
-                COUNTERMOVES[(board->board[movelst[(*key) - 2].move.move & 0xFF] >> 1) - 1][movelst[(*key) - 2].move.move & 0xFF] = list[i].move;
-            }
             movelst[(*key) - 1].move.flags = 0;
             *key = *key - 1;
             CURRENTPOS = original_pos;
