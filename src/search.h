@@ -426,7 +426,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
         ismove = true;
 
-        if (depth > 0 && !iscap && !ispv)
+        if (depth > 0 && !iscap && !ispv && bestscore > -100000)
         {
             int newdepth = MAX(depthleft - 1 - LMRTABLE[depthleft-1][betacount] + improving, 0);
             int futility_move_count = (3 + depthleft * depthleft / (1 + (!improving)));
