@@ -532,7 +532,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (iscap && !ispv)
                 {
                     R = R / 2;
-                    if (list[i].eval > 100190)
+                    if (list[i].eval > 1000190)
                     {
                         R--;
                     }
@@ -541,7 +541,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R--;
                 }
-                if (list[i].eval > 100190)
+                if (list[i].eval > 1000190)
                 {
                     R--;
                 }
@@ -553,9 +553,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R--;
                 }
-                if (type != None && (list[0].move.flags == 0xC || board->board[list[0].move.move & 0xFF])) // increase the reduction if the TT move was a capture
+                /*if (type != None && (list[0].move.flags == 0xC || board->board[list[0].move.move & 0xFF])) // increase the reduction if the TT move was a capture
                 {
                     R++;
+                }*/
+                if (list[i].eval < 16385 && list[i].eval > -16385){
+                    R -= HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 5104;
                 }
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
@@ -639,7 +642,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             if (!iscap)
             {
 
-                int c = depthleft * depthleft + depthleft - 1; // Update history tables, countermoves, and killer moves.
+                int c = MIN(300 * (depthleft-1), 2400); // Update history tables, countermoves, and killer moves.
                 int lastpiecetype = 0, lastsquare = 0;
                 bool isreply = false;
                 if (depth > 1 && !isnull && movelst[(*key-2)].move.move != 0){

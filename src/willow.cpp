@@ -243,6 +243,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
             }
 
             int milltime = atoi(&command[k]) - 50;
+            maximumtime = (float)milltime/5000;
             if (milltime < 1)
             {
                 time = 0.001;
