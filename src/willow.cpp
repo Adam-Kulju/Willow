@@ -243,7 +243,12 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
             }
 
             int milltime = atoi(&command[k]) - 50;
-            maximumtime = (float)milltime/5000;
+            if (movestogo > 2 || movestogo == -1){
+                maximumtime = (float)milltime/5000;
+            }
+            else{
+                maximumtime = (float)milltime/2000;
+            }
             if (milltime < 1)
             {
                 time = 0.001;
@@ -259,8 +264,8 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
                 }
                 else
                 {
-                    int movesleft = MAX(20, 70 - (*key / 2));
-                    time = ((float)milltime / (1000 * movesleft)) * 1.5;
+                    int movesleft = 20;
+                    time = ((float)milltime / (1000 * movesleft));
                 }
 
                 if (strstr(command, "winc"))
@@ -301,7 +306,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
                     milltime = atoi(&command[k]);
                     if (time + ((float)milltime / 1000 * 4) < coldturkey)
                     { // if you have at least four increments left over, it's safe to add half the increment to your move.
-                        time += (float)milltime / 1000 * 0.5;
+                        time += (float)milltime / 1000 * 0.75;
                     }
                 }
             }
