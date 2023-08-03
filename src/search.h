@@ -428,7 +428,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         if (depth > 0 && !iscap && !ispv)
         {
-            int newdepth = MAX(depthleft - 1 - LMRTABLE[depthleft-1][betacount] + improving, 0);
+            int newdepth = MAX(depthleft - 1 -  LMRTABLE[depthleft-1][betacount] + improving, 0);
             int futility_move_count = (3 + depthleft * depthleft / (1 + (!improving)));
             // Late Move Pruning (LMP): at high depths, we can just not search quiet moves after a while.
             // They are very unlikely to be unavoidable even if they are good and it saves time.
@@ -492,6 +492,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     //extension--;
                 }
             }
+            else if (ischeck){
+                extension++;
+            }
         }
 
         long int current_nodes = nodes;
@@ -537,7 +540,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         R--;
                     }
                 }
-                if (ischeck || incheck) // Reduce reduction for checks or moves made in check
+                if (ischeck) // Reduce reduction for checks or moves made in check
                 {
                     R--;
                 }
@@ -553,10 +556,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R--;
                 }
-                /*if (type != None && (list[0].move.flags == 0xC || board->board[list[0].move.move & 0xFF])) // increase the reduction if the TT move was a capture
-                {
-                    R++;
-                }*/
                 if (list[i].eval < 16385 && list[i].eval > -16385){
                     R -= HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 5104;
                 }
