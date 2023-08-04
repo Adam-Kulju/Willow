@@ -488,9 +488,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     nnue_state.pop();
                     return sBeta;
                 }
-                else if (ttscore <= alpha || ttscore >= beta){
-                    //extension--;
-                }
             }
             else if (ischeck){
                 extension++;
@@ -541,10 +538,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     }
                 }
                 if (ischeck) // Reduce reduction for checks or moves made in check
-                {
-                    R--;
-                }
-                if (list[i].eval > 1000190)
                 {
                     R--;
                 }
