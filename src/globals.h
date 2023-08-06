@@ -291,14 +291,14 @@ void clearHistory(bool del) // Either divides the entries in the history table b
 {
     if (!del)
     {
-        for (int i = 0; i < 0x80; i++)
+        /*for (int i = 0; i < 0x80; i++)
         {
             for (int n = 0; n < 0x80; n++)
             {
-                HISTORYTABLE[WHITE][i][n] = (HISTORYTABLE[WHITE][i][n] >> 2);
-                HISTORYTABLE[BLACK][i][n] = (HISTORYTABLE[BLACK][i][n] >> 2);
+                HISTORYTABLE[WHITE][i][n] = (HISTORYTABLE[WHITE][i][n] / 2);
+                HISTORYTABLE[BLACK][i][n] = (HISTORYTABLE[BLACK][i][n] / 2);
             }
-        }
+        }*/
         for (int i = 0; i < 6; i++){
             for (int n = 0; n < 128; n++){
                 for (int a = 0; a < 6; a++){
