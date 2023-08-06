@@ -18,7 +18,7 @@ int attackers[2]; // the number of attackers on king
 int NODES_IID = 0;
 
 struct move currentmove; // The engine's current best move at root
-short int search_age;    // search age for TT purposes
+unsigned char search_age;    // search age for TT purposes
 
 short int MAXDEPTH; // The maximum depth of a position (set to 14 for bench and 99 normally)
 
@@ -367,7 +367,7 @@ void insert(unsigned long long int position, int depthleft, int eval, char type,
 
     if (TT[index].zobrist_key == position && !(type == 3 && TT[index].type != 3)) // Overwrite entries of same positions depending on depth, type, and age.
     {
-        int agediff = search_age - TT[index].age;
+        int agediff = search_age - TT[index].age; if (agediff < 0){agediff += 256;}
         int newentryb = depthleft + type + ((agediff * agediff) >> 2);
         int oldentryb = TT[index].depth + TT[index].type;
         if (oldentryb * 2 > newentryb * 3)

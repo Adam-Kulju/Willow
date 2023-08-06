@@ -133,6 +133,14 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
             {
                 break;
             }
+            int val = stand_pat + 200 + SEEVALUES[board->board[list[i].move.move & 0xFF] / 2];
+            if (val <= alpha && list[i].move.flags / 4 != 1){
+                if (val > bestscore){
+                    bestscore = val;
+                }
+                i++;
+                continue;
+            }
         }
         struct board_info board2 = *board;
 
@@ -140,6 +148,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         {
             exit(1);
         }
+
+        bestmove = list[i].move;
 
         if (isattacked(&board2, board2.kingpos[color], color ^ 1)) // skip illegal moves
         {
@@ -529,13 +539,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             {
                 R = LMRTABLE[depthleft - 1][betacount];
 
-                if (iscap && !ispv)
+                if (iscap)
                 {
-                    R = R / 2;
-                    if (list[i].eval > 1000190)
-                    {
-                        R--;
-                    }
+                    R = R / 2 - (list[i].eval > 1000190);
                 }
                 if (ischeck) // Reduce reduction for checks or moves made in check
                 {

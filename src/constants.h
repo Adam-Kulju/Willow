@@ -110,7 +110,7 @@ struct ttentry  //Transposition table entry
     struct move bestmove;
     int eval;
     char depth;
-    short int age;
+    unsigned char age;
 };
 
 const struct move nullmove = {0, 0};
