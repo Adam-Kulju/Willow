@@ -118,10 +118,11 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     int listlen = movegen(board, list, color, incheck);
 
     movescore(board, list, 99, color, type, nullmove, listlen, -108);
-    // score the moves; if our TT hit was from a qsearch node, use it for those purposes (one from an alpha beta node is not useful because this only searches captures)
+    // score the moves
 
     struct move bestmove = nullmove;
     int i = 0;
+    int quiets = 0;
 
     while (i < listlen)
     {
@@ -134,6 +135,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
                 break;
             }
         }
+
         struct board_info board2 = *board;
 
         if (move(&board2, list[i].move, color))
@@ -464,7 +466,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft - 3 && type != UBound)
             {
-                int sBeta = ttscore - (depthleft * 3);
+                int sBeta = ttscore - (depthleft * 3/*2*/);
 
                 CURRENTPOS = original_pos; // reset hash of the position for the singular search
                 nnue_state.pop();          // pop the nnue_state to before we made our move. After singular search, we make the move again to reset the nnue state.
@@ -477,8 +479,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (sScore < sBeta)
                 {
                     extension = 1;
-                    if (!ispv && sScore + 20 < sBeta && depth < info.depth)
-                    { // Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at
+                    if (!ispv && sScore + 20 < sBeta && depth < info.depth /*&& depth < 15*/)
+                    { // Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at or less than 15 (leaves room for a bunch near the root)
                         extension++;
                     }
                 }
