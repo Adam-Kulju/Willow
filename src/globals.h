@@ -298,7 +298,7 @@ void clearHistory(bool del) // Either divides the entries in the history table b
                 HISTORYTABLE[WHITE][i][n] = (HISTORYTABLE[WHITE][i][n] / 2);
                 HISTORYTABLE[BLACK][i][n] = (HISTORYTABLE[BLACK][i][n] / 2);
             }
-        }*/
+        }
         for (int i = 0; i < 6; i++){
             for (int n = 0; n < 128; n++){
                 for (int a = 0; a < 6; a++){
@@ -307,7 +307,7 @@ void clearHistory(bool del) // Either divides the entries in the history table b
                     }
                 }
             }
-        }
+        }*/
     }
     else
     {

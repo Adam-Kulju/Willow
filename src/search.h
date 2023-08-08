@@ -466,7 +466,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(CURRENTPOS) & (_mask)].depth >= depthleft - 3 && type != UBound)
             {
-                int sBeta = ttscore - (depthleft * 3/*2*/);
+                int sBeta = ttscore - (depthleft * 3);
 
                 CURRENTPOS = original_pos; // reset hash of the position for the singular search
                 nnue_state.pop();          // pop the nnue_state to before we made our move. After singular search, we make the move again to reset the nnue state.
@@ -670,6 +670,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     {
 
                         updateHistory(HISTORYTABLE[color][(list[a].move.move >> 8)][list[a].move.move & 0xFF], -c);
+                        if (isreply){
+                            updateHistory(CONTHIST[lastpiecetype][lastsquare][board->board[list[a].move.move >> 8] / 2 - 1][list[a].move.move & 0xFF], -c);
+                        }
 
                     }
                 }
