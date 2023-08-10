@@ -312,23 +312,8 @@ void clearHistory(bool del) // Either divides the entries in the history table b
     else
     {
 
-        for (int i = 0; i < 0x80; i++)
-        {
-            for (int n = 0; n < 0x80; n++)
-            {
-                HISTORYTABLE[WHITE][i][n] = 0;
-                HISTORYTABLE[BLACK][i][n] = 0;
-            }
-        }
-        for (int i = 0; i < 6; i++){
-            for (int n = 0; n < 128; n++){
-                for (int a = 0; a < 6; a++){
-                    for (int b = 0; b < 128; b++){
-                        CONTHIST[i][n][a][b] = 0;
-                    }
-                }
-            }
-        }
+     memset(CONTHIST, 0, sizeof(CONTHIST));
+     memset(HISTORYTABLE, 0, sizeof(HISTORYTABLE));
           
     }
 }
