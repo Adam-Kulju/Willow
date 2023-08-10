@@ -15,7 +15,7 @@ ifeq ($(OS), Windows_NT)
 	LINKER := -fuse-ld=lld
 else
 	SUFFIX :=
-	LINKER := -lm -fuse-ld=lld
+	LINKER := -lm
 endif
 
 OUT := $(EXE)$(SUFFIX)
