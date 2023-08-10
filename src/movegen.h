@@ -339,7 +339,7 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
 
         if (depth > 1 && lastmove.move != 0 && (board->board[lastmove.move & 0xFF] >> 1) - 1 < 0)
         {
-            return 1;
+            exit(1);
         }
 
         if (type > None && ismatch(TT[(CURRENTPOS) & (_mask)].bestmove, list[i].move)) // TT hit: gets the largest bonus.
