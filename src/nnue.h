@@ -224,13 +224,4 @@ void NNUE_State::reset_nnue(struct board_info *board)
     }
 }
 
-int eval(struct board_info *board, int color){
-    int material = 0;
-    for (int i = 1; i < 5; i++){
-        material += SEEVALUES[i+1] * (board->pnbrqcount[0][i] + board->pnbrqcount[1][i]);
-    }
-    material = 700 + material / 32;
-    return nnue_state.evaluate(color) * material / 1024;
-}
-
 #endif
