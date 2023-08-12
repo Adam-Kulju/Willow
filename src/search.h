@@ -30,7 +30,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     nodes++;
     if (depthleft <= 0) // return if we are too deep
     {
-        return incheck ? 0 : nnue_state.evaluate(color);
+        return incheck ? 0 : eval(board, color);
     }
 
     if (!((nodes) & (CHECKTIME))) // return if we have run out of time, either alloted to search or overall
@@ -90,7 +90,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     else
     {
         int ttscore = evl;
-        stand_pat = nnue_state.evaluate(color);
+        stand_pat = eval(board, color);
         if (type == 3 || (type == UBound && ttscore < stand_pat) || (type == LBound && ttscore > stand_pat)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
         {
             stand_pat = TT[(CURRENTPOS) & (_mask)].eval;
@@ -301,7 +301,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     }
     else
     {
-        evl = nnue_state.evaluate(color);
+        evl = eval(board, color);
     }
     movelst[*key - 1].staticeval = evl;
 
