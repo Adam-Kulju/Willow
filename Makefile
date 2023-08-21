@@ -12,10 +12,14 @@ SUFFIX :=
 
 ifeq ($(OS), Windows_NT)
 	SUFFIX := .exe
-	LINKER := -fuse-ld=lld
+	LINKER :=
 else
 	SUFFIX :=
 	LINKER := -lm
+endif
+
+ifneq (,$(findstring clang,$(shell $(CXX) --version)))
+	LINKER += -fuse-ld=lld
 endif
 
 OUT := $(EXE)$(SUFFIX)
