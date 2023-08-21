@@ -4,7 +4,7 @@ SOURCES := src/willow.cpp
 
 CXX := clang++
 
-CXXFLAGS := -O3 -march=native -std=c++20 -ffast-math -flto
+CXXFLAGS := -O3 -march=native -std=c++2a -ffast-math -flto
 
 LINKER :=
 
