@@ -320,7 +320,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     // Null Move Pruning: If our position is good enough that we can give our opponent an extra move and still beat beta with a reduced search, cut off.
     if (isnull == false && !ispv && !singularsearch && !incheck && depthleft > 2 &&
-        (evl >= beta))
+        (evl >= beta + 50 - MIN(50, ((improving + 1) * depthleft * 5))))
     {
 
         bool ispiecew = false, ispieceb = false;
