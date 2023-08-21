@@ -5,6 +5,7 @@
 #include <span>
 #include <vector>
 #include <algorithm>
+#include <cstdint>
 #include "constants.h"
 #ifdef _MSC_VER
 #define W_MSVC
