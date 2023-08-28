@@ -34,11 +34,17 @@ char KINGZONES[2][0x80][0x80]; // a quick lookup to tell if a square is in the k
 bool CENTERWHITE[0x88]; // lookup table for White's center
 bool CENTERBLACK[0x88]; // lookup table for Black's center
 
-struct move KILLERTABLE[100][2];      // Stores killer moves
-struct move COUNTERMOVES[6][128];     // Stores countermoves
-int HISTORYTABLE[2][0x80][0x80]; // The History table
 
-int CONTHIST[6][128][6][128];
+
+struct ThreadInfo{
+    struct move KILLERTABLE[100][2];      // Stores killer moves
+    struct move COUNTERMOVES[6][128];     // Stores countermoves
+    int HISTORYTABLE[2][0x80][0x80]; // The History table
+    int CONTHIST[6][128][6][128];
+    unsigned long long int CURRENTPOS;
+    NNUE_State nnue_state{};
+};
+//ThreadInfo thread_info;
 
 static unsigned long long mt[NN];
 static int mti = NN + 1;
@@ -47,7 +53,6 @@ unsigned long long int ZOBRISTTABLE[774];
 // 768-771 is castling
 // color key is 772
 // ep possible is 773
-unsigned long long int CURRENTPOS;
 
 struct ttentry *TT;
 size_t TTSIZE;
@@ -65,8 +70,6 @@ void initglobals() // Initialize all our global variable stuff.
     TT = (struct ttentry *)malloc(sizeof(struct ttentry) * (1 << size));
     TTSIZE = 1 << size;
     _mask = TTSIZE - 1;
-
-    nnue_state.m_accumulator_stack.reserve(MOVESIZE);
 
     for (unsigned char i = 0; i < 0x80; i++)
     {
@@ -259,22 +262,22 @@ void setzobrist() // Fills the table of Zobrist keys with numbers.
     }
 }
 
-void calc_pos(struct board_info *board, bool color) // Calculates the Zobrist Key for a particular position.
+void calc_pos(struct board_info *board, bool color, ThreadInfo *thread_info) // Calculates the Zobrist Key for a particular position.
 {
-    CURRENTPOS = 0;
+    thread_info->CURRENTPOS = 0;
     int i;
     for (i = 0; i < 0x80; i++)
     {
         if (!(i & 0x88) && board->board[i])
         {
-            CURRENTPOS ^= ZOBRISTTABLE[(((board->board[i] - 2) << 6)) + i - ((i >> 4) << 3)];
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[i] - 2) << 6)) + i - ((i >> 4) << 3)];
             // board->board[i]-2<<6: gives us the base value for each piece*64.
             // i-((i>>4)<<3): converts i into a number from 1 to 64. it does that by subtracting 8 for every rank it's on - on rank 0 doesn't get subtracted, on rank 7 gets -56
         }
     }
     if (color)
     {
-        CURRENTPOS ^= ZOBRISTTABLE[772];
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[772];
     }
 }
 
@@ -287,7 +290,7 @@ void clearTT() // Clears the Transposition table.
     }
 }
 
-void clearHistory(bool del) // Either divides the entries in the history table by 4 (between searches), or resets it entirely (between games)
+void clearHistory(bool del, ThreadInfo *thread_info) // Either divides the entries in the history table by 4 (between searches), or resets it entirely (between games)
 {
     if (!del)
     {
@@ -312,27 +315,27 @@ void clearHistory(bool del) // Either divides the entries in the history table b
     else
     {
 
-     memset(CONTHIST, 0, sizeof(CONTHIST));
-     memset(HISTORYTABLE, 0, sizeof(HISTORYTABLE));
+     memset(thread_info->CONTHIST, 0, sizeof(thread_info->CONTHIST));
+     memset(thread_info->HISTORYTABLE, 0, sizeof(thread_info->HISTORYTABLE));
           
     }
 }
-void clearKiller() // Clears the Killer Table
+void clearKiller(ThreadInfo *thread_info) // Clears the Killer Table
 {
     for (int i = 0; i < 100; i++)
     {
-        KILLERTABLE[i][0].move = 0;
-        KILLERTABLE[i][1].move = 0;
+        thread_info->KILLERTABLE[i][0].move = 0;
+        thread_info->KILLERTABLE[i][1].move = 0;
     }
 }
 
-void clearCounters() // Clears the countermoves table
+void clearCounters(ThreadInfo *thread_info) // Clears the countermoves table
 {
     for (int i = 0; i < 6; i++)
     {
         for (int n = 0; n < 128; n++)
         {
-            COUNTERMOVES[i][n] = nullmove;
+            thread_info->COUNTERMOVES[i][n] = nullmove;
         }
     }
 }

@@ -29,7 +29,7 @@ char *getsafe(char *buffer, int count) // Gets a number of characters up to coun
     return result;
 }
 
-long long unsigned int perft(int depth, struct board_info *board, bool color, bool first) // Performs a perft search to the desired depth, displaying results for each move at the root.
+long long unsigned int perft(int depth, struct board_info *board, bool color, bool first, ThreadInfo *thread_info) // Performs a perft search to the desired depth, displaying results for each move at the root.
 {
     if (!depth)
     {
@@ -42,25 +42,25 @@ long long unsigned int perft(int depth, struct board_info *board, bool color, bo
     for (i = 0; i < nmoves; i++) // Loop through all of the moves, skipping illegal ones.
     {
         struct board_info board2 = *board;
-        move(&board2, list[i].move, color);
+        move(&board2, list[i].move, color, thread_info);
         if (isattacked(&board2, board2.kingpos[color], color ^ 1))
         {
-            nnue_state.pop();
+            thread_info->nnue_state.pop();
             continue;
         }
-        long long unsigned int b = perft(depth - 1, &board2, color ^ 1, false);
+        long long unsigned int b = perft(depth - 1, &board2, color ^ 1, false, thread_info);
         if (first)
         {
             char temp[6];
             printf("%llu %s\n", b, conv(list[i].move, temp));
         }
-        nnue_state.pop();
+        thread_info->nnue_state.pop();
         l += b;
     }
     return l;
 }
 
-void move_uci(char *command, int i, struct board_info *board, struct movelist *movelst, int *key, bool *color)
+void move_uci(char *command, int i, struct board_info *board, struct movelist *movelst, int *key, bool *color, ThreadInfo *thread_info)
 {
     // parses a uci move such as "e2e4" internally and plays it.
     while (command[i] != '\0' && command[i] != '\n')
@@ -81,15 +81,15 @@ void move_uci(char *command, int i, struct board_info *board, struct movelist *m
         struct move temp;
         convto(buf, &temp, board);
         bool iscap = (temp.flags == 0xC || board->board[temp.move & 0xFF]); // captures reset the halfmove clock for 50-move rule draws, so it's important to check that the move is a capture.
-        move(board, temp, *color);
+        move(board, temp, *color, thread_info);
 
-        move_add(board, movelst, key, temp, *color, iscap);
+        move_add(board, movelst, key, temp, *color, iscap, thread_info);
 
         *color ^= 1;
     }
 }
 
-int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *color) // handles various UCI options.
+int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *color, ThreadInfo *thread_info) // handles various UCI options.
 {                                                                                      // assumes board+movelist have been already set up under wraps
 
     char command[65536];
@@ -120,11 +120,11 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     if (!strcmp(command, "ucinewgame"))
     {
         clearTT();
-        clearKiller();
-        clearCounters();
-        clearHistory(true);
+        clearKiller(thread_info);
+        clearCounters(thread_info);
+        clearHistory(true, thread_info);
         setfull(board);
-        setmovelist(movelst, key);
+        setmovelist(movelst, key, thread_info);
         search_age = 0;
     }
 
@@ -157,18 +157,18 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     {
         *color = WHITE;
         setfull(board);
-        nnue_state.reset_nnue(board);
-        setmovelist(movelst, key);
-        calc_pos(board, WHITE);
+        thread_info->nnue_state.reset_nnue(board);
+        setmovelist(movelst, key, thread_info);
+        calc_pos(board, WHITE, thread_info);
         *key = 1;
         if (strstr(command, "moves"))
         {
-            move_uci(command, 24, board, movelst, key, color);
+            move_uci(command, 24, board, movelst, key, color, thread_info);
         }
     }
     if (strstr(command, ("position fen")))
     {
-        setfromfen(board, movelst, key, command, color, 13);
+        setfromfen(board, movelst, key, command, color, 13, thread_info);
         if (strstr(command, "moves"))
         {
             int i = 20;
@@ -177,7 +177,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
                 i++;
             }
             i++;
-            move_uci(command, i, board, movelst, key, color);
+            move_uci(command, i, board, movelst, key, color, thread_info);
         }
     }
     if (strstr(command, "go"))
@@ -314,13 +314,13 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
 
         time = MAX(time, 0.001);
         printf("%f %f\n", coldturkey, time);
-        iid_time(board, movelst, time, key, *color, false, true, nullmove);
+        iid_time(board, movelst, time, key, *color, false, true, nullmove, thread_info);
     }
     // fflush(hstdin);
     return 0;
 }
 
-int bench() // Benchmarks Willow, printing total nodes and nodes per second.
+int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes and nodes per second.
 {
     MAXDEPTH = 14;
     char positions[50][1024] = {
@@ -380,9 +380,9 @@ int bench() // Benchmarks Willow, printing total nodes and nodes per second.
     {
 
         clearTT();
-        clearKiller();
-        clearCounters();
-        clearHistory(true);
+        clearKiller(thread_info);
+        clearCounters(thread_info);
+        clearHistory(true, thread_info);
         search_age = 0;
 
         struct board_info board;
@@ -390,35 +390,35 @@ int bench() // Benchmarks Willow, printing total nodes and nodes per second.
         int key;
         bool color;
         /*setfull(&board);
-        nnue_state.reset_nnue(&board);
+        thread_info.nnue_state.reset_nnue(&board);
         printfull(&board);
         printf("%i\n", eval(&board, BLACK));
         exit(0);*/
 
-        setfromfen(&board, movelst, &key, positions[i], &color, 0);
+        setfromfen(&board, movelst, &key, positions[i], &color, 0, thread_info);
 
         printfull(&board);
 
-        iid_time(&board, movelst, 1000000, &key, color, false, true, nullmove);
+        iid_time(&board, movelst, 1000000, &key, color, false, true, nullmove, thread_info);
         t += nodes;
     }
     printf("Bench: %lu nodes %i nps\n", t, (int)(t / ((clock() - start) / (float)CLOCKS_PER_SEC)));
     return 1;
 }
 
-int com()
+int com(ThreadInfo *thread_info)
 {
     struct board_info board;
     setfull(&board);
     struct movelist movelst[MOVESIZE];
     int key;
-    calc_pos(&board, WHITE);
-    setmovelist(movelst, &key);
+    calc_pos(&board, WHITE, thread_info);
+    setmovelist(movelst, &key, thread_info);
     bool color;
 
     for (;;)
     {
-        com_uci(&board, movelst, &key, &color);
+        com_uci(&board, movelst, &key, &color, thread_info);
     }
     return 0;
 }
@@ -440,12 +440,14 @@ int main(int argc, char *argv[])
 {
 
     init();
+    ThreadInfo *thread_info = new ThreadInfo();
+    thread_info->nnue_state.m_accumulator_stack.reserve(MOVESIZE);
     if (argc > 1)
     {
 
         if (!strcmp(argv[1], "bench"))
         {
-            bench();
+            bench(thread_info);
             // printf("%f\n", (float)betas / total);
             exit(0);
         }
@@ -453,7 +455,7 @@ int main(int argc, char *argv[])
         {
             struct board_info board;
             setfull(&board);
-            nnue_state.reset_nnue(&board);
+            thread_info->nnue_state.reset_nnue(&board);
             int depth;
             if (argc == 2)
             {
@@ -464,13 +466,13 @@ int main(int argc, char *argv[])
                 depth = atoi(argv[2]);
             }
             clock_t start = clock();
-            long long unsigned int a = perft(depth, &board, WHITE, true);
+            long long unsigned int a = perft(depth, &board, WHITE, true, thread_info);
             float time_elapsed = (float)(clock() - start) / CLOCKS_PER_SEC;
             printf("%llu nodes %i nps\n", a, (int)(a / ((clock() - start) / (float)CLOCKS_PER_SEC)));
             exit(0);
         }
     }
 
-    com();
+    com(thread_info);
     return 0;
 }
