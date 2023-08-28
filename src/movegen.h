@@ -320,7 +320,7 @@ void selectionsort(struct list *list, int k, int t)
     list[k] = tempmove;
 }
 
-int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen, int threshold)
+int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen, int threshold, ThreadInfo *thread_info)
 {
     // Given a list of moves, scores them for move ordering purposes.
 
@@ -342,13 +342,13 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
             exit(1);
         }
 
-        if (type > None && ismatch(TT[(CURRENTPOS) & (_mask)].bestmove, list[i].move)) // TT hit: gets the largest bonus.
+        if (type > None && ismatch(TT[(thread_info->CURRENTPOS) & (_mask)].bestmove, list[i].move)) // TT hit: gets the largest bonus.
         {
 
-            if (TT[(CURRENTPOS) & (_mask)].bestmove.move == list[i].move.move)
+            if (TT[(thread_info->CURRENTPOS) & (_mask)].bestmove.move == list[i].move.move)
             {
 
-                if (TT[(CURRENTPOS) & (_mask)].bestmove.flags == list[i].move.flags)
+                if (TT[(thread_info->CURRENTPOS) & (_mask)].bestmove.flags == list[i].move.flags)
                 {
 
                     list[i].eval += 10000000;
@@ -364,15 +364,15 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         {
             list[i].eval = see(board, list[i].move, color, threshold);
         }
-        else if (ismatch(list[i].move, KILLERTABLE[depth][0])) // Killer moves
+        else if (ismatch(list[i].move, thread_info->KILLERTABLE[depth][0])) // Killer moves
         {
             list[i].eval += 199;
         }
-        else if (ismatch(list[i].move, KILLERTABLE[depth][1]))
+        else if (ismatch(list[i].move, thread_info->KILLERTABLE[depth][1]))
         {
             list[i].eval += 198;
         }
-        else if (depth > 1 && isreply && ismatch(list[i].move, COUNTERMOVES[lastpiecetype][lastpiecedest]))
+        else if (depth > 1 && isreply && ismatch(list[i].move, thread_info->COUNTERMOVES[lastpiecetype][lastpiecedest]))
         // The move from the countermoves history table
         {
             // the piece that the opponent moved     the square it is on
@@ -382,9 +382,9 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
 
         else // And if none of those apply, score the move by its history score.
         {
-            list[i].eval = HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
+            list[i].eval = thread_info->HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
             if (isreply){
-                list[i].eval += CONTHIST[lastpiecetype][lastpiecedest][board->board[list[i].move.move >> 8] / 2 - 1][list[i].move.move & 0xFF];
+                list[i].eval += thread_info->CONTHIST[lastpiecetype][lastpiecedest][board->board[list[i].move.move >> 8] / 2 - 1][list[i].move.move & 0xFF];
             }
         }
 

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdint>
 #include "constants.h"
+#include "globals.h"
 #ifdef _MSC_VER
 #define W_MSVC
 #pragma push_macro("_MSC_VER")
@@ -153,8 +154,6 @@ public:
 INCBIN(nnue, "src/net0003.bin");
 const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(g_nnueData);
 
-NNUE_State nnue_state{};
-
 void NNUE_State::push()
 {
     m_accumulator_stack.push_back(*m_curr);
@@ -223,15 +222,6 @@ void NNUE_State::reset_nnue(struct board_info *board)
             update_feature<true>(board->board[square], MAILBOX_TO_STANDARD[square]);
         }
     }
-}
-
-int eval(struct board_info *board, int color){
-    int material = 0;
-    for (int i = 1; i < 5; i++){
-        material += SEEVALUES[i+1] * (board->pnbrqcount[0][i] + board->pnbrqcount[1][i]);
-    }
-    material = 700 + material / 32;
-    return nnue_state.evaluate(color) * material / 1024;
 }
 
 #endif
