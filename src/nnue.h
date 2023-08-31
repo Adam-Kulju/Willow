@@ -5,9 +5,7 @@
 #include <span>
 #include <vector>
 #include <algorithm>
-#include <cstdint>
 #include "constants.h"
-#include "globals.h"
 #ifdef _MSC_VER
 #define W_MSVC
 #pragma push_macro("_MSC_VER")
@@ -153,6 +151,8 @@ public:
 
 INCBIN(nnue, "src/net0003.bin");
 const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(g_nnueData);
+
+NNUE_State nnue_state{};
 
 void NNUE_State::push()
 {
