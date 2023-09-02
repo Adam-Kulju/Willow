@@ -13,6 +13,8 @@
 #include <string>
 
 long int num_fens = 0;
+int n;
+int games;
 
 char *export_fen(struct board_info *board, bool color, struct movelist *movelst, int *key, char *fen)
 {
@@ -159,7 +161,7 @@ char *export_fen(struct board_info *board, bool color, struct movelist *movelst,
     return fen;
 }
 
-struct move random_move(struct board_info *board, bool color, bool incheck, ThreadInfo *thread_info)
+struct move random_move(struct board_info *board, bool color, bool incheck)
 {
     struct list list[LISTSIZE];
     int movelen = movegen(board, list, color, incheck);
@@ -168,10 +170,10 @@ struct move random_move(struct board_info *board, bool color, bool incheck, Thre
     for (int i = 0; i < movelen; i++)
     {
         struct board_info board2 = *board;
-        long long unsigned int temp = thread_info->CURRENTPOS;
-        move(&board2, list[i].move, color, thread_info);
+        long long unsigned int temp = CURRENTPOS;
+        move(&board2, list[i].move, color);
         // nnue_state.pop();
-        thread_info->CURRENTPOS = temp;
+        CURRENTPOS = temp;
         if (!isattacked(&board2, board2.kingpos[color], color ^ 1))
         {
             legalmovelist[legalmoves] = list[i];
@@ -186,21 +188,21 @@ struct move random_move(struct board_info *board, bool color, bool incheck, Thre
     return legalmovelist[randIndex].move;
 }
 
-float game(std::ofstream &file, std::string filename, ThreadInfo *thread_info)
+float game(std::ofstream &file, std::string filename)
 {
     clearTT();
-    clearKiller(thread_info);
-    clearCounters(thread_info);
-    clearHistory(true, thread_info);
+    clearKiller();
+    clearCounters();
+    clearHistory(true);
     search_age = 0;
     srand(clock());
     struct board_info board;
     struct movelist movelst[MOVESIZE];
     setfull(&board);
-    thread_info->nnue_state.reset_nnue(&board);
-    calc_pos(&board, WHITE, thread_info);
+    nnue_state.reset_nnue(&board);
+    calc_pos(&board, WHITE);
     int key;
-    setmovelist(movelst, &key, thread_info);
+    setmovelist(movelst, &key);
 
     char fen[100];
 
@@ -209,13 +211,13 @@ float game(std::ofstream &file, std::string filename, ThreadInfo *thread_info)
 
     for (int i = 0; i < moves; i++)
     {
-        struct move mve = random_move(&board, color, isattacked(&board, board.kingpos[color], color ^ 1), thread_info);
+        struct move mve = random_move(&board, color, isattacked(&board, board.kingpos[color], color ^ 1));
         if (ismatch(mve, nullmove))
         {
             return 0;
         }
-        move(&board, mve, color, thread_info);
-        move_add(&board, movelst, &key, mve, color, (mve.flags == 0xC || board.board[mve.move & 0xFF]), thread_info);
+        move(&board, mve, color);
+        move_add(&board, movelst, &key, mve, color, (mve.flags == 0xC || board.board[mve.move & 0xFF]));
         color ^= 1;
     }
 
@@ -224,7 +226,9 @@ float game(std::ofstream &file, std::string filename, ThreadInfo *thread_info)
     char fens[1000][150];
     int fkey = 0;
     float res = 0.5;
+    MOVES.number_moves = 0;
     memset(fens, '\0', sizeof(fens));
+
     while (!game_end && res == 0.5 && key < 900 && !checkdraw1(&board) && !checkdraw2(movelst, &key))
     {
 
@@ -235,10 +239,10 @@ float game(std::ofstream &file, std::string filename, ThreadInfo *thread_info)
         for (int i = 0; i < movelen; i++)
         {
             struct board_info board2 = board;
-            long long unsigned int temp = thread_info->CURRENTPOS;
-            move(&board2, list[i].move, color, thread_info);
+            long long unsigned int temp = CURRENTPOS;
+            move(&board2, list[i].move, color);
             // nnue_state.pop();
-            thread_info->CURRENTPOS = temp;
+            CURRENTPOS = temp;
             if (!isattacked(&board2, board2.kingpos[color], color ^ 1))
             {
                 legalmovelist[legalmoves] = list[i];
@@ -258,38 +262,49 @@ float game(std::ofstream &file, std::string filename, ThreadInfo *thread_info)
         int g = 0;
 
         int r = rand() % 100;
-        if (board.pnbrqcount[WHITE][1] + board.pnbrqcount[BLACK][1] + board.pnbrqcount[WHITE][2] + board.pnbrqcount[BLACK][2] + 
-            board.pnbrqcount[WHITE][3]*2 + board.pnbrqcount[BLACK][3]*2  + board.pnbrqcount[WHITE][4]*4 + board.pnbrqcount[BLACK][4]*4 < 12){ 
+        int phase = board.pnbrqcount[WHITE][1] + board.pnbrqcount[BLACK][1] + board.pnbrqcount[WHITE][2] + board.pnbrqcount[BLACK][2] + 
+            board.pnbrqcount[WHITE][3]*2 + board.pnbrqcount[BLACK][3]*2  + board.pnbrqcount[WHITE][4]*4 + board.pnbrqcount[BLACK][4]*4;
+        if (phase < 12){ 
                 //If we are in the endgame (defined as anything less than a queen and a rook on each side, don't do any random moves. There is no such thing as endgame style.)
+            r -= 5;
+            if (phase < 6){
                 r = 0;
             }
-
-        if (r == 99)
-        {
-            currentmove = random_move(&board, color, isattacked(&board, board.kingpos[color], color ^ 1), thread_info);
         }
-        else if (r >= 94)
-        { // Play the second best move if it (a) exists and (b) is not "much" worse than the best move.
+        /*
+        /*if (r == 99)
+        {
+            currentmove = random_move(&board, color, isattacked(&board, board.kingpos[color], color ^ 1));
+        }
+        else if (r >= 85)
+        { // Play the second best move if it (a) exists and (b) is between 25 and 75 cps worse than bestmove.
             g = iid_time(&board, movelst, 5000, &key, color, true, false, nullmove);
+            struct move tmp = currentmove;
 
-            if (legalmoves > 1)
-            {
-
-                struct move tmp = currentmove;
+            for (int i = 0; i < legalmoves-1 && abs(g) < 250; i++){
+                MOVES.moves[MOVES.number_moves++] = currentmove;
                 int d = iid_time(&board, movelst, 5000, &key, color, true, false, tmp);
-                if (d + 50 + (r-94)*15 < g)     //If the score of the second best move + a number between 50 and 110 is still not enough to beat the score of the best move, reset
-                {
-                    currentmove = tmp;
-                }
-                else{                           //Otherwise, set eval. (this eval is for position AFTER makemove)
+
+                if (g - d > 15 && g - d < 65){                              //if we found a slightly worse move, play it. 25-75 cps isn't immediately game-losing, but it is definitely an inaccuracy.
                     g = d;
+                    n++;
+                    break;
+                }
+                else if (r == 99 && i == 0 && g - d >= 100 && g - d <= 500){    //in rare occasions, if we have an "only move", play a losing (but not too losing) move.
+                    g = d;
+                    break;
+                }
+                else if (g - d >= 65){      //if we end up at the point where the moves are too bad, just quit
+                    currentmove = tmp;
+                    break;
                 }
             }
+            MOVES.number_moves = 0;
         }
         else
-        {
+        {*/
             g = iid_time(&board, movelst, 5000, &key, color, true, false, nullmove);
-        }
+        //
 
         if (color)
         {
@@ -318,11 +333,11 @@ float game(std::ofstream &file, std::string filename, ThreadInfo *thread_info)
 
         bool isnoisy = (currentmove.flags == 0xC || currentmove.flags == 0x7 || board.board[currentmove.move & 0xFF]);
         bool incheck = isattacked(&board, board.kingpos[color], color ^ 1);
-        move(&board, currentmove, color, thread_info);
-        move_add(&board, movelst, &key, currentmove, color, isnoisy, thread_info);
+        move(&board, currentmove, color);
+        move_add(&board, movelst, &key, currentmove, color, isnoisy);
         bool ischeck = isattacked(&board, board.kingpos[color ^ 1], color);
 
-        if (!(isnoisy || incheck || ischeck || decisive_flag || r == 99))
+        if (!(isnoisy || incheck || ischeck || decisive_flag))
         {
             char fen[100];
             export_fen(&board, color, movelst, &key, fen);
@@ -341,10 +356,14 @@ float game(std::ofstream &file, std::string filename, ThreadInfo *thread_info)
         }
         file << fens[i] << result << "\n";
     }
+    games++;
+    if (games % 10000 == 0){
+        //printf("%i %i\n", n, games);
+    }
     return 0;
 }
 
-void run_game(ThreadInfo *thread_info)
+void run_game()
 {
     srand(clock());
     std::string filename = "data" + std::to_string(rand()) + ".txt";
@@ -353,7 +372,7 @@ void run_game(ThreadInfo *thread_info)
     {
         std::ofstream fr;
         fr.open(filename, std::ios::out | std::ios::app);
-        game(fr, filename, thread_info);
+        game(fr, filename);
         fr.close();
     }
 }
@@ -367,11 +386,10 @@ int main()
     unsigned long long init[4] = {0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
     init_by_array64(init, 4);
     setzobrist();
-    NODES_IID = 5000;
+    NODES_IID = 4000;
     int target = 32 * 1024 * 1024;
     int size = 0;
-    ThreadInfo *thread_info = new ThreadInfo();
-    thread_info->nnue_state.m_accumulator_stack.reserve(MOVESIZE);
+    nnue_state.m_accumulator_stack.reserve(MOVESIZE);
     while (sizeof(struct ttentry) * (1 << size) < target)
     {
         size++;
@@ -380,5 +398,5 @@ int main()
     TTSIZE = 1 << size;
     _mask = TTSIZE - 1;
 
-    run_game(thread_info);
+    run_game();
 }
