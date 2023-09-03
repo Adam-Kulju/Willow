@@ -92,10 +92,10 @@ void setfull(struct board_info *board)  //Sets up the board for the start of the
     board->epsquare = 0;    //en passant square
 }
 
-void setmovelist(struct movelist *movelst, int *key) // Sets up the list of moves in the game.
+void setmovelist(struct movelist *movelst, int *key, ThreadInfo *thread_info) // Sets up the list of moves in the game.
 {
 
-    movelst[0].fen = CURRENTPOS;
+    movelst[0].fen = thread_info->CURRENTPOS;
     *key = 1;
     movelst[0].move.move = 0;
     movelst[1].move.move = 0;
@@ -103,7 +103,7 @@ void setmovelist(struct movelist *movelst, int *key) // Sets up the list of move
     return;
 }
 
-void setfromfen(struct board_info *board, struct movelist *movelst, int *key, char *fenstring, bool *color, int start) // Given an FEN, sets up the board to it.
+void setfromfen(struct board_info *board, struct movelist *movelst, int *key, char *fenstring, bool *color, int start, ThreadInfo *thread_info) // Given an FEN, sets up the board to it.
 {
     int i = 7, n = 0;
     int fenkey = start;
@@ -208,10 +208,10 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
     }
     fenkey++;
 
-    calc_pos(board, *color); // Gets the Zobrist Hash of the position (it doesn't matter that we do it before castling stuff)
-    nnue_state.reset_nnue(board);
+    calc_pos(board, *color, thread_info); // Gets the Zobrist Hash of the position (it doesn't matter that we do it before castling stuff)
+    thread_info->nnue_state.reset_nnue(board);
 
-    setmovelist(movelst, key);
+    setmovelist(movelst, key, thread_info);
     *key = 0;
 
     while (isblank(fenstring[fenkey]))
@@ -282,20 +282,20 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
     *key += 1;
 }
 
-int move(struct board_info *board, struct move move, bool color) // Perform a move on the board.
+int move(struct board_info *board, struct move move, bool color, ThreadInfo *thread_info) // Perform a move on the board.
 {
 
     if (board->epsquare)
     {
-        CURRENTPOS ^= ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it is not.
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it is not.
     }
-    CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
+    thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
     if (!move.move)
     {
         board->epsquare = 0;
         return 0;
     }
-    nnue_state.push();
+    thread_info->nnue_state.push();
     unsigned char from = move.move >> 8, to = move.move & 0xFF; // get the indexes of the move
     unsigned char flag = move.flags >> 2;
     if ((from & 0x88) || (to & 0x88))
@@ -305,25 +305,24 @@ int move(struct board_info *board, struct move move, bool color) // Perform a mo
         exit(0);
         return 1;
     }
-    //printfull(board);
-    //printf("%x\n", move.move);
-    CURRENTPOS ^= ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from - ((from >> 4) << 3)]; // xor out the piece to be moved
-    nnue_state.update_feature<false>(board->board[from], MAILBOX_TO_STANDARD[from]);
+
+    thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from - ((from >> 4) << 3)]; // xor out the piece to be moved
+    thread_info->nnue_state.update_feature<false>(board->board[from], MAILBOX_TO_STANDARD[from]);
 
     if (flag != 3)
     { // handle captures and en passant - this is for normal moves
         if (board->board[to])
         {
             board->pnbrqcount[color ^ 1][((board->board[to] >> 1) - 1)]--;
-            CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)];
-            nnue_state.update_feature<false>(board->board[to], MAILBOX_TO_STANDARD[to]);
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)];
+            thread_info->nnue_state.update_feature<false>(board->board[to], MAILBOX_TO_STANDARD[to]);
         }
     }
     else
     { // and this branch handles en passant
         board->pnbrqcount[color ^ 1][0]--;
-        CURRENTPOS ^= ZOBRISTTABLE[(((board->board[board->epsquare] - 2) << 6)) + board->epsquare - ((board->epsquare >> 4) << 3)];
-        nnue_state.update_feature<false>(board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare]);
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[board->epsquare] - 2) << 6)) + board->epsquare - ((board->epsquare >> 4) << 3)];
+        thread_info->nnue_state.update_feature<false>(board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare]);
         board->board[board->epsquare] = BLANK;
     }
 
@@ -355,8 +354,8 @@ int move(struct board_info *board, struct move move, bool color) // Perform a mo
 
     board->board[to] = board->board[from];
     board->board[from] = BLANK;
-    CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)]; // xor in the piece that has been moved
-    nnue_state.update_feature<true>(board->board[to], MAILBOX_TO_STANDARD[to]);
+    thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)]; // xor in the piece that has been moved
+    thread_info->nnue_state.update_feature<true>(board->board[to], MAILBOX_TO_STANDARD[to]);
 
     if (flag == 2)
     { // castle
@@ -364,19 +363,19 @@ int move(struct board_info *board, struct move move, bool color) // Perform a mo
         { // to = g file, meaning kingside
 
             board->board[to - 1] = board->board[to + 1];
-            CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
-            CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
-            nnue_state.update_feature<true>(board->board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
-            nnue_state.update_feature<false>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
+            thread_info->nnue_state.update_feature<true>(board->board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
+            thread_info->nnue_state.update_feature<false>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
             board->board[to + 1] = BLANK;
         }
         else
         {
             board->board[to + 1] = board->board[to - 2];
-            CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
-            CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
-            nnue_state.update_feature<false>(board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
-            nnue_state.update_feature<true>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
+            thread_info->nnue_state.update_feature<false>(board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
+            thread_info->nnue_state.update_feature<true>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
             board->board[to - 2] = BLANK;
         }
     }
@@ -385,17 +384,17 @@ int move(struct board_info *board, struct move move, bool color) // Perform a mo
     if (!flag && abs(to - from) == 32 && board->board[to] == WPAWN + color)
     {
         board->epsquare = to;
-        CURRENTPOS ^= ZOBRISTTABLE[773];
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
     }
     // printfull(board);
     return 0;
 }
 
-void move_add(struct board_info *board, struct movelist *movelst, int *key, struct move mve, bool color, bool iscap) // Add a move to the list of moves in the game.
+void move_add(struct board_info *board, struct movelist *movelst, int *key, struct move mve, bool color, bool iscap, ThreadInfo *thread_info) // Add a move to the list of moves in the game.
 {
     int k = *key;
     movelst[k].move = mve;
-    movelst[k].fen = CURRENTPOS;
+    movelst[k].fen = thread_info->CURRENTPOS;
     if ((mve.flags >> 2) == 1 || (board->board[(mve.move & 0xFF)] == WPAWN + color) || iscap)
     { // if the move is a capture, or a promotion, or a pawn move, half move clock is reset.
         movelst[k].halfmoves = 0;
@@ -648,6 +647,16 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos, unsigned i
     }
 
     return flag;
+}
+
+
+int eval(struct board_info *board, int color, ThreadInfo *thread_info){
+    int material = 0;
+    for (int i = 1; i < 5; i++){
+        material += SEEVALUES[i+1] * (board->pnbrqcount[0][i] + board->pnbrqcount[1][i]);
+    }
+    material = 700 + material / 32;
+    return thread_info->nnue_state.evaluate(color) * material / 1024;
 }
 
 #endif
