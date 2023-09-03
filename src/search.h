@@ -24,7 +24,7 @@ void updateHistory(int &entry, int score){
 int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthleft, bool color, bool incheck, ThreadInfo *thread_info)
 // Performs a quiescence search on the given position.
 {
-    if (depth > maxdepth) // update seldepth
+    if (depth > maxdepth || depth >= 99) // update seldepth
     {
         maxdepth = depth;
     }
@@ -918,7 +918,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
             beta = evl + 12;
         }
 
-        if (thread_info->id == 0 && ((float)rightnow / 1000 > opttime || depth >= MAXDEPTH)) // If we've hit the soft cap for time, finish after the iteration.
+        if (depth >= MAXDEPTH || ((float)rightnow / 1000 > opttime && thread_info->id == 0)) // If we've hit the soft cap for time, finish after the iteration.
         {
             break;
         }
