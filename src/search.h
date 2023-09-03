@@ -893,14 +893,19 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
             // Print the principal variation, extracted from the TT table, as long as it remains a legal line.
             while (d > 0)
             {
-                if (TT[thread_info->CURRENTPOS & _mask].zobrist_key != thread_info->CURRENTPOS || ismatch(TT[thread_info->CURRENTPOS & _mask].bestmove, nullmove) ||
-                    !verifypv(&board2, TT[thread_info->CURRENTPOS & _mask].bestmove, false, c, thread_info))
+                if (TT[thread_info->CURRENTPOS & _mask].zobrist_key != thread_info->CURRENTPOS)
                 {
                     break;
                 }
+                struct move tempmove = TT[thread_info->CURRENTPOS & _mask].bestmove;
+
+                if (!verifypv(&board2, tempmove, false, c, thread_info)){
+                    break;
+                }
+
                 char temp[6];
-                printf("%s ", conv(TT[thread_info->CURRENTPOS & _mask].bestmove, temp));
-                move(&board2, TT[thread_info->CURRENTPOS & _mask].bestmove, c, thread_info);
+                printf("%s ", conv(tempmove, temp));
+                move(&board2, tempmove, c, thread_info);
                 thread_info->nnue_state.pop();
                 c ^= 1;
                 d--;
