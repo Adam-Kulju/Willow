@@ -383,7 +383,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int i = 0;
     unsigned long long int original_pos = thread_info->CURRENTPOS;
     int movelen = movegen(board, list, color, incheck);
-    movescore(board, list, depth, color, TT[(thread_info->CURRENTPOS) & (_mask)].type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0, thread_info);
+    movescore(board, list, depth, color, type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0, thread_info);
     bool raisedalpha = false;
     if (depth == 0)
     {
