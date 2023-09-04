@@ -51,7 +51,6 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     int evl = 0;
     char type;
     struct ttentry entry = TT[(thread_info->CURRENTPOS) & (_mask)];
-
     if (thread_info->CURRENTPOS == entry.zobrist_key)
     // Probe the transposition table. If we got an hit we may be able to cut of immediately, if not it may stil be useful for move ordering.
     {
@@ -244,9 +243,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int evl;
 
     bool singularsearch = !ismatch(excludedmove, nullmove);
-
-    char type;
     struct ttentry entry = TT[(thread_info->CURRENTPOS) & (_mask)];
+    char type;
     if (!singularsearch && thread_info->CURRENTPOS == entry.zobrist_key) // Probe the transposition table.
     {
         type = entry.type;
@@ -386,7 +384,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int i = 0;
     unsigned long long int original_pos = thread_info->CURRENTPOS;
     int movelen = movegen(board, list, color, incheck);
-    movescore(board, list, depth, color, entry, type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0, thread_info);
+    movescore(board, list, depth, color, TT[(thread_info->CURRENTPOS) & (_mask)], type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0, thread_info);
     bool raisedalpha = false;
     if (depth == 0)
     {
@@ -470,7 +468,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         if (depth && depth < info.depth * 2)
         { // if we're not already in a singular search, do singular search.
 
-            if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && entry.depth >= depthleft - 3 && type != UBound)
+            if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(thread_info->CURRENTPOS) & (_mask)].depth >= depthleft - 3 && type != UBound)
             {
                 int sBeta = ttscore - (depthleft);
 
