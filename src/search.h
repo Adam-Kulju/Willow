@@ -50,12 +50,11 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     }
     int evl = 0;
     char type;
-    struct ttentry entry = TT[(thread_info->CURRENTPOS) & (_mask)];
-    if (thread_info->CURRENTPOS == entry.zobrist_key)
+    if (thread_info->CURRENTPOS == TT[(thread_info->CURRENTPOS) & (_mask)].zobrist_key)
     // Probe the transposition table. If we got an hit we may be able to cut of immediately, if not it may stil be useful for move ordering.
     {
-        type = entry.type;
-        evl = entry.eval;
+        type = TT[(thread_info->CURRENTPOS) & (_mask)].type;
+        evl = TT[(thread_info->CURRENTPOS) & (_mask)].eval;
     }
     else
     {
@@ -97,7 +96,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         stand_pat = eval(board, color, thread_info);
         if (type == 3 || (type == UBound && ttscore < stand_pat) || (type == LBound && ttscore > stand_pat)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
         {
-            stand_pat = entry.eval;
+            stand_pat = TT[(thread_info->CURRENTPOS) & (_mask)].eval;
         }
     }
 
@@ -121,7 +120,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     struct list list[LISTSIZE];
     int listlen = movegen(board, list, color, incheck);
 
-    movescore(board, list, 99, color, entry, type, nullmove, listlen, -108, thread_info);
+    movescore(board, list, 99, color, type, nullmove, listlen, -108, thread_info);
     // score the moves
 
     struct move bestmove = nullmove;
@@ -243,12 +242,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int evl;
 
     bool singularsearch = !ismatch(excludedmove, nullmove);
-    struct ttentry entry = TT[(thread_info->CURRENTPOS) & (_mask)];
+
     char type;
-    if (!singularsearch && thread_info->CURRENTPOS == entry.zobrist_key) // Probe the transposition table.
+    if (!singularsearch && thread_info->CURRENTPOS == TT[(thread_info->CURRENTPOS) & (_mask)].zobrist_key) // Probe the transposition table.
     {
-        type = entry.type;
-        evl = entry.eval;
+        type = TT[(thread_info->CURRENTPOS) & (_mask)].type;
+        evl = TT[(thread_info->CURRENTPOS) & (_mask)].eval;
     }
     else
     {
@@ -260,7 +259,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     bool ispv = (beta != alpha + 1); // Are we in a PV (i.e. likely best line) node? This affects what type of pruning we can do.
 
-    if (!ispv && type != None && entry.depth >= depthleft) // Check to see if we can cutoff
+    if (!ispv && type != None && TT[(thread_info->CURRENTPOS) & (_mask)].depth >= depthleft) // Check to see if we can cutoff
     {
         if (type == Exact)
         {
@@ -314,7 +313,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     if (type == Exact || (type == UBound && ttscore < evl) || (type == LBound && ttscore > evl)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
     {
-        evl = entry.eval;
+        evl = TT[(thread_info->CURRENTPOS) & (_mask)].eval;
     }
 
     // Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
@@ -384,7 +383,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int i = 0;
     unsigned long long int original_pos = thread_info->CURRENTPOS;
     int movelen = movegen(board, list, color, incheck);
-    movescore(board, list, depth, color, TT[(thread_info->CURRENTPOS) & (_mask)], type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0, thread_info);
+    movescore(board, list, depth, color, TT[(thread_info->CURRENTPOS) & (_mask)].type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0, thread_info);
     bool raisedalpha = false;
     if (depth == 0)
     {
