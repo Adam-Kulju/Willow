@@ -320,7 +320,7 @@ void selectionsort(struct list *list, int k, int t)
     list[k] = tempmove;
 }
 
-int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen, int threshold, ThreadInfo *thread_info)
+int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen, int threshold, ThreadInfo *thread_info, ttentry entry)
 {
     // Given a list of moves, scores them for move ordering purposes.
 
@@ -342,13 +342,13 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
             exit(1);
         }
 
-        if (type > None && ismatch(TT[(thread_info->CURRENTPOS) & (_mask)].bestmove, list[i].move)) // TT hit: gets the largest bonus.
+        if (type > None && ismatch(entry.bestmove, list[i].move)) // TT hit: gets the largest bonus.
         {
 
-            if (TT[(thread_info->CURRENTPOS) & (_mask)].bestmove.move == list[i].move.move)
+            if (entry.bestmove.move == list[i].move.move)
             {
 
-                if (TT[(thread_info->CURRENTPOS) & (_mask)].bestmove.flags == list[i].move.flags)
+                if (entry.bestmove.flags == list[i].move.flags)
                 {
 
                     list[i].eval += 10000000;
