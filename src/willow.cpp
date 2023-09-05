@@ -89,6 +89,8 @@ void move_uci(char *command, int i, struct board_info *board, struct movelist *m
     }
 }
 
+int thread_num = 1;
+
 int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *color, ThreadInfo *thread_info) // handles various UCI options.
 {                                                                                      // assumes board+movelist have been already set up under wraps
 
@@ -105,11 +107,11 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
 
     if (!strcmp(command, "uci"))
     {
-        printf("id name Willow 3.0\n");
+        printf("id name Willow 3.1\n");
         printf("id author Adam Kulju\n");
         // send options
         printf("option name Hash type spin default 32 min 1 max 131072\n");
-        printf("option name Threads type spin default 1 min 1 max 1\n");
+        printf("option name Threads type spin default 1 min 1 max 1024\n");
 
         printf("uciok\n");
     }
@@ -153,6 +155,11 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
         TT = (struct ttentry *)malloc(sizeof(struct ttentry) * TTSIZE);
     }
 
+    else if (strstr(command, "setoption name Threads value")){
+        thread_num = atoi(&command[29]);
+        printf("%i\n", thread_num);
+    }
+
     if (strstr(command, "position startpos"))
     {
         *color = WHITE;
@@ -187,6 +194,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
         {
             time = 1000000;
             coldturkey = 1000000;
+            maximumtime = 1000000;
         }
         else if (strstr(command, "movetime"))
         {
@@ -314,7 +322,10 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
 
         time = MAX(time, 0.001);
         printf("%f %f\n", coldturkey, time);
-        iid_time(board, movelst, time, key, *color, false, true, nullmove, thread_info);
+        start_time = std::chrono::steady_clock::now();
+        thread_info->id = 0;
+        start_search(board, movelst, time, key, *color, thread_info, thread_num);
+        //iid_time(board, movelst, time, key, *color, false, true, nullmove, thread_info);
     }
     // fflush(hstdin);
     return 0;
@@ -380,9 +391,7 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes an
     {
 
         clearTT();
-        clearKiller(thread_info);
-        clearCounters(thread_info);
-        clearHistory(true, thread_info);
+        memset(thread_info, 0, sizeof(ThreadInfo));
         search_age = 0;
 
         struct board_info board;
@@ -398,8 +407,10 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes an
         setfromfen(&board, movelst, &key, positions[i], &color, 0, thread_info);
 
         printfull(&board);
-
-        iid_time(&board, movelst, 1000000, &key, color, false, true, nullmove, thread_info);
+        maximumtime = 100000;
+        start_search(&board, movelst, 1000000, &key, color, thread_info, 1);
+        //start_time = std::chrono::steady_clock::now();
+        //iid_time(&board, movelst, 1000000, &key, color, false, true, nullmove, thread_info);
         t += nodes;
     }
     printf("Bench: %lu nodes %i nps\n", t, (int)(t / ((clock() - start) / (float)CLOCKS_PER_SEC)));
@@ -441,6 +452,8 @@ int main(int argc, char *argv[])
 
     init();
     ThreadInfo *thread_info = new ThreadInfo();
+    memset(thread_info, 0, sizeof(ThreadInfo));
+
     thread_info->nnue_state.m_accumulator_stack.reserve(MOVESIZE);
     if (argc > 1)
     {

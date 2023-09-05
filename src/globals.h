@@ -5,8 +5,9 @@
 #include <math.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <thread>
 
-clock_t start_time; // stores the time that the engine started a search
+std::chrono::time_point<std::chrono::steady_clock> start_time; // stores the time that the engine started a search
 float maximumtime;  // the time that the engine has gotten for time management purposes
 float coldturkey;   // the total amount of time that the engine has in the game
 bool isattacker;    // a temp global for if a piece is an attacker on king
@@ -17,7 +18,7 @@ int attackers[2]; // the number of attackers on king
 
 int NODES_IID = 0;
 
-struct move currentmove; // The engine's current best move at root
+
 short int search_age;    // search age for TT purposes
 
 short int MAXDEPTH; // The maximum depth of a position (set to 14 for bench and 99 normally)
@@ -35,7 +36,6 @@ bool CENTERWHITE[0x88]; // lookup table for White's center
 bool CENTERBLACK[0x88]; // lookup table for Black's center
 
 
-
 struct ThreadInfo{
     struct move KILLERTABLE[100][2];      // Stores killer moves
     struct move COUNTERMOVES[6][128];     // Stores countermoves
@@ -43,7 +43,17 @@ struct ThreadInfo{
     int CONTHIST[6][128][6][128];
     unsigned long long int CURRENTPOS;
     NNUE_State nnue_state{};
+    struct move currentmove; // The engine's current best move at root
+    int id;
+    struct board_info board;
+    struct movelist movelst[MOVESIZE];
+    int key;
+    bool stop;
+    long int nodes;
 };
+
+std::vector<std::thread> threads; 
+std::vector<ThreadInfo> thread_infos;
 //ThreadInfo thread_info;
 
 static unsigned long long mt[NN];

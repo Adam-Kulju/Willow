@@ -16,6 +16,7 @@ ifeq ($(OS), Windows_NT)
 else
 	SUFFIX :=
 	LINKER := -lm
+	CXXFLAGS += -pthread
 endif
 
 ifneq (,$(findstring clang,$(shell $(CXX) --version)))

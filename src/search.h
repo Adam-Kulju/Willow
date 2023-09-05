@@ -6,6 +6,7 @@
 #include "movegen.h"
 #include "nnue.h"
 #include <time.h>
+#include <chrono>
 
 struct nodeinfo
 {
@@ -23,25 +24,27 @@ void updateHistory(int &entry, int score){
 int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthleft, bool color, bool incheck, ThreadInfo *thread_info)
 // Performs a quiescence search on the given position.
 {
-    if (depth > maxdepth) // update seldepth
+    if (depth > maxdepth || depth >= 99) // update seldepth
     {
         maxdepth = depth;
     }
-    nodes++;
+    nodes++, thread_info->nodes++;
     if (depthleft <= 0) // return if we are too deep
     {
         return incheck ? 0 : eval(board, color, thread_info);
     }
 
-    if (!((nodes) & (CHECKTIME))) // return if we have run out of time, either alloted to search or overall
+    if (thread_info->id == 0 && !((nodes) & (CHECKTIME))) // return if we have run out of time, either alloted to search or overall
     {
-        float rightnow = ((float)(clock() - start_time)) / CLOCKS_PER_SEC;
+    auto end = std::chrono::steady_clock::now();
+    auto rightnow = (float)std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() / 1000;
+
         if (rightnow > maximumtime || rightnow > coldturkey)
         { // you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
     }
-    if (NODES_IID && !((nodes) % (NODES_IID)))
+    if ((NODES_IID && !((nodes) % (NODES_IID))) || thread_info->stop)
     {
         return TIMEOUT;
     }
@@ -197,9 +200,9 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
 int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depthleft, int depth, bool color, bool isnull, bool incheck, struct move excludedmove, ThreadInfo *thread_info)
 {
-    nodes++;
+    nodes++, thread_info->nodes++;
 
-    if (depth == 0)
+    if (depth == 0 && thread_info->id == 0)
     {
         maxdepth = 0;
         info.total_nodes = 0;
@@ -207,15 +210,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         info.depth = depthleft;
     }
 
-    if (!((nodes) & (CHECKTIME))) // Timeout detection
+    if (thread_info->id == 0 && !((nodes) & (CHECKTIME))) // Timeout detection
     {
-        float rightnow = ((float)(clock() - start_time)) / CLOCKS_PER_SEC;
+    auto end = std::chrono::steady_clock::now();
+    auto rightnow = (float)std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() / 1000;
         if (rightnow > maximumtime || rightnow > coldturkey)
         { // you MOVE if you're down to 0.1 seconds!
             return TIMEOUT;
         }
     }
-    if (NODES_IID && !((nodes) % (NODES_IID)))
+    if ((NODES_IID && !((nodes) % (NODES_IID))) || thread_info->stop)
     {
         return TIMEOUT;
     }
@@ -383,7 +387,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool raisedalpha = false;
     if (depth == 0)
     {
-        currentmove.move = 0;
+        thread_info->currentmove.move = 0;
     }
     struct move bestmove = nullmove;
     bool quietsprune = false;
@@ -495,7 +499,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
         }
 
-        long int current_nodes = nodes;
+        long int current_nodes = thread_info->nodes;
         move_add(&board2, movelst, key, list[i].move, color, iscap, thread_info);
 
         if (ispv == true && !betacount) // The first move of a PV node gets searched to full depth with a full window.
@@ -607,12 +611,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
         }
 
-        if (depth == 0)
+        if (depth == 0 && thread_info->id == 0)
         {
-            info.total_nodes += nodes - current_nodes;
+            info.total_nodes += thread_info->nodes - current_nodes;
             if (list[i].eval > bestscore)
             {
-                info.best_nodes = nodes - current_nodes;
+                info.best_nodes = thread_info->nodes - current_nodes;
             }
         }
 
@@ -626,7 +630,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         {
             if (depth == 0)
             {
-                currentmove = list[i].move;
+                thread_info->currentmove = list[i].move;
             }
             bestmove = list[i].move;
             if (!singularsearch)
@@ -690,7 +694,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         {
             if (depth == 0)
             {
-                currentmove = list[i].move;
+                thread_info->currentmove = list[i].move;
             }
             raisedalpha = true;
             alpha = list[i].eval;
@@ -772,12 +776,11 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
     // Performs an Iterative Deepening search on the current position.
 
     nodes = 0;
-    maximumtime = maxtime * 2;
+    
     float opttime = maxtime * 0.6;
-    start_time = clock();
     clearHistory(false, thread_info);
     clearKiller(thread_info);
-    currentmove.move = 0;
+    thread_info->currentmove.move = 0;
     int alpha = -1000000, beta = 1000000;
     bool incheck = isattacked(board, board->kingpos[color], color ^ 1);
     int g = 0;
@@ -799,7 +802,9 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
                 char temp[6];
                 if (isprint)
                 {
-                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC, conv(pvmove, temp));
+                    auto end = std::chrono::steady_clock::now();
+                    auto rightnow = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count();
+                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, rightnow, conv(pvmove, temp));
                 }
                 alpha -= delta;
                 beta = (alpha + 3 * beta) / 4;
@@ -808,9 +813,9 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
 
                 if (abs(evl) == TIMEOUT)
                 {
-                    if (currentmove.move == 0)
+                    if (thread_info->currentmove.move == 0)
                     {
-                        currentmove = pvmove;
+                        thread_info->currentmove = pvmove;
                         depth--;
                     }
                     break;
@@ -821,9 +826,11 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
                 char temp[6];
                 if (isprint)
                 {
-                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC, conv(currentmove, temp));
+                    auto end = std::chrono::steady_clock::now();
+                    auto rightnow = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count();
+                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, rightnow, conv(thread_info->currentmove, temp));
                 }
-                pvmove = currentmove;
+                pvmove = thread_info->currentmove;
                 beta += delta;
                 delta += delta * 2 / 3;
 
@@ -833,39 +840,41 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
                 evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color, false, incheck, excludedmove, thread_info);
                 if (abs(evl) == TIMEOUT)
                 {
-                    currentmove = pvmove;
+                    thread_info->currentmove = pvmove;
                     break;
                 }
             }
         }
         if (abs(evl) == TIMEOUT) // If we've run out of time and don't have a best move from this iteration, use the one from last iteration
         {
-            if (currentmove.move == 0)
+            if (thread_info->currentmove.move == 0)
             {
-                currentmove = pvmove;
+                thread_info->currentmove = pvmove;
                 depth--;
             }
             break;
         }
 
-        clock_t time2 = clock() - start_time;
+            auto end = std::chrono::steady_clock::now();
+            float rightnow = (float)std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count();
         g = evl;
-        pvmove = currentmove;
+        pvmove = thread_info->currentmove;
 
         // Print search results, handling mate scores
         if (isprint)
         {
+
             if (g > 99900)
             {
-                printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (100001 - g) / 2, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC);
+                printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (100001 - g) / 2, nodes, (long int)rightnow);
             }
             else if (g < -99900)
             {
-                printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (-100001 - g) / 2, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC);
+                printf("info depth %i seldepth %i score mate %i nodes %lu time %li pv ", depth, maxdepth, (-100001 - g) / 2, nodes, (long int)rightnow);
             }
             else
             {
-                printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv ", depth, maxdepth, g, nodes, (long int)((float)clock() - start_time) * 1000 / CLOCKS_PER_SEC);
+                printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv ", depth, maxdepth, g, nodes, (long int)rightnow);
             }
         }
 
@@ -884,14 +893,19 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
             // Print the principal variation, extracted from the TT table, as long as it remains a legal line.
             while (d > 0)
             {
-                if (TT[thread_info->CURRENTPOS & _mask].zobrist_key != thread_info->CURRENTPOS || ismatch(TT[thread_info->CURRENTPOS & _mask].bestmove, nullmove) ||
-                    !verifypv(&board2, TT[thread_info->CURRENTPOS & _mask].bestmove, false, c, thread_info))
+                if (TT[thread_info->CURRENTPOS & _mask].zobrist_key != thread_info->CURRENTPOS)
                 {
                     break;
                 }
+                struct move tempmove = TT[thread_info->CURRENTPOS & _mask].bestmove;
+
+                if (!verifypv(&board2, tempmove, false, c, thread_info)){
+                    break;
+                }
+
                 char temp[6];
-                printf("%s ", conv(TT[thread_info->CURRENTPOS & _mask].bestmove, temp));
-                move(&board2, TT[thread_info->CURRENTPOS & _mask].bestmove, c, thread_info);
+                printf("%s ", conv(tempmove, temp));
+                move(&board2, tempmove, c, thread_info);
                 thread_info->nnue_state.pop();
                 c ^= 1;
                 d--;
@@ -909,7 +923,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
             beta = evl + 12;
         }
 
-        if ((float)time2 / CLOCKS_PER_SEC > opttime || depth >= MAXDEPTH) // If we've hit the soft cap for time, finish after the iteration.
+        if (depth >= MAXDEPTH || ((float)rightnow / 1000 > opttime && thread_info->id == 0)) // If we've hit the soft cap for time, finish after the iteration.
         {
             break;
         }
@@ -917,10 +931,46 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
     char temp[8], temp2[8];
     if (isprint)
     {
-        printf("bestmove %s\n", conv(currentmove, temp));
+        printf("bestmove %s\n", conv(thread_info->currentmove, temp));
     }
-    search_age++;
     return g;
+}
+
+
+void start_search(struct board_info *board, struct movelist *movelst, float maxtime, int *key, bool color, ThreadInfo *thread_info, int numThreads){
+    thread_info->board = *board;
+    memcpy(thread_info->movelst, movelst, sizeof(movelist) * 1000);
+    thread_info->key = *key;
+    thread_info->stop = false;
+
+    for (int i = thread_infos.size(); i < numThreads - 1; i++){
+        thread_infos.emplace_back();
+    }
+
+    for (int i = 0; i < thread_infos.size(); i++){
+        thread_infos[i] = *thread_info;
+        thread_infos[i].id = i + 1;
+    }
+    start_time = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < numThreads-1; i++){
+        threads.emplace_back(iid_time, &thread_infos[i].board, thread_infos[i].movelst, maxtime, &thread_infos[i].key, color, false, false, nullmove, &thread_infos[i]);
+    }
+    iid_time(&thread_info->board, thread_info->movelst, maxtime, &thread_info->key, color, false, true, nullmove, thread_info);
+
+    // Stop helper threads
+    for (auto& td : thread_infos) {
+        td.stop = true;
+    }
+
+    for (auto& th : threads) {
+        if (th.joinable())
+            th.join();
+    }
+
+    threads.clear();
+    search_age++;
+
 }
 
 #endif
