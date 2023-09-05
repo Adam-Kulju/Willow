@@ -933,14 +933,14 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
     {
         printf("bestmove %s\n", conv(thread_info->currentmove, temp));
     }
+    search_age++;
     return g;
 }
 
 
 void start_search(struct board_info *board, struct movelist *movelst, float maxtime, int *key, bool color, ThreadInfo *thread_info, int numThreads){
-    setfull(&thread_info->board);
     thread_info->board = *board;
-    *thread_info->movelst = *movelst;
+    memcpy(thread_info->movelst, movelst, sizeof(movelist) * 1000);
     thread_info->key = *key;
     thread_info->stop = false;
 
@@ -952,8 +952,6 @@ void start_search(struct board_info *board, struct movelist *movelst, float maxt
         thread_infos[i] = *thread_info;
         thread_infos[i].id = i + 1;
     }
-
-    maximumtime = maxtime * 2;
     start_time = std::chrono::steady_clock::now();
 
     for (int i = 0; i < numThreads-1; i++){
