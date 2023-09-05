@@ -469,7 +469,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         if (depth && depth < info.depth * 2)
         { // if we're not already in a singular search, do singular search.
 
-            if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && TT[(thread_info->CURRENTPOS & _mask)].depth >= depthleft - 3 && type != UBound)
+            if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && entry.depth >= depthleft - 3 && type != UBound)
             {
                 int sBeta = ttscore - (depthleft);
 
