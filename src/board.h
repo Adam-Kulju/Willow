@@ -293,6 +293,7 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
     if (!move.move)
     {
         board->epsquare = 0;
+        __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
         return 0;
     }
     thread_info->nnue_state.push();
@@ -387,6 +388,7 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
         thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
     }
     // printfull(board);
+    __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
     return 0;
 }
 
