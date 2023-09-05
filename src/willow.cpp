@@ -121,12 +121,10 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     }
     if (!strcmp(command, "ucinewgame"))
     {
-        clearTT();
-        clearKiller(thread_info);
-        clearCounters(thread_info);
-        clearHistory(true, thread_info);
+        memset(thread_info, 0, sizeof(ThreadInfo));
         setfull(board);
         setmovelist(movelst, key, thread_info);
+        calc_pos(board, color, thread_info);
         search_age = 0;
     }
 
@@ -321,8 +319,8 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
 
         time = MAX(time, 0.001);
         printf("%f %f\n", coldturkey, time);
-        //start_search(board, movelst, time, key, *color, thread_info, thread_num);
-        iid_time(board, movelst, time, key, *color, false, true, nullmove, thread_info);
+        start_search(board, movelst, time, key, *color, thread_info, thread_num);
+        //iid_time(board, movelst, time, key, *color, false, true, nullmove, thread_info);
     }
     // fflush(hstdin);
     return 0;
