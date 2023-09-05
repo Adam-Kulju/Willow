@@ -194,6 +194,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
         {
             time = 1000000;
             coldturkey = 1000000;
+            maximumtime = 1000000;
         }
         else if (strstr(command, "movetime"))
         {

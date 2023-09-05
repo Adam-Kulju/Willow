@@ -933,7 +933,6 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
     {
         printf("bestmove %s\n", conv(thread_info->currentmove, temp));
     }
-    search_age++;
     return g;
 }
 
