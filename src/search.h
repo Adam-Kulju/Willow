@@ -539,14 +539,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (iscap && !ispv)
                 {
                     R = R / 2;
-                    if (list[i].eval > 1000190)
+                    if (list[i].eval < 1000190)
                     {
-                        R--;
+                        R++;
                     }
-                }
-                if (ischeck) // Reduce reduction for checks or moves made in check
-                {
-                    R--;
                 }
                 if (list[i].eval > 1000190 && !iscap)
                 {
