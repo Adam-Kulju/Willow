@@ -539,14 +539,18 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (iscap && !ispv)
                 {
                     R = R / 2;
-                    if (list[i].eval < 1000190)
+                    if (list[i].eval > 1000190)
                     {
-                        R++;
+                        R--;
                     }
                 }
-                if (list[i].eval > 1000197 && !iscap)
+                if (ischeck) // Reduce reduction for checks or moves made in check
                 {
-                    R -= 1;
+                    R--;
+                }
+                if (list[i].eval > 1000190 && !iscap)
+                {
+                    R -= 1 + (list[i].eval > 1000198);
                 }
                 if (!ispv && type != Exact) // Increase the reduction if we got a TT hit and we're not in a PV node (we know the TT move is almost certainly best)
                 {
@@ -556,8 +560,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R--;
                 }
-                if (list[i].eval < 16385 && list[i].eval > -16385){
-                    R -= thread_info->HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 5104;
+                if (list[i].eval < 100000 && list[i].eval > -100000){
+                    R -= std::clamp(3, -3, list[i].eval / 5104);
                 }
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
