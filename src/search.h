@@ -544,9 +544,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         R++;
                     }
                 }
-                if (list[i].eval > 1000190 && !iscap)
+                if (list[i].eval > 1000197 && !iscap)
                 {
-                    R -= 1 + (list[i].eval > 1000198);
+                    R -= 1;
                 }
                 if (!ispv && type != Exact) // Increase the reduction if we got a TT hit and we're not in a PV node (we know the TT move is almost certainly best)
                 {
