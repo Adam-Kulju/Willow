@@ -344,7 +344,7 @@ void run_game(const std::string &filename, ThreadInfo *thread_info)
     while (1)
     {
 
-        game(filename, thread_info);
+        game(filename, &thread_info);
     }
 }
 
@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
     NODES_IID = 12000;
     int target = 32 * 1024 * 1024;
     int size = 0;
-    ThreadInfo *thread_info = new ThreadInfo();
+    auto thread_info = std::make_unique<ThreadInfo>();
     thread_info->nnue_state.m_accumulator_stack.reserve(MOVESIZE);
     while (sizeof(struct ttentry) * (1 << size) < target)
     {
