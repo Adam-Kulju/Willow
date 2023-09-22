@@ -806,7 +806,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
                 {
                     auto end = std::chrono::steady_clock::now();
                     auto rightnow = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count();
-                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, rightnow, conv(pvmove, temp));
+                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, alpha, nodes, (long int)rightnow, conv(pvmove, temp));
                 }
                 alpha -= delta;
                 beta = (alpha + 3 * beta) / 4;
@@ -830,7 +830,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
                 {
                     auto end = std::chrono::steady_clock::now();
                     auto rightnow = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count();
-                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, rightnow, conv(thread_info->currentmove, temp));
+                    printf("info depth %i seldepth %i score cp %i nodes %lu time %li pv %s\n", depth, maxdepth, beta, nodes, (long int)rightnow, conv(thread_info->currentmove, temp));
                 }
                 pvmove = thread_info->currentmove;
                 beta += delta;

@@ -337,7 +337,7 @@ float game(std::string filename, ThreadInfo *thread_info)
     return 0;
 }
 
-void run_game(ThreadInfo *thread_info)
+void run_game(ThreadInfo &thread_info)
 {
     srand(clock());
     std::string filename = "data" + std::to_string(rand()) + ".txt";
@@ -345,7 +345,7 @@ void run_game(ThreadInfo *thread_info)
     while (1)
     {
 
-        game(filename, thread_info);
+        game(filename, &thread_info);
     }
 }
 
@@ -361,7 +361,7 @@ int main()
     NODES_IID = 12000;
     int target = 32 * 1024 * 1024;
     int size = 0;
-    ThreadInfo *thread_info = new ThreadInfo();
+    auto thread_info = std::make_unique<ThreadInfo>();
     thread_info->nnue_state.m_accumulator_stack.reserve(MOVESIZE);
     while (sizeof(struct ttentry) * (1 << size) < target)
     {
@@ -371,5 +371,5 @@ int main()
     TTSIZE = 1 << size;
     _mask = TTSIZE - 1;
     maximumtime = 1000, coldturkey = 1000;
-    run_game(thread_info);
+    run_game(*thread_info);
 }
