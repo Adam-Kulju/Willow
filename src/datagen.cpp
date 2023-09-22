@@ -338,7 +338,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
     return 0;
 }
 
-void run_game(const std::string &filename, ThreadInfo *thread_info)
+void run_game(const std::string &filename, ThreadInfo &thread_info)
 {
     printf("Writing data into file %s\n", filename.c_str());
     while (1)
@@ -370,5 +370,5 @@ int main(int argc, char *argv[])
     TTSIZE = 1 << size;
     _mask = TTSIZE - 1;
     maximumtime = 1000, coldturkey = 1000;
-    run_game(argv[1], thread_info);
+    run_game(argv[1], *thread_info);
 }
