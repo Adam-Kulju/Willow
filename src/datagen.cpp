@@ -11,6 +11,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <random>
 
 long int num_fens = 0;
 
@@ -186,14 +187,14 @@ struct move random_move(struct board_info *board, bool color, bool incheck, Thre
     return legalmovelist[randIndex].move;
 }
 
-float game(std::string filename, ThreadInfo *thread_info)
+float game(const std::string &filename, ThreadInfo *thread_info)
 {
     clearTT();
     clearCounters(thread_info);
     clearHistory(true, thread_info);
     clearKiller(thread_info);
     search_age = 0;
-    srand(clock());
+    srand(std::random_device()());
     struct board_info board;
     struct movelist movelst[MOVESIZE];
     setfull(&board);
@@ -337,10 +338,8 @@ float game(std::string filename, ThreadInfo *thread_info)
     return 0;
 }
 
-void run_game(ThreadInfo &thread_info)
+void run_game(const std::string &filename, ThreadInfo &thread_info)
 {
-    srand(clock());
-    std::string filename = "data" + std::to_string(rand()) + ".txt";
     printf("Writing data into file %s\n", filename.c_str());
     while (1)
     {
@@ -349,7 +348,7 @@ void run_game(ThreadInfo &thread_info)
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     setvbuf(stdin, NULL, _IONBF, 0);
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -371,5 +370,5 @@ int main()
     TTSIZE = 1 << size;
     _mask = TTSIZE - 1;
     maximumtime = 1000, coldturkey = 1000;
-    run_game(*thread_info);
+    run_game(argv[1], *thread_info);
 }
