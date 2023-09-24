@@ -566,9 +566,14 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
 
+            int newdepth = depthleft - 1 + extension;
+            if (newdepth - R < 1 && R > 0){
+                R = newdepth-1;
+            }
+
             // Search at a reduced depth with null window
 
-            list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, depthleft - 1 - R + extension, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
+            list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth-R, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
             if (abs(list[i].eval) == TIMEOUT)
             {
                 movelst[*key - 1].move = nullmove;
@@ -583,7 +588,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (list[i].eval > alpha && R > 0)
             {
-                list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, depthleft - 1 + extension, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
+                list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
                 if (abs(list[i].eval) == TIMEOUT)
                 {
                     movelst[*key - 1].move = nullmove;
@@ -600,7 +605,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             if (list[i].eval > alpha && ispv)
             {
 
-                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, depthleft - 1 + extension, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
+                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, newdepth, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
                 if (abs(list[i].eval) == TIMEOUT)
                 {
                     movelst[*key - 1].move = nullmove;
