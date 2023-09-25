@@ -658,7 +658,7 @@ int eval(struct board_info *board, int color, ThreadInfo *thread_info){
         material += SEEVALUES[i+1] * (board->pnbrqcount[0][i] + board->pnbrqcount[1][i]);
     }
     material = 700 + material / 32;
-    return thread_info->nnue_state.evaluate(color) * material / 1024;
+    return thread_info->nnue_state.evaluate(color) * material / 1024; //trying to get this material scaling back in order because oops
 }
 
 #endif
