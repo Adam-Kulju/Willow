@@ -495,6 +495,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     thread_info->nnue_state.pop();
                     return sBeta;
                 }
+                else if (ttscore <= alpha){
+                    extension = -1;
+                }
             }
             else if (ischeck){
                 extension++;
