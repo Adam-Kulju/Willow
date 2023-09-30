@@ -282,132 +282,6 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
     *key += 1;
 }
 
-int move(struct board_info *board, struct move move, bool color, ThreadInfo *thread_info) // Perform a move on the board.
-{
-
-    if (board->epsquare)
-    {
-        thread_info->CURRENTPOS ^= ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it is not.
-    }
-    thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
-    if (!move.move)
-    {
-        board->epsquare = 0;
-        __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
-        return 0;
-    }
-    thread_info->nnue_state.push();
-    unsigned char from = move.move >> 8, to = move.move & 0xFF; // get the indexes of the move
-    unsigned char flag = move.flags >> 2;
-    if ((from & 0x88) || (to & 0x88))
-    {
-        printf("out of board index! %4x %x %i %x\n", move.move, (board->epsquare), color, move.flags);
-        printfull(board);
-        exit(0);
-        return 1;
-    }
-
-    thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from - ((from >> 4) << 3)]; // xor out the piece to be moved
-    thread_info->nnue_state.update_feature<false>(board->board[from], MAILBOX_TO_STANDARD[from]);
-
-    if (flag != 3)
-    { // handle captures and en passant - this is for normal moves
-        if (board->board[to])
-        {
-            board->pnbrqcount[color ^ 1][((board->board[to] >> 1) - 1)]--;
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)];
-            thread_info->nnue_state.update_feature<false>(board->board[to], MAILBOX_TO_STANDARD[to]);
-        }
-    }
-    else
-    { // and this branch handles en passant
-        board->pnbrqcount[color ^ 1][0]--;
-        thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[board->epsquare] - 2) << 6)) + board->epsquare - ((board->epsquare >> 4) << 3)];
-        thread_info->nnue_state.update_feature<false>(board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare]);
-        board->board[board->epsquare] = BLANK;
-    }
-
-    if (flag == 1)
-    { // handle promotions
-        board->pnbrqcount[color][0]--;
-        board->board[from] = (((move.flags & 3) + 2) << 1) + color;
-        board->pnbrqcount[color][((move.flags & 3) + 1)]++;
-    }
-
-    if (from == board->kingpos[color])
-    { // handle king moves
-        board->castling[color][0] = false;
-        board->castling[color][1] = false;
-        board->kingpos[color] = to;
-    }
-
-    if (board->board[from] == WROOK + color)
-    { // handle rook moves
-        if (from == 0x70 * color)
-        { // turn off queenside castling
-            board->castling[color][0] = false;
-        }
-        else if (from == 0x7 + 0x70 * color)
-        { // turn off kingside castling
-            board->castling[color][1] = false;
-        }
-    }
-
-    board->board[to] = board->board[from];
-    board->board[from] = BLANK;
-    thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)]; // xor in the piece that has been moved
-    thread_info->nnue_state.update_feature<true>(board->board[to], MAILBOX_TO_STANDARD[to]);
-
-    if (flag == 2)
-    { // castle
-        if ((to & 7) == 6)
-        { // to = g file, meaning kingside
-
-            board->board[to - 1] = board->board[to + 1];
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
-            thread_info->nnue_state.update_feature<true>(board->board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
-            thread_info->nnue_state.update_feature<false>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
-            board->board[to + 1] = BLANK;
-        }
-        else
-        {
-            board->board[to + 1] = board->board[to - 2];
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
-            thread_info->nnue_state.update_feature<false>(board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
-            thread_info->nnue_state.update_feature<true>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
-            board->board[to - 2] = BLANK;
-        }
-    }
-
-    board->epsquare = 0;
-    if (!flag && abs(to - from) == 32 && board->board[to] == WPAWN + color)
-    {
-        board->epsquare = to;
-        thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
-    }
-    // printfull(board);
-    __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
-    return 0;
-}
-
-void move_add(struct board_info *board, struct movelist *movelst, int *key, struct move mve, bool color, bool iscap, ThreadInfo *thread_info) // Add a move to the list of moves in the game.
-{
-    int k = *key;
-    movelst[k].move = mve;
-    movelst[k].fen = thread_info->CURRENTPOS;
-    if ((mve.flags >> 2) == 1 || (board->board[(mve.move & 0xFF)] == WPAWN + color) || iscap)
-    { // if the move is a capture, or a promotion, or a pawn move, half move clock is reset.
-        movelst[k].halfmoves = 0;
-    }
-    else
-    {
-        movelst[k].halfmoves = movelst[k - 1].halfmoves + 1; // otherwise increment it
-    }
-    *key = k + 1;
-}
-
 bool isattacked(struct board_info *board, unsigned char pos, bool encolor) // Is a particular square attacked by an enemy piece?
 {
     // pawns
@@ -466,6 +340,169 @@ bool isattacked(struct board_info *board, unsigned char pos, bool encolor) // Is
 
     return false;
 }
+
+int move(struct board_info *board, struct move move, bool color, ThreadInfo *thread_info) // Perform a move on the board.
+{
+
+    if (!move.move)
+    {
+        if (board->epsquare)
+        {
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it is not.
+        }
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
+        board->epsquare = 0;
+        __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
+        return 0;
+    }
+    unsigned char from = move.move >> 8, to = move.move & 0xFF; // get the indexes of the move
+    unsigned char flag = move.flags >> 2;
+    if ((from & 0x88) || (to & 0x88))
+    {
+        printf("out of board index! %4x %x %i %x\n", move.move, (board->epsquare), color, move.flags);
+        printfull(board);
+        exit(0);
+    }
+
+    struct board_info board2 = *board;
+
+    if (flag != 3)
+    { // handle captures and en passant - this is for normal moves
+        if (board2.board[to])
+        {
+            board2.pnbrqcount[color ^ 1][((board2.board[to] >> 1) - 1)]--;
+        }
+    }
+    else
+    { // and this branch handles en passant
+        board2.pnbrqcount[color ^ 1][0]--;
+        board2.board[board2.epsquare] = BLANK;
+    }
+
+    if (flag == 1)
+    { // handle promotions
+        board2.pnbrqcount[color][0]--;
+        board2.board[from] = (((move.flags & 3) + 2) << 1) + color;
+        board2.pnbrqcount[color][((move.flags & 3) + 1)]++;
+    }
+
+    if (from == board2.kingpos[color])
+    { // handle king moves
+        board2.castling[color][0] = false;
+        board2.castling[color][1] = false;
+        board2.kingpos[color] = to;
+    }
+
+    if (board2.board[from] == WROOK + color)
+    { // handle rook moves
+        if (from == 0x70 * color)
+        { // turn off queenside castling
+            board2.castling[color][0] = false;
+        }
+        else if (from == 0x7 + 0x70 * color)
+        { // turn off kingside castling
+            board2.castling[color][1] = false;
+        }
+    }
+
+    board2.board[to] = board2.board[from];
+    board2.board[from] = BLANK;
+
+    if (flag == 2)
+    { // castle
+        if ((to & 7) == 6)
+        { // to = g file, meaning kingside
+
+            board2.board[to - 1] = board2.board[to + 1];
+            board2.board[to + 1] = BLANK;
+        }
+        else
+        {
+            board2.board[to + 1] = board2.board[to - 2];
+            board2.board[to - 2] = BLANK;
+        }
+    }
+    if (isattacked(&board2, board2.kingpos[color], color^1)){
+        return 1;
+    }
+
+
+
+    if (board->epsquare)
+    {
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it is not.
+    }
+    thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
+
+    thread_info->nnue_state.push();
+
+    thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from - ((from >> 4) << 3)]; // xor out the piece to be moved
+    thread_info->nnue_state.update_feature<false>(board->board[from], MAILBOX_TO_STANDARD[from]);
+
+    if (flag != 3)
+    { // handle captures and en passant - this is for normal moves
+        if (board->board[to])
+        {
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)];
+            thread_info->nnue_state.update_feature<false>(board->board[to], MAILBOX_TO_STANDARD[to]);
+        }
+    }
+    else
+    { // and this branch handles en passant
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[board->epsquare] - 2) << 6)) + board->epsquare - ((board->epsquare >> 4) << 3)];
+        thread_info->nnue_state.update_feature<false>(board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare]);
+    }
+
+    thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to] - 2) << 6)) + to - ((to >> 4) << 3)]; // xor in the piece that has been moved
+    thread_info->nnue_state.update_feature<true>(board2.board[to], MAILBOX_TO_STANDARD[to]);
+
+    if (flag == 2)
+    { // castle
+        if ((to & 7) == 6)
+        { // to = g file, meaning kingside
+
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
+            thread_info->nnue_state.update_feature<true>(board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
+            thread_info->nnue_state.update_feature<false>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+        }
+        else
+        {
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
+            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
+            thread_info->nnue_state.update_feature<false>(board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
+            thread_info->nnue_state.update_feature<true>(board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+        }
+    }
+
+    *board = board2;
+    board->epsquare = 0;
+    if (!flag && abs(to - from) == 32 && board->board[to] == WPAWN + color)
+    {
+        board->epsquare = to;
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
+    }
+    // printfull(board);
+    __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
+    return 0;
+}
+
+void move_add(struct board_info *board, struct movelist *movelst, int *key, struct move mve, bool color, bool iscap, ThreadInfo *thread_info) // Add a move to the list of moves in the game.
+{
+    int k = *key;
+    movelst[k].move = mve;
+    movelst[k].fen = thread_info->CURRENTPOS;
+    if ((mve.flags >> 2) == 1 || (board->board[(mve.move & 0xFF)] == WPAWN + color) || iscap)
+    { // if the move is a capture, or a promotion, or a pawn move, half move clock is reset.
+        movelst[k].halfmoves = 0;
+    }
+    else
+    {
+        movelst[k].halfmoves = movelst[k - 1].halfmoves + 1; // otherwise increment it
+    }
+    *key = k + 1;
+}
+
 char isattacked_mv(struct board_info *board, unsigned char pos, bool encolor)
 // Same as above, but ignores kings. Slight speed boost for eval purposes.
 {

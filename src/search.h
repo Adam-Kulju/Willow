@@ -144,16 +144,10 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
 
         if (move(&board2, list[i].move, color, thread_info))
         {
-            exit(1);
-        }
-
-        if (isattacked(&board2, board2.kingpos[color], color ^ 1)) // skip illegal moves
-        {
-            thread_info->CURRENTPOS = original_pos;
-            thread_info->nnue_state.pop();
             i++;
             continue;
         }
+
 
         list[i].eval = -quiesce(&board2, -beta, -alpha, depth + 1, depthleft - 1, color ^ 1, isattacked(board, board->kingpos[color ^ 1], color), thread_info);
 
@@ -411,22 +405,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         if (move(&board2, list[i].move, color, thread_info))
         {
-            printfull(board);
-            for (int b = 0; b < *key; b++)
-            {
-                char a[6];
-                printf("%s *%x ", conv(movelst[b].move, a), movelst[b].move.flags);
-            }
-            printf("\n");
-            exit(0);
-        }
-        if (isattacked(&board2, board2.kingpos[color], color ^ 1))
-        {
-            thread_info->CURRENTPOS = original_pos;
-            thread_info->nnue_state.pop();
             i++;
             continue;
         }
+
         if (!ismove)
         {
             bestmove = list[i].move;
@@ -472,14 +454,18 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 && abs(evl) < 50000 && entry.depth >= depthleft - 3 && type != UBound)
             {
                 int sBeta = ttscore - (depthleft);
-
+                long long unsigned int temp = thread_info->CURRENTPOS;
                 thread_info->CURRENTPOS = original_pos; // reset hash of the position for the singular search
-                thread_info->nnue_state.pop();          // pop the thread_info->nnue_state to before we made our move. After singular search, we make the move again to reset the nnue state.
+
+                NNUE_State temp_nnue = thread_info->nnue_state; //disgusting but works
+                thread_info->nnue_state.pop();
 
                 int sScore = alphabeta(board, movelst, key, sBeta - 1, sBeta, (depthleft - 1) / 2, depth, color, false, incheck, list[i].move, thread_info);
 
-                board2 = *board;
-                move(&board2, list[i].move, color, thread_info);
+                thread_info->nnue_state.push();
+                thread_info->nnue_state = temp_nnue;
+
+                thread_info->CURRENTPOS = temp;
 
                 if (sScore < sBeta)
                 {
