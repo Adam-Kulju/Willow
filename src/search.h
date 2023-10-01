@@ -410,7 +410,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             continue;
         }
         struct board_info board2 = *board;
-        int piecetype = board->board[list[i].move.move >> 8] - 1;
+        int piecetype = board->board[list[i].move.move >> 8] - 2;
 
         if (move(&board2, list[i].move, color, thread_info))
         {
@@ -655,8 +655,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (depth > 1 && !isnull && movelst[(*key-2)].move.move != 0){
                     isreply = true;
                     lastpiecetype = board->board[movelst[(*key-2)].move.move & 0xFF] - 2, lastsquare = movelst[(*key-2)].move.move & 0xFF;
-                    thread_info->COUNTERMOVES[board->board[movelst[(*key) - 2].move.move & 0xFF] - 2][lastsquare] = list[i].move;
+
+                    thread_info->COUNTERMOVES[lastpiecetype][lastsquare] = list[i].move;
                 }
+
                 if (!ismatch(thread_info->KILLERTABLE[depth][0], list[i].move))
                 {
                     thread_info->KILLERTABLE[depth][0] = list[i].move;
@@ -665,6 +667,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     thread_info->KILLERTABLE[depth][1] = list[i].move;
                 }
+
 
                 updateHistory(thread_info->HISTORYTABLE[color][(list[i].move.move >> 8)][list[i].move.move & 0xFF], c);
                 if (isreply){

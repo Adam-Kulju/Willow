@@ -341,7 +341,7 @@ void clearKiller(ThreadInfo *thread_info) // Clears the Killer Table
 
 void clearCounters(ThreadInfo *thread_info) // Clears the countermoves table
 {
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < 12; i++)
     {
         for (int n = 0; n < 128; n++)
         {
