@@ -215,8 +215,9 @@ float game(const std::string &filename, ThreadInfo *thread_info)
         {
             return 0;
         }
+        int piecetype = board.board[mve.move >> 8] - 1;
         move(&board, mve, color, thread_info);
-        move_add(&board, movelst, &key, mve, color, (mve.flags == 0xC || board.board[mve.move & 0xFF]), thread_info);
+        move_add(&board, movelst, &key, mve, color, (mve.flags == 0xC || board.board[mve.move & 0xFF]), thread_info, piecetype);
         color ^= 1;
     }
 
@@ -311,8 +312,9 @@ float game(const std::string &filename, ThreadInfo *thread_info)
             g = iid_time(&board, movelst, 5000, &key, color, true, true, nullmove, thread_info);
             exit(0);
         }
+        int piecetype = board.board[thread_info->currentmove.move >> 8] - 1;
         move(&board, thread_info->currentmove, color, thread_info);
-        move_add(&board, movelst, &key, thread_info->currentmove, color, isnoisy, thread_info);
+        move_add(&board, movelst, &key, thread_info->currentmove, color, isnoisy, thread_info, piecetype);
         bool ischeck = isattacked(&board, board.kingpos[color ^ 1], color);
 
         if (!(isnoisy || incheck || ischeck || decisive_flag))

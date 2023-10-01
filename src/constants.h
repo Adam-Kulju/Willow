@@ -94,6 +94,7 @@ struct movelist     //A in game move representation
     long long unsigned int fen;     //The resulting zobrist key for the board
     char halfmoves;                 //Halfmoves
     int staticeval;                 //Static evaluation of the position at that time
+    int piecetype;
 };
 struct list     //Stores a move and ordering/eval score. Used for search.
 {

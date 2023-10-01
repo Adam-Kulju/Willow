@@ -38,9 +38,9 @@ bool CENTERBLACK[0x88]; // lookup table for Black's center
 
 struct ThreadInfo{
     struct move KILLERTABLE[100][2];      // Stores killer moves
-    struct move COUNTERMOVES[6][128];     // Stores countermoves
+    struct move COUNTERMOVES[12][128];     // Stores countermoves
     int HISTORYTABLE[2][0x80][0x80]; // The History table
-    int CONTHIST[6][128][6][128];
+    int CONTHIST[12][128][12][128];
     unsigned long long int CURRENTPOS;
     NNUE_State nnue_state{};
     struct move currentmove; // The engine's current best move at root

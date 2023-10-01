@@ -81,9 +81,10 @@ void move_uci(char *command, int i, struct board_info *board, struct movelist *m
         struct move temp;
         convto(buf, &temp, board);
         bool iscap = (temp.flags == 0xC || board->board[temp.move & 0xFF]); // captures reset the halfmove clock for 50-move rule draws, so it's important to check that the move is a capture.
+        int piece_type = board->board[temp.move >> 8] - 1;
         move(board, temp, *color, thread_info);
 
-        move_add(board, movelst, key, temp, *color, iscap, thread_info);
+        move_add(board, movelst, key, temp, *color, iscap, thread_info, piece_type);
 
         *color ^= 1;
     }

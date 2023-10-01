@@ -320,16 +320,16 @@ void selectionsort(struct list *list, int k, int t)
     list[k] = tempmove;
 }
 
-int movescore(struct board_info *board, struct list *list, int depth, bool color, char type, struct move lastmove, int movelen, int threshold, ThreadInfo *thread_info, ttentry entry)
+int movescore(struct board_info *board, struct movelist *movelst, int *key, struct list *list, int depth, bool color, char type, int movelen, int threshold, ThreadInfo *thread_info, ttentry entry)
 {
     // Given a list of moves, scores them for move ordering purposes.
 
     int lastpiecetype = 0, lastpiecedest = 0;
     bool isreply = false;
-    if (!ismatch(lastmove, nullmove)){
+    if (depth > 1 && movelst[*key-1].piecetype != -1 && depth < 90){
         isreply = true;
-        lastpiecetype = (board->board[lastmove.move & 0xFF] >> 1) - 1;
-        lastpiecedest = lastmove.move & 0xFF;
+        lastpiecetype = board->board[movelst[*key-1].move.move & 0xFF] - 1;
+        lastpiecedest = movelst[*key-1].move.move & 0xFF;
     } 
 
     int i = 0;
@@ -337,8 +337,12 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
     {
         list[i].eval = 1000000; // base
 
-        if (depth > 1 && lastmove.move != 0 && (board->board[lastmove.move & 0xFF] >> 1) - 1 < 0)
+        if (isreply && movelst[*key-1].move.move != 0 && board->board[movelst[*key-1].move.move & 0xFF] - 1 < 0)
         {
+            for (int i = 0; i < *key; i++){
+                printf("%x\n", movelst[i].move.move);
+            }
+            printfull(board);
             exit(1);
         }
 
@@ -372,7 +376,7 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         {
             list[i].eval += 198;
         }
-        else if (depth > 1 && isreply && ismatch(list[i].move, thread_info->COUNTERMOVES[lastpiecetype][lastpiecedest]))
+        else if (isreply && ismatch(list[i].move, thread_info->COUNTERMOVES[lastpiecetype][lastpiecedest]))
         // The move from the countermoves history table
         {
             // the piece that the opponent moved     the square it is on
@@ -384,7 +388,10 @@ int movescore(struct board_info *board, struct list *list, int depth, bool color
         {
             list[i].eval = thread_info->HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
             if (isreply){
-                list[i].eval += thread_info->CONTHIST[lastpiecetype][lastpiecedest][board->board[list[i].move.move >> 8] / 2 - 1][list[i].move.move & 0xFF];
+                list[i].eval += thread_info->CONTHIST[lastpiecetype][lastpiecedest][board->board[list[i].move.move >> 8] - 1][list[i].move.move & 0xFF];
+            }
+            if (depth > 2 && movelst[*key-2].piecetype != -1){
+                //list[i].eval += thread_info->CONTHIST[movelst[*key-2].piecetype][movelst[*key-2].move.move & 0xFF][board->board[list[i].move.move >> 8] - 1][list[i].move.move & 0xFF];
             }
         }
 

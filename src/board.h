@@ -487,7 +487,7 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
     return 0;
 }
 
-void move_add(struct board_info *board, struct movelist *movelst, int *key, struct move mve, bool color, bool iscap, ThreadInfo *thread_info) // Add a move to the list of moves in the game.
+void move_add(struct board_info *board, struct movelist *movelst, int *key, struct move mve, bool color, bool iscap, ThreadInfo *thread_info, int piecetype) // Add a move to the list of moves in the game.
 {
     int k = *key;
     movelst[k].move = mve;
@@ -500,6 +500,7 @@ void move_add(struct board_info *board, struct movelist *movelst, int *key, stru
     {
         movelst[k].halfmoves = movelst[k - 1].halfmoves + 1; // otherwise increment it
     }
+    movelst[k].piecetype = piecetype;
     *key = k + 1;
 }
 
