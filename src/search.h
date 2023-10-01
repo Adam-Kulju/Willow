@@ -654,8 +654,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
                 if (depth > 1 && !isnull && movelst[(*key-2)].move.move != 0){
                     isreply = true;
-                    lastpiecetype = board->board[movelst[(*key-2)].move.move & 0xFF] - 1, lastsquare = movelst[(*key-2)].move.move & 0xFF;
-                    thread_info->COUNTERMOVES[board->board[movelst[(*key) - 2].move.move & 0xFF] - 1][lastsquare] = list[i].move;
+                    lastpiecetype = board->board[movelst[(*key-2)].move.move & 0xFF] - 2, lastsquare = movelst[(*key-2)].move.move & 0xFF;
+                    thread_info->COUNTERMOVES[board->board[movelst[(*key) - 2].move.move & 0xFF] - 2][lastsquare] = list[i].move;
                 }
                 if (!ismatch(thread_info->KILLERTABLE[depth][0], list[i].move))
                 {
@@ -684,7 +684,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
                         updateHistory(thread_info->HISTORYTABLE[color][(list[a].move.move >> 8)][list[a].move.move & 0xFF], -c);
                         if (isreply){
-                            updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][board->board[list[a].move.move >> 8] - 1][list[a].move.move & 0xFF], -c);
+                            updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
                         if (depth > 2 && movelst[*key-3].piecetype != -1){
                             //updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][board->board[list[a].move.move >> 8] - 1][list[a].move.move & 0xFF], -c);

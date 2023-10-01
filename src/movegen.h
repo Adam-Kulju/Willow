@@ -328,7 +328,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
     bool isreply = false;
     if (depth > 1 && movelst[*key-1].piecetype != -1 && depth < 90){
         isreply = true;
-        lastpiecetype = board->board[movelst[*key-1].move.move & 0xFF] - 1;
+        lastpiecetype = board->board[movelst[*key-1].move.move & 0xFF] - 2;
         lastpiecedest = movelst[*key-1].move.move & 0xFF;
     } 
 
@@ -388,7 +388,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
         {
             list[i].eval = thread_info->HISTORYTABLE[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
             if (isreply){
-                list[i].eval += thread_info->CONTHIST[lastpiecetype][lastpiecedest][board->board[list[i].move.move >> 8] - 1][list[i].move.move & 0xFF];
+                list[i].eval += thread_info->CONTHIST[lastpiecetype][lastpiecedest][board->board[list[i].move.move >> 8] - 2][list[i].move.move & 0xFF];
             }
             if (depth > 2 && movelst[*key-2].piecetype != -1){
                 //list[i].eval += thread_info->CONTHIST[movelst[*key-2].piecetype][movelst[*key-2].move.move & 0xFF][board->board[list[i].move.move >> 8] - 1][list[i].move.move & 0xFF];
