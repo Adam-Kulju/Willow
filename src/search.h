@@ -141,7 +141,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
         }
 
         struct board_info board2 = *board;
-        int piecetype = board->board[list[i].move.move >> 8] - 1;
+        int piecetype = board->board[list[i].move.move >> 8] - 2;
 
         if (move(&board2, list[i].move, color, thread_info))
         {
