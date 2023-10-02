@@ -21,7 +21,7 @@ void updateHistory(int &entry, int score){
     entry += score - entry * abs(score) / 16384;
 }
 
-int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthleft, bool color, bool incheck, ThreadInfo *thread_info)
+int quiesce(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depth, int depthleft, bool color, bool incheck, ThreadInfo *thread_info)
 // Performs a quiescence search on the given position.
 {
     if (depth > maxdepth || depth >= 99) // update seldepth
@@ -121,7 +121,7 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
     struct list list[LISTSIZE];
     int listlen = movegen(board, list, color, incheck);
 
-    movescore(board, list, 99, color, type, nullmove, listlen, -108, thread_info, entry);
+    movescore(board, movelst, key, list, 99, color, type, listlen, -108, thread_info, entry);
     // score the moves
 
     struct move bestmove = nullmove;
@@ -141,20 +141,24 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         }
 
         struct board_info board2 = *board;
+        int piecetype = board->board[list[i].move.move >> 8] - 1;
 
         if (move(&board2, list[i].move, color, thread_info))
         {
             i++;
             continue;
         }
+        move_add(board, movelst, key, list[i].move, color, (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]), thread_info, piecetype);
 
 
-        list[i].eval = -quiesce(&board2, -beta, -alpha, depth + 1, depthleft - 1, color ^ 1, isattacked(board, board->kingpos[color ^ 1], color), thread_info);
+        list[i].eval = -quiesce(&board2, movelst, key, -beta, -alpha, depth + 1, depthleft - 1, color ^ 1, isattacked(board, board->kingpos[color ^ 1], color), thread_info);
 
         if (abs(list[i].eval) == TIMEOUT) // timeout detection
         {
             thread_info->CURRENTPOS = original_pos;
             thread_info->nnue_state.pop();
+            movelst[*key - 1].move = nullmove;
+            *key = *key-1;
             return TIMEOUT;
         }
         if (list[i].eval > bestscore) // update best move
@@ -166,6 +170,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         {
             thread_info->CURRENTPOS = original_pos;
             thread_info->nnue_state.pop();
+            movelst[*key - 1].move = nullmove;
+            *key = *key-1;
             insert(original_pos, 0, list[i].eval, LBound, list[i].move, search_age);
             return list[i].eval;
         }
@@ -173,6 +179,8 @@ int quiesce(struct board_info *board, int alpha, int beta, int depth, int depthl
         {
             alpha = list[i].eval;
         }
+        movelst[*key - 1].move = nullmove;
+        *key = *key-1;
         thread_info->CURRENTPOS = original_pos;
         thread_info->nnue_state.pop();
         i++;
@@ -280,7 +288,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     if (depthleft <= 0 || depth >= 99) // if we're too deep drop into qsearch, adjusting based on depth if we get a mate score.
     {
-        int b = quiesce(board, alpha, beta, depth, 15, color, incheck, thread_info);
+        int b = quiesce(board, movelst, key, alpha, beta, depth, 15, color, incheck, thread_info);
         if (b == -100000)
         {
             b += depth;
@@ -345,7 +353,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
             }
             thread_info->CURRENTPOS ^= ZOBRISTTABLE[772];
-            move_add(&board2, movelst, key, nullmove, color, false, thread_info);
+            move_add(&board2, movelst, key, nullmove, color, false, thread_info, -1);
             int R = 4 + (depthleft / 6) + MIN((evl - beta) / 200, 3);
 
             // We call it with a null window, because we don't care about what the score is exactly, we only care if it beats beta or not.
@@ -379,7 +387,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int i = 0;
     unsigned long long int original_pos = thread_info->CURRENTPOS;
     int movelen = movegen(board, list, color, incheck);
-    movescore(board, list, depth, color, type, depth > 1 ? movelst[*key - 1].move : nullmove, movelen, 0, thread_info, entry);
+    movescore(board, movelst, key, list, depth, color, type, movelen, 0, thread_info, entry);
     bool raisedalpha = false;
     if (depth == 0)
     {
@@ -402,6 +410,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             continue;
         }
         struct board_info board2 = *board;
+        int piecetype = board->board[list[i].move.move >> 8] - 2;
 
         if (move(&board2, list[i].move, color, thread_info))
         {
@@ -491,7 +500,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         }
 
         long int current_nodes = thread_info->nodes;
-        move_add(&board2, movelst, key, list[i].move, color, iscap, thread_info);
+        move_add(&board2, movelst, key, list[i].move, color, iscap, thread_info, piecetype);
 
         if (ispv == true && !betacount) // The first move of a PV node gets searched to full depth with a full window.
         {
@@ -642,11 +651,14 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 int c = MIN(300 * (depthleft-1), 2400); // Update history tables, countermoves, and killer moves.
                 int lastpiecetype = 0, lastsquare = 0;
                 bool isreply = false;
+
                 if (depth > 1 && !isnull && movelst[(*key-2)].move.move != 0){
                     isreply = true;
-                    lastpiecetype = board->board[movelst[(*key-2)].move.move & 0xFF] / 2 - 1, lastsquare = movelst[(*key-2)].move.move & 0xFF;
-                    thread_info->COUNTERMOVES[(board->board[movelst[(*key) - 2].move.move & 0xFF] >> 1) - 1][movelst[(*key) - 2].move.move & 0xFF] = list[i].move;
+                    lastpiecetype = board->board[movelst[(*key-2)].move.move & 0xFF] - 2, lastsquare = movelst[(*key-2)].move.move & 0xFF;
+
+                    thread_info->COUNTERMOVES[lastpiecetype][lastsquare] = list[i].move;
                 }
+
                 if (!ismatch(thread_info->KILLERTABLE[depth][0], list[i].move))
                 {
                     thread_info->KILLERTABLE[depth][0] = list[i].move;
@@ -656,10 +668,15 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     thread_info->KILLERTABLE[depth][1] = list[i].move;
                 }
 
+
                 updateHistory(thread_info->HISTORYTABLE[color][(list[i].move.move >> 8)][list[i].move.move & 0xFF], c);
                 if (isreply){
-                    updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][board->board[list[i].move.move >> 8] / 2 - 1][list[i].move.move & 0xFF], c);
+                    updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][piecetype][list[i].move.move & 0xFF], c);
                 }
+                if (depth > 2 && movelst[*key-3].piecetype != -1){
+                    //updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][piecetype][list[i].move.move & 0xFF], c);
+                }
+
 
 
                 for (int a = 0; a < i; a++)
@@ -670,7 +687,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
                         updateHistory(thread_info->HISTORYTABLE[color][(list[a].move.move >> 8)][list[a].move.move & 0xFF], -c);
                         if (isreply){
-                            updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][board->board[list[a].move.move >> 8] / 2 - 1][list[a].move.move & 0xFF], -c);
+                            updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
+                        }
+                        if (depth > 2 && movelst[*key-3].piecetype != -1){
+                            //updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][board->board[list[a].move.move >> 8] - 1][list[a].move.move & 0xFF], -c);
                         }
 
                     }
