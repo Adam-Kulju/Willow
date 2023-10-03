@@ -390,20 +390,19 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes an
     clock_t start = clock();
     for (int i = 0; i < 50; i++) // clear all game info between positions
     {
-
-        clearTT();
-        memset(thread_info, 0, sizeof(ThreadInfo));
-        search_age = 0;
-
         struct board_info board;
         struct movelist movelst[MOVESIZE];
         int key;
         bool color;
-        /*setfull(&board);
-        thread_info.nnue_state.reset_nnue(&board);
-        printfull(&board);
-        printf("%i\n", eval(&board, BLACK));
-        exit(0);*/
+
+        clearTT();
+        clearKiller(thread_info);
+        clearCounters(thread_info);
+        clearHistory(true, thread_info);
+        setfull(&board);
+        setmovelist(movelst, &key, thread_info);
+        search_age = 0;
+
 
         setfromfen(&board, movelst, &key, positions[i], &color, 0, thread_info);
 
