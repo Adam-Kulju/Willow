@@ -10,7 +10,7 @@ LINKER :=
 
 SUFFIX :=
 
-ifeq ($(OS), Windows_NT)
+ifneq ($(OS), Darwin)
 	SUFFIX := .exe
 	LINKER :=
 else
