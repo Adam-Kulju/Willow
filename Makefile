@@ -10,7 +10,7 @@ LINKER :=
 
 SUFFIX :=
 
-ifneq ($(OS), Darwin)
+ifneq ($(OS), Windows_NT)
 	SUFFIX := .exe
 	LINKER :=
 else
@@ -20,7 +20,9 @@ else
 endif
 
 ifneq (,$(findstring clang,$(shell $(CXX) --version)))
-	LINKER += -fuse-ld=lld
+    ifneq ($(DETECTED_OS),Darwin)
+        LINKER += -fuse-ld=lld
+    endif
 endif
 
 OUT := $(EXE)$(SUFFIX)
