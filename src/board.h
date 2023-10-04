@@ -100,6 +100,7 @@ void setmovelist(struct movelist *movelst, int *key, ThreadInfo *thread_info) //
     movelst[0].move.move = 0;
     movelst[1].move.move = 0;
     movelst[0].halfmoves = 0;
+    movelst[1].piecetype = -1, movelst[0].piecetype = -1;
     return;
 }
 

@@ -141,7 +141,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
         }
 
         struct board_info board2 = *board;
-        int piecetype = board->board[list[i].move.move >> 8] - 1;
+        int piecetype = board->board[list[i].move.move >> 8] - 2;
 
         if (move(&board2, list[i].move, color, thread_info))
         {
@@ -674,7 +674,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][piecetype][list[i].move.move & 0xFF], c);
                 }
                 if (depth > 2 && movelst[*key-3].piecetype != -1){
-                    //updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][piecetype][list[i].move.move & 0xFF], c);
+                    updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][piecetype][list[i].move.move & 0xFF], c);
                 }
 
 
@@ -690,7 +690,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                             updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
                         if (depth > 2 && movelst[*key-3].piecetype != -1){
-                            //updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][board->board[list[a].move.move >> 8] - 1][list[a].move.move & 0xFF], -c);
+
+                            updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
 
                     }
@@ -963,7 +964,7 @@ void start_search(struct board_info *board, struct movelist *movelst, float maxt
         thread_infos.emplace_back();
     }
 
-    for (int i = 0; i < thread_infos.size(); i++){
+    for (unsigned int i = 0; i < thread_infos.size(); i++){
         thread_infos[i] = *thread_info;
         thread_infos[i].id = i + 1;
     }
