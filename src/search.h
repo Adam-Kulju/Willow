@@ -559,7 +559,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     R--;
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
-                    R -= std::clamp(3, -3, list[i].eval / 5104);
+                    R -= list[i].eval / 8096;
                 }
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
