@@ -11,16 +11,18 @@ LINKER :=
 SUFFIX :=
 
 ifeq ($(OS), Windows_NT)
+	DETECTED_OS := Windows
 	SUFFIX := .exe
 	LINKER :=
 else
+	DETECTED_OS := $(shell uname -s)
 	SUFFIX :=
 	LINKER := -lm
 	CXXFLAGS += -pthread
 endif
 
 ifneq (,$(findstring clang,$(shell $(CXX) --version)))
-    ifneq ($(OS), Darwin)
+    ifneq ($(DETECTED_OS), Darwin)
         LINKER += -fuse-ld=lld
     endif
 endif
