@@ -126,7 +126,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
 
     struct move bestmove = nullmove;
     int i = 0;
-    int quiets = 0;
+    int legals = 0;
 
     while (i < listlen)
     {
@@ -139,15 +139,17 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
                 break;
             }
         }
+        int piecetype = board->board[list[i].move.move >> 8] - 2;
+
 
         struct board_info board2 = *board;
-        int piecetype = board->board[list[i].move.move >> 8] - 2;
 
         if (move(&board2, list[i].move, color, thread_info))
         {
             i++;
             continue;
         }
+        legals++;
         move_add(board, movelst, key, list[i].move, color, (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]), thread_info, piecetype);
 
 
@@ -446,7 +448,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         // SEE pruning: if a quick check shows that we're hanging material, we skip the move.
         if (depth && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 9 &&
-            !static_exchange_evaluation(board, list[i].move, color, depthleft * (iscap ? -30 * depthleft : -80)))
+            !static_exchange_evaluation(board, list[i].move, color, (depthleft) * (iscap ? -30 * depthleft : -80)))
         {
             thread_info->CURRENTPOS = original_pos;
             thread_info->nnue_state.pop();
