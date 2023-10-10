@@ -376,13 +376,13 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
         {
             list[i].eval += 198;
         }
-        else if (isreply && ismatch(list[i].move, thread_info->COUNTERMOVES[lastpiecetype][lastpiecedest]))
+        /*else if (isreply && ismatch(list[i].move, thread_info->COUNTERMOVES[lastpiecetype][lastpiecedest]))
         // The move from the countermoves history table
         {
             // the piece that the opponent moved     the square it is on
 
             list[i].eval += 197;
-        }
+        }*/
 
         else // And if none of those apply, score the move by its history score.
         {
