@@ -190,7 +190,6 @@ struct move random_move(struct board_info *board, bool color, bool incheck, Thre
 float game(const std::string &filename, ThreadInfo *thread_info)
 {
     clearTT();
-    clearCounters(thread_info);
     clearHistory(true, thread_info);
     clearKiller(thread_info);
     search_age = 0;

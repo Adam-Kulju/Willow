@@ -654,11 +654,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 int lastpiecetype = 0, lastsquare = 0;
                 bool isreply = false;
 
-                if (depth > 1 && !isnull && movelst[(*key-2)].move.move != 0){
+                if (depth > 0 && !isnull && movelst[(*key-2)].move.move != 0){
                     isreply = true;
                     lastpiecetype = board->board[movelst[(*key-2)].move.move & 0xFF] - 2, lastsquare = movelst[(*key-2)].move.move & 0xFF;
 
-                    thread_info->COUNTERMOVES[lastpiecetype][lastsquare] = list[i].move;
                 }
 
                 if (!ismatch(thread_info->KILLERTABLE[depth][0], list[i].move))
@@ -675,9 +674,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (isreply){
                     updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][piecetype][list[i].move.move & 0xFF], c);
                 }
-                if (depth > 2 && movelst[*key-3].piecetype != -1){
+                if (depth > 1 && movelst[*key-3].piecetype != -1){
                     updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][piecetype][list[i].move.move & 0xFF], c);
                 }
+                if (depth > 3 && movelst[*key-5]).piece
 
 
 
@@ -691,8 +691,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         if (isreply){
                             updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
-                        if (depth > 2 && movelst[*key-3].piecetype != -1){
-
+                        if (depth > 1 && movelst[*key-3].piecetype != -1){
+                            if (depth == 2){
+                                printf("%x\n", movelst[*key-3].move.move);
+                                exit(0);
+                            }
                             updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
 

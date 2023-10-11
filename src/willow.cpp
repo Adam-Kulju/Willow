@@ -124,7 +124,6 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key, bool *
     {
         clearTT();
         clearKiller(thread_info);
-        clearCounters(thread_info);
         clearHistory(true, thread_info);
         setfull(board);
         setmovelist(movelst, key, thread_info);
@@ -397,7 +396,6 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes an
 
         clearTT();
         clearKiller(thread_info);
-        clearCounters(thread_info);
         clearHistory(true, thread_info);
         setfull(&board);
         setmovelist(movelst, &key, thread_info);
