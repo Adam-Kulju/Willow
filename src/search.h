@@ -691,10 +691,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                             updateHistory(thread_info->CONTHIST[lastpiecetype][lastsquare][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
                         if (depth > 1 && movelst[*key-3].piecetype != -1){
-                            if (depth == 2){
-                                printf("%x\n", movelst[*key-3].move.move);
-                                exit(0);
-                            }
                             updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
 
