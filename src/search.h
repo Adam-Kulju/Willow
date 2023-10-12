@@ -677,6 +677,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (depth > 1 && movelst[*key-3].piecetype != -1){
                     updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][piecetype][list[i].move.move & 0xFF], c);
                 }
+                if (depth > 3 && movelst[*key-5].piecetype != -1){
+                    updateHistory(thread_info->CONTHIST[movelst[*key-5].piecetype][movelst[*key-5].move.move & 0xFF][piecetype][list[i].move.move & 0xFF], c);
+                }
 
 
 
@@ -692,6 +695,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         }
                         if (depth > 1 && movelst[*key-3].piecetype != -1){
                             updateHistory(thread_info->CONTHIST[movelst[*key-3].piecetype][movelst[*key-3].move.move & 0xFF][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
+                        }
+                        if (depth > 3 && movelst[*key-5].piecetype != -1){
+                            updateHistory(thread_info->CONTHIST[movelst[*key-5].piecetype][movelst[*key-5].move.move & 0xFF][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
 
                     }
