@@ -38,7 +38,6 @@ bool CENTERBLACK[0x88]; // lookup table for Black's center
 
 struct ThreadInfo{
     struct move KILLERTABLE[100][2];      // Stores killer moves
-    struct move COUNTERMOVES[12][128];     // Stores countermoves
     int HISTORYTABLE[2][0x80][0x80]; // The History table
     int CONTHIST[12][128][12][128];
     unsigned long long int CURRENTPOS;
@@ -336,17 +335,6 @@ void clearKiller(ThreadInfo *thread_info) // Clears the Killer Table
     {
         thread_info->KILLERTABLE[i][0].move = 0;
         thread_info->KILLERTABLE[i][1].move = 0;
-    }
-}
-
-void clearCounters(ThreadInfo *thread_info) // Clears the countermoves table
-{
-    for (int i = 0; i < 12; i++)
-    {
-        for (int n = 0; n < 128; n++)
-        {
-            thread_info->COUNTERMOVES[i][n] = nullmove;
-        }
     }
 }
 
