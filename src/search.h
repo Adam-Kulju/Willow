@@ -647,10 +647,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             total++;
             betas += betacount + 1;
 
+            int c = MIN(300 * (depthleft-1), 2400); // Update history tables, countermoves, and killer moves.
+
             if (!iscap)
             {
 
-                int c = MIN(300 * (depthleft-1), 2400); // Update history tables, countermoves, and killer moves.
                 int lastpiecetype = 0, lastsquare = 0;
                 bool isreply = false;
 
@@ -700,6 +701,18 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                             updateHistory(thread_info->CONTHIST[movelst[*key-5].piecetype][movelst[*key-5].move.move & 0xFF][board->board[list[a].move.move >> 8] - 2][list[a].move.move & 0xFF], -c);
                         }
 
+                    }
+                    else{
+                        updateHistory(thread_info->CAPHIST[color][(list[a].move.move >> 8)][list[a].move.move & 0xFF], -c);
+                    }
+                }
+            }
+
+            else{
+                updateHistory(thread_info->CAPHIST[color][(list[i].move.move >> 8)][list[i].move.move & 0xFF], c);
+                for (int a = 0; a < i; a++){
+                    if (list[a].move.flags == 0xC || board->board[list[a].move.move & 0xFF]){
+                        updateHistory(thread_info->CAPHIST[color][(list[a].move.move >> 8)][list[a].move.move & 0xFF], -c);
                     }
                 }
             }

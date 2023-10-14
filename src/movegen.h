@@ -299,7 +299,7 @@ int see(struct board_info *board, struct move mve, bool color, int threshold)
         // If the piece we're trying to capture is worth less than the attacker, and a static exchange evaluation also verifies the move looks bad, order it at the very end
         v = -v;
     }
-    return v + victim * 10 - attacker;
+    return v + (victim * 10) - (attacker / 100);
 }
 
 void selectionsort(struct list *list, int k, int t)
@@ -366,7 +366,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
         }
         else if (board->board[list[i].move.move & 0xFF]) // Score captures with MVV-LVA and SEE.
         {
-            list[i].eval = see(board, list[i].move, color, threshold);
+            list[i].eval = see(board, list[i].move, color, threshold) + thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
         }
         else if (ismatch(list[i].move, thread_info->KILLERTABLE[depth][0])) // Killer moves
         {
