@@ -702,6 +702,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                         }
 
                     }
+                    else{
+                        updateHistory(thread_info->CAPHIST[color][(list[a].move.move >> 8)][list[a].move.move & 0xFF], -c);
+                    }
                 }
             }
 
