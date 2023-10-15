@@ -203,7 +203,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     return bestscore;
 }
 
-int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depthleft, int depth, bool color, bool isnull, bool incheck, struct move excludedmove, ThreadInfo *thread_info)
+int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int alpha, int beta, int depthleft, int depth, bool color, bool cutnode, bool incheck, struct move excludedmove, ThreadInfo *thread_info)
 {
     nodes++, thread_info->nodes++;
 
@@ -264,6 +264,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int ttscore = evl;
 
     bool ispv = (beta != alpha + 1); // Are we in a PV (i.e. likely best line) node? This affects what type of pruning we can do.
+    bool allnode = (!ispv && !cutnode);
 
     if (!ispv && type != None && entry.depth >= depthleft) // Check to see if we can cutoff
     {
@@ -328,6 +329,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         return evl;
     }
 
+    bool isnull = (depth > 0 && movelst[*key-1].piecetype == -1);
+
     // Null Move Pruning: If our position is good enough that we can give our opponent an extra move and still beat beta with a reduced search, cut off.
     if (isnull == false && !ispv && !singularsearch && !incheck && depthleft > 2 &&
         (evl >= beta + 50 - MIN(50, ((improving + 1) * depthleft * 5))))
@@ -359,7 +362,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             int R = 4 + (depthleft / 6) + MIN((evl - beta) / 200, 3);
 
             // We call it with a null window, because we don't care about what the score is exactly, we only care if it beats beta or not.
-            int nm = -alphabeta(&board2, movelst, key, -beta, -beta + 1, depthleft - R, depth + 1, color ^ 1, true, false, nullmove, thread_info);
+            int nm = -alphabeta(&board2, movelst, key, -beta, -beta + 1, depthleft - R, depth + 1, color ^ 1, !cutnode, false, nullmove, thread_info);
 
             thread_info->CURRENTPOS = a;
 
@@ -382,7 +385,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool ismove = false;
     int betacount = 0;
 
-    if (ispv && type == None && depthleft > 3){
+    if ((ispv || cutnode) && type == None && depthleft > 3){
         depthleft--;
     }
 
@@ -471,7 +474,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 NNUE_State temp_nnue = thread_info->nnue_state; //disgusting but works
                 thread_info->nnue_state.pop();
 
-                int sScore = alphabeta(board, movelst, key, sBeta - 1, sBeta, (depthleft - 1) / 2, depth, color, false, incheck, list[i].move, thread_info);
+                int sScore = alphabeta(board, movelst, key, sBeta - 1, sBeta, (depthleft - 1) / 2, depth, color, cutnode, incheck, list[i].move, thread_info);
 
                 thread_info->nnue_state.push();
                 thread_info->nnue_state = temp_nnue;
@@ -563,6 +566,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
                 }
+                R += 2 * cutnode;  //i should make a funny comment here
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
 
@@ -573,7 +577,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             // Search at a reduced depth with null window
 
-            list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth-R, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
+            list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth-R, depth + 1, color ^ 1, true, ischeck, nullmove, thread_info);
             if (abs(list[i].eval) == TIMEOUT)
             {
                 movelst[*key - 1].move = nullmove;
@@ -588,7 +592,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (list[i].eval > alpha && R > 0)
             {
-                list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
+                list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth, depth + 1, color ^ 1, !cutnode, ischeck, nullmove, thread_info);
                 if (abs(list[i].eval) == TIMEOUT)
                 {
                     movelst[*key - 1].move = nullmove;
