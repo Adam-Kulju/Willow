@@ -555,10 +555,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R -= 1 + (list[i].eval > 1000198);
                 }
-                if (!ispv && type != Exact) // Increase the reduction if we got a TT hit and we're not in a PV node (we know the TT move is almost certainly best)
-                {
-                    R++;
-                }
                 if (improving) // reduce reduction if we are improving.
                 {
                     R--;
@@ -566,7 +562,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
                 }
-                R += (!iscap && cutnode);  //i should make a funny comment here
+                R += (cutnode);  //i should make a funny comment here
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
 
