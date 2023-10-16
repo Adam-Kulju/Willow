@@ -1,5 +1,5 @@
 # Willow
-The strongest mailbox chess engine in the world.
+A chess engine written with the goal of being both extremely strong and very aggressive. Currently, it is the strongest mailbox chess engine in the world and clocks in at just under 3400 CCRL Elo.
 
 # Features
 Search: Willow is a relatively standard alpha-beta engine as far as search goes. It has all the major algorithms that major engines use; from the most important ones like Alpha-Beta Pruning with Aspiration Windows, Reverse Futility Pruning, Transposition Tables, Quiescence Search, etc. to more obscure ones such as Singular Extensions, Countermove History and Delta Pruning in Qsearch. Although the general algorithms are the same, the exact details of their implementation (depth reduction, conditions in when to use them, etc), are unique to each engine, and Willow is no exception; I have thrown stuff at the LMR code hundreds of times for example in an attempt to squeeze some more ELO out of it.
