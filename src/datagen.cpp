@@ -241,14 +241,13 @@ float game(const std::string &filename, ThreadInfo *thread_info)
         {
             struct board_info board2 = board;
             long long unsigned int temp = thread_info->CURRENTPOS;
-            move(&board2, list[i].move, color, thread_info);
-            // nnue_state.pop();
-            thread_info->CURRENTPOS = temp;
-            if (!isattacked(&board2, board2.kingpos[color], color ^ 1))
-            {
+            if (!move(&board2, list[i].move, color, thread_info)){
                 legalmovelist[legalmoves] = list[i];
                 legalmoves++;
+                thread_info->nnue_state.pop();
             }
+            // nnue_state.pop();
+            thread_info->CURRENTPOS = temp;
         }
         if (!legalmoves)
         {
@@ -316,7 +315,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
         move_add(&board, movelst, &key, thread_info->currentmove, color, isnoisy, thread_info, piecetype);
         bool ischeck = isattacked(&board, board.kingpos[color ^ 1], color);
 
-        if (!(isnoisy || incheck || ischeck || decisive_flag))
+        if (!(isnoisy || incheck || ischeck))
         {
             char fen[100];
             export_fen(&board, color, movelst, &key, fen);
