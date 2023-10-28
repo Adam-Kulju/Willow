@@ -261,6 +261,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         evl = -1024;
     }
 
+        thread_info->KILLERTABLE[depth + 2][0] = nullmove, thread_info->KILLERTABLE[depth + 2][1] = nullmove;
+
     int ttscore = evl;
 
     bool ispv = (beta != alpha + 1); // Are we in a PV (i.e. likely best line) node? This affects what type of pruning we can do.
@@ -402,8 +404,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool quietsprune = false;
     int bestscore = -100000;
 
-    thread_info->KILLERTABLE[depth + 1][0] = nullmove, thread_info->KILLERTABLE[depth + 1][1] = nullmove;
-
     while (i < movelen)
     {
         // First, make sure the move is legal, not skipped by futility pruning or LMP, and that there's no errors making the move.
@@ -544,20 +544,24 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     R = R / 2;
                     R -= thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 8096;
                 }
+                if (ischeck) // Reduce reduction for checks or moves made in check
+                {
+                    R--;
+                }
                 if (list[i].eval > 1000190 && !iscap)
                 {
                     R -= 1 + (list[i].eval > 1000198);
                 }
-                if (ispv) // reduce reduction if we are improving.
+                if (improving) // reduce reduction if we are improving.
                 {
                     R--;
-                }
-                else if (!improving){
-                    R++;
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
                 }
+                /*if (ispv && R > 2){
+                    R--;
+                }*/
                 R += (cutnode);  //i should make a funny comment here
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
