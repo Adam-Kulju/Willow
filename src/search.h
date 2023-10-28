@@ -544,24 +544,20 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     R = R / 2;
                     R -= thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 8096;
                 }
-                if (ischeck) // Reduce reduction for checks or moves made in check
-                {
-                    R--;
-                }
                 if (list[i].eval > 1000190 && !iscap)
                 {
                     R -= 1 + (list[i].eval > 1000198);
                 }
-                if (improving) // reduce reduction if we are improving.
+                if (ispv) // reduce reduction if we are improving.
                 {
                     R--;
+                }
+                else if (!improving){
+                    R++;
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
                 }
-                /*if (ispv && R > 2){
-                    R--;
-                }*/
                 R += (cutnode);  //i should make a funny comment here
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
