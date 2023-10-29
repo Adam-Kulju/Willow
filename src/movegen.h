@@ -368,11 +368,11 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
         {
             list[i].eval = see(board, list[i].move, color, threshold) + thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
         }
-        else if (ismatch(list[i].move, thread_info->KILLERTABLE[depth][0])) // Killer moves
-        {
+        else if (isreply && ismatch(list[i].move, thread_info->COUNTERMOVES[lastpiecetype][lastpiecedest])){
             list[i].eval += 199;
         }
-        else if (isreply && ismatch(list[i].move, thread_info->COUNTERMOVES[lastpiecetype][lastpiecedest])){
+        else if (ismatch(list[i].move, thread_info->KILLERTABLE[depth][0])) // Killer moves
+        {
             list[i].eval += 198;
         }
 
