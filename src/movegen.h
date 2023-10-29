@@ -372,10 +372,6 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
         {
             list[i].eval += 199;
         }
-        else if (ismatch(list[i].move, thread_info->KILLERTABLE[depth][1]))
-        {
-            list[i].eval += 198;
-        }
 
         else // And if none of those apply, score the move by its history score.
         {

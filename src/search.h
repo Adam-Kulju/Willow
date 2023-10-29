@@ -314,6 +314,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     {
         evl = eval(board, color, thread_info);
     }
+
+    thread_info->KILLERTABLE[depth + 1][0] = nullmove;
     movelst[*key - 1].staticeval = evl;
 
     bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval); // Is our position better than it was during our last move?
@@ -401,8 +403,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     struct move bestmove = nullmove;
     bool quietsprune = false;
     int bestscore = -100000;
-
-    thread_info->KILLERTABLE[depth + 1][0] = nullmove, thread_info->KILLERTABLE[depth + 1][1] = nullmove;
 
     while (i < movelen)
     {
@@ -664,10 +664,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (!ismatch(thread_info->KILLERTABLE[depth][0], list[i].move))
                 {
                     thread_info->KILLERTABLE[depth][0] = list[i].move;
-                }
-                else if (!ismatch(thread_info->KILLERTABLE[depth][1], list[i].move))
-                {
-                    thread_info->KILLERTABLE[depth][1] = list[i].move;
                 }
 
 
