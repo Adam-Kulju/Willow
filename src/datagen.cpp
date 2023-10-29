@@ -232,6 +232,8 @@ float game(const std::string &filename, ThreadInfo *thread_info)
 
     while (!game_end && res == 0.5 && key < 900 && !checkdraw1(&board) && !checkdraw2(movelst, &key))
     {
+        char fen[100];
+        export_fen(&board, color, movelst, &key, fen);
 
         struct list list[LISTSIZE];
         int movelen = movegen(&board, list, color, isattacked(&board, board.kingpos[color], color ^ 1));
@@ -315,10 +317,8 @@ float game(const std::string &filename, ThreadInfo *thread_info)
         move_add(&board, movelst, &key, thread_info->currentmove, color, isnoisy, thread_info, piecetype);
         bool ischeck = isattacked(&board, board.kingpos[color ^ 1], color);
 
-        if (!(isnoisy || incheck || ischeck))
+        if (!(isnoisy || incheck))
         {
-            char fen[100];
-            export_fen(&board, color, movelst, &key, fen);
             sprintf(fens[fkey++], "%s | %d | ", fen, g);
         }
         color ^= 1;
@@ -328,7 +328,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
     for (int i = 0; i < fkey; i++)
     {
         num_fens++;
-        if (num_fens % 100000 == 0)
+        if (num_fens % 100 == 0)
         {
             printf("%li fens written to file %s\n", num_fens, filename.c_str());
         }
