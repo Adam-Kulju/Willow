@@ -550,7 +550,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
                 if (list[i].eval > 1000190 && !iscap)
                 {
-                    R -= 1 + (list[i].eval > 1000198);
+                    R -= 2;
                 }
                 if (improving) // reduce reduction if we are improving.
                 {
@@ -558,6 +558,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
+                }
+                if (!iscap){
+                    R += (type > 0 && (entry.bestmove.flags == 0xC || board->board[entry.bestmove.move & 0xFF]));
                 }
                 /*if (ispv && R > 2){
                     R--;
@@ -664,10 +667,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (!ismatch(thread_info->KILLERTABLE[depth][0], list[i].move))
                 {
                     thread_info->KILLERTABLE[depth][0] = list[i].move;
-                }
-
-                if (isreply){
-                    thread_info->COUNTERMOVES[lastpiecetype][lastsquare] = list[i].move;
                 }
 
 
