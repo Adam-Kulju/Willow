@@ -41,6 +41,7 @@ struct ThreadInfo{
     int HISTORYTABLE[2][0x80][0x80]; // The History table
     int CONTHIST[12][128][12][128];
     int CAPHIST[2][0x80][0x80];
+    struct move COUNTERMOVES[12][0x80];
     unsigned long long int CURRENTPOS;
     NNUE_State nnue_state{};
     struct move currentmove; // The engine's current best move at root
@@ -328,7 +329,7 @@ void clearHistory(bool del, ThreadInfo *thread_info) // Either divides the entri
      memset(thread_info->CONTHIST, 0, sizeof(thread_info->CONTHIST));
      memset(thread_info->HISTORYTABLE, 0, sizeof(thread_info->HISTORYTABLE));
      memset(thread_info->CAPHIST, 0, sizeof(thread_info->CAPHIST));
-     
+     memset(thread_info->COUNTERMOVES, 0, sizeof(thread_info->COUNTERMOVES));
           
     }
 }

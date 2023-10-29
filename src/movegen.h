@@ -372,8 +372,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
         {
             list[i].eval += 199;
         }
-        else if (ismatch(list[i].move, thread_info->KILLERTABLE[depth][1]))
-        {
+        else if (isreply && ismatch(list[i].move, thread_info->COUNTERMOVES[lastpiecetype][lastpiecedest])){
             list[i].eval += 198;
         }
 
