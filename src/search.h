@@ -325,8 +325,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
         evl = entry.eval;
     }
 
+    int histscore = (movelst[*key-1].wascap) ? thread_info->HISTORYTABLE[color^1][movelst[*key-1].piecetype][movelst[*key-1].move.move & 0xFF] : 
+                                                thread_info->CAPHIST[color^1][movelst[*key-1].piecetype][movelst[*key-1].move.move & 0xFF];
+
+    histscore = -histscore / 128;
+    //we reverse histscore so that we get how good the move was relative to our side (if last move was a terrible move for the opponent, this board will have high histscore and vice versa)
+    //if the board has high histscore, the eval needs to be less above beta to cut off.
+
     // Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
-    if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 && depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta)
+    if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 && depthleft < 9 && 
+    evl >= beta && evl - ((depthleft - improving) * 80) + histscore >= beta)
     {
         return evl;
     }
@@ -558,9 +566,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
-                }
-                if (!iscap){
-                    R += (type > 0 && (entry.bestmove.flags == 0xC || board->board[entry.bestmove.move & 0xFF]));
                 }
                 /*if (ispv && R > 2){
                     R--;
