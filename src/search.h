@@ -334,7 +334,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     // Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
     if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 && depthleft < 9 && 
-    evl >= beta && evl - ((depthleft - improving) * 80) + histscore >= beta)
+    evl >= beta && evl - ((80 - 20*improving) * depthleft) + histscore >= beta)
     {
         return evl;
     }
