@@ -329,12 +329,18 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                                                 thread_info->HISTORYTABLE[color^1][movelst[*key-1].piecetype][movelst[*key-1].move.move & 0xFF];
 
     histscore = -histscore / 128;
+    if (histscore > 0){
+        histscore = MAX(0, histscore - 20);
+    }
+    else{
+        histscore = MIN(0, histscore + 20);
+    }
     //we reverse histscore so that we get how good the move was relative to our side (if last move was a terrible move for the opponent, this board will have high histscore and vice versa)
     //if the board has high histscore, the eval needs to be less above beta to cut off.
 
     // Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
     if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 && depthleft < 9 && 
-    evl >= beta && evl - (80 * (depthleft / (1 + improving))) + histscore >= beta)
+        evl - ((depthleft - improving) * 80) + histscore >= beta)
     {
         return evl;
     }
