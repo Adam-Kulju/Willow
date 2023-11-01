@@ -502,6 +502,7 @@ void move_add(struct board_info *board, struct movelist *movelst, int *key, stru
         movelst[k].halfmoves = movelst[k - 1].halfmoves + 1; // otherwise increment it
     }
     movelst[k].piecetype = piecetype;
+    movelst[k].wascap = iscap;
     *key = k + 1;
 }
 

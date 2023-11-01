@@ -95,6 +95,7 @@ struct movelist     //A in game move representation
     char halfmoves;                 //Halfmoves
     int staticeval;                 //Static evaluation of the position at that time
     int piecetype;
+    bool wascap;
 };
 struct list     //Stores a move and ordering/eval score. Used for search.
 {
