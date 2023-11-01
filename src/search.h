@@ -318,7 +318,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     thread_info->KILLERTABLE[depth + 1][0] = nullmove;
     movelst[*key - 1].staticeval = evl;
 
-    bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval && movelst[*key-3].staticeval != -100000); 
+    bool improving = (depth > 1 && !incheck && movelst[*key - 1].staticeval > movelst[*key - 3].staticeval); 
         // Is our position better than it was during our last move?
 
     if (type == Exact || (type == UBound && ttscore < evl) || (type == LBound && ttscore > evl)) // Use the evaluation from the transposition table as it is more accurate than the static evaluation.
@@ -338,8 +338,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool isnull = (depth > 0 && movelst[*key-1].piecetype == -1);
 
     // Null Move Pruning: If our position is good enough that we can give our opponent an extra move and still beat beta with a reduced search, cut off.
-    if (isnull == false && !ispv && !singularsearch && !incheck && depthleft > 2 && evl >= movelst[*key-1].staticeval &&
-        (evl >= beta + 50 - MIN(50, ((improving + 1) * depthleft * 5))))
+    if (isnull == false && !ispv && !singularsearch && !incheck && evl >= movelst[*key-1].staticeval &&
+        (evl >= beta + 30 * (depthleft < 4)))
     {
 
         bool ispiecew = false, ispieceb = false;
