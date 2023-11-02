@@ -41,8 +41,8 @@
 #define QUEEN 5
 #define KING 6
 
-#define LISTSIZE 150
-#define MOVESIZE 1000
+#define LISTSIZE 216
+#define MOVESIZE 10000
 #define NN 312
 #define MM 156
 #define MATRIX_A 0xB5026F5AA96619E9ULL
