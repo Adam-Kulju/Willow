@@ -452,14 +452,14 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 quietsprune = true;
             }
             // SEE pruning: if a quick check shows that we're hanging material, we skip the move.
-            if (!incheck && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 9 &&
-                !static_exchange_evaluation(board, list[i].move, color, (depthleft) * (iscap ? -30 * depthleft : -80)))
-            {
-                thread_info->CURRENTPOS = original_pos;
-                thread_info->nnue_state.pop();
-                i++;
-                continue;
-            }
+        }
+        if (depth && !ispv &&!incheck && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 9 &&
+            !static_exchange_evaluation(board, list[i].move, color, (depthleft) * (iscap ? -30 * depthleft : -80)))
+        {
+            thread_info->CURRENTPOS = original_pos;
+            thread_info->nnue_state.pop();
+            i++;
+            continue;
         }
 
         bool ischeck = isattacked(&board2, board2.kingpos[color ^ 1], color);
