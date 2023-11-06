@@ -121,7 +121,7 @@ void initglobals() // Initialize all our global variable stuff.
     {
         for (int n = 0; n < LISTSIZE; n++)
         {
-            LMRTABLE[i][n] = (int)round(log(i + 1) * log(n + 1) / 2.15);
+            LMRTABLE[i][n] = (int)round(log(i + 1) * log(n + 1) / 2.3);
         }
     }
     coldturkey = 1000000;
