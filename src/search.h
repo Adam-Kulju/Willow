@@ -453,7 +453,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
             // SEE pruning: if a quick check shows that we're hanging material, we skip the move.
         }
-        if (depth && !ispv &&!incheck && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 9 &&
+        if (depth && !incheck && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 9 &&
             !static_exchange_evaluation(board, list[i].move, color, (depthleft) * (iscap ? -30 * depthleft : -80)))
         {
             thread_info->CURRENTPOS = original_pos;
