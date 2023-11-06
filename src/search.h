@@ -329,7 +329,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     //if the board has high histscore, the eval needs to be less above beta to cut off.
 
     // Reverse Futility Pruning: If our position is so good that we don't need to move to beat beta + some margin, we cut off early.
-    if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 && depthleft < 9 && 
+    if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 && depthleft < 12 && 
         evl - ((depthleft - improving) * 80) >= beta)
     {
         return evl;
