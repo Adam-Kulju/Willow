@@ -439,7 +439,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             int futility_move_count = (3 + depthleft * depthleft / (1 + (!improving)));
             // Late Move Pruning (LMP): at high depths, we can just not search quiet moves after a while.
             // They are very unlikely to be unavoidable even if they are good and it saves time.
-            if (newdepth < 6)
+            if (newdepth < 4)
             {
                 if (betacount >= futility_move_count)
                 {
@@ -451,9 +451,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             {
                 quietsprune = true;
             }
-            // SEE pruning: if a quick check shows that we're hanging material, we skip the move.
         }
-        if (depth && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 8 &&
+
+        // SEE pruning: if a quick check shows that we're hanging material, we skip the move.
+        if (depth && list[i].eval < 1000200 && bestscore > -50000 && depthleft < 9 &&
             !static_exchange_evaluation(board, list[i].move, color, (depthleft) * (iscap ? -30 * depthleft : -80)))
         {
             thread_info->CURRENTPOS = original_pos;
@@ -461,7 +462,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             i++;
             continue;
         }
-
         bool ischeck = isattacked(&board2, board2.kingpos[color ^ 1], color);
 
         int extension = 0;
@@ -563,9 +563,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
                 }
-                /*if (ispv && R > 2){
+                if (ispv){
                     R--;
-                }*/
+                }
                 R += (cutnode);  //i should make a funny comment here
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
