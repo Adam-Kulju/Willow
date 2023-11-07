@@ -83,6 +83,7 @@ struct board_info
     unsigned char board[0x80];      //Stores the board itself
     unsigned char pnbrqcount[2][5]; //Stores material
     bool castling[2][2];            //Stores castling rights
+    unsigned char rookstartpos[2][2];
     unsigned char kingpos[2];       //Stores King positions
     unsigned char epsquare;         //stores ep square
 };
@@ -125,6 +126,19 @@ const int attacknums[4] = {2, 2, 3, 5};
 
 
 const int SEEVALUES[7] = {0, 100, 450, 450, 650, 1250, 10000};  //move ordering purposes
+
+const int N5NTABLE[10][2] = {
+    {0, 1},
+    {0, 2},
+    {0, 3},
+    {0, 4},
+    {1, 2},
+    {1, 3},
+    {1, 4},
+    {2, 3},
+    {2, 4},
+    {3, 4}
+};
 
 enum EntryType {None = 0, UBound = 1, LBound = 2, Exact = 3};
 

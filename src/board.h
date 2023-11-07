@@ -80,7 +80,6 @@ void setfull(struct board_info *board)  //Sets up the board for the start of the
         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
         BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN,0,0,0,0,0,0,0,0,
         BROOK, BKNIGHT, BBISHOP, BQUEEN, BKING, BBISHOP, BKNIGHT, BROOK,0,0,0,0,0,0,0,0,
-
         };
     memcpy(board->board, brd, 0x80);
     char count[2][5] = {    //the number of pieces on the board
@@ -89,7 +88,83 @@ void setfull(struct board_info *board)  //Sets up the board for the start of the
     memcpy(board->pnbrqcount, count, 10);
     board->castling[0][0] = true, board->castling[0][1] = true, board->castling[1][0] = true, board->castling[1][1] = true; //castling data
     board->kingpos[0] = 0x4, board->kingpos[1] = 0x74;  //king position data
+    board->rookstartpos[0][0] = 0, board->rookstartpos[0][1] = 7, board->rookstartpos[1][0] = 0x70, board->rookstartpos[1][1] = 0x77;
     board->epsquare = 0;    //en passant square
+}
+
+void setdfrc(struct board_info *board, int indexNumber){    //sets up a board given a particular DFRC key.
+    int indexes[2] = {indexNumber % 960, indexNumber / 960};    
+    char brd[0x80] = {
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        WPAWN, WPAWN, WPAWN, WPAWN, WPAWN, WPAWN, WPAWN, WPAWN,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN, BPAWN,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        };
+    memcpy(board->board, brd, 0x80);
+    char count[2][5] = {
+        {8, 2, 2, 2, 1},
+        {8, 2, 2, 2, 1}};
+    memcpy(board->pnbrqcount, count, 10);
+    board->castling[0][0] = true, board->castling[0][1] = true, board->castling[1][0] = true, board->castling[1][1] = true;
+    board->epsquare = 0;
+
+    for (int color = WHITE; color <= BLACK; color++){
+        int rank_base = 0x70 * color;
+
+        int index = indexes[color], remainder = indexes[color] % 4;     //Step 1: given an index N, divide it by 4 and take the remainder N1; use that to place the LSB.
+        index /= 4;
+        board->board[rank_base + 1 + remainder*2] = WBISHOP + color;    //(0, 1, 2, 3) remainders correspond to (b1, d1, f1, h1)
+
+        remainder = index % 4, index /= 4;                              //Step 2: repeat step 1 to get the DSB positions (0 = a1, 1 = c1 etc)
+        board->board[rank_base + remainder*2] = WBISHOP + color;
+
+        remainder = index % 6, index /= 6;                              //Step 3: divide N by 6 and take the remainder N3; this is the queen position, where 0 = first available square, 1 = second, etc.
+        int empty_squares = 0, piece_index;
+        for (piece_index = rank_base; piece_index < rank_base + 8; piece_index++){
+            if (!board->board[piece_index]){
+                empty_squares++;
+                if (empty_squares > remainder){
+                    break;
+                }
+            }
+        }
+        board->board[piece_index] = WQUEEN + color;
+
+        empty_squares = 0;                                               //Step 4: place the knights in the same way as the queen, but by looking up the N5N table.
+        bool placed = false;
+        for (piece_index = rank_base; piece_index < rank_base + 8; piece_index++){
+            if (!board->board[piece_index]){
+                empty_squares++;
+                if ((empty_squares > N5NTABLE[index][0] && !placed) || empty_squares > N5NTABLE[index][1]){
+                    board->board[piece_index] = WKNIGHT + color;
+                    placed = true;
+                    if (empty_squares > N5NTABLE[index][1]){
+                        break;
+                    }
+                }
+            }
+        }
+
+        empty_squares = 0;
+        for (piece_index = rank_base; piece_index < rank_base + 8; piece_index++){
+            if (!board->board[piece_index]){
+                empty_squares++;
+                if (empty_squares % 2){
+                    board->board[piece_index] = WROOK + color;
+                    board->rookstartpos[color][(empty_squares - 1) / 2] = piece_index;
+                }
+                else{
+                    board->board[piece_index] = WKING + color;
+                    board->kingpos[color] = piece_index;
+                }
+            }
+        }
+
+    }
 }
 
 void setmovelist(struct movelist *movelst, int *key, ThreadInfo *thread_info) // Sets up the list of moves in the game.
@@ -187,6 +262,7 @@ void setfromfen(struct board_info *board, struct movelist *movelst, int *key, ch
         } // sets up the board based on fen
         fenkey++;
     }
+    board->rookstartpos[0][0] = 0, board->rookstartpos[0][1] = 7, board->rookstartpos[1][0] = 0x70, board->rookstartpos[1][1] = 0x77; //someday, I may supprt DFRC fen parsing, but that day is not today.
     for (int i = 0; i < 8; i++)
     {
         for (int n = 8; n < 16; n++)
@@ -396,11 +472,12 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
 
     if (board2.board[from] == WROOK + color)
     { // handle rook moves
-        if (from == 0x70 * color)
+
+        if (from == board->rookstartpos[color][0])
         { // turn off queenside castling
             board2.castling[color][0] = false;
         }
-        else if (from == 0x7 + 0x70 * color)
+        else if (from == board->rookstartpos[color][1])
         { // turn off kingside castling
             board2.castling[color][1] = false;
         }
@@ -411,16 +488,30 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
 
     if (flag == 2)
     { // castle
-        if ((to & 7) == 6)
-        { // to = g file, meaning kingside
 
-            board2.board[to - 1] = board2.board[to + 1];
-            board2.board[to + 1] = BLANK;
+        if (to > board->kingpos[color])
+        { // to = g file, meaning kingside
+            if (IS_DFRC){
+                board2.board[to / 16 * 16 + 5] = board2.board[to];
+                board2.board[to] = BLANK;
+            }
+            else{
+                board2.board[to - 1] = board2.board[to + 1];
+                board2.board[to + 1] = BLANK;
+            }
+ 
         }
         else
         {
-            board2.board[to + 1] = board2.board[to - 2];
-            board2.board[to - 2] = BLANK;
+            if (IS_DFRC){
+                board2.board[to / 16 * 16 + 3] = board2.board[to];
+                board2.board[to] = BLANK;
+            }
+            else{
+                board2.board[to + 1] = board2.board[to - 2];
+                board2.board[to - 2] = BLANK;
+            }
+
         }
     }
     if (isattacked(&board2, board2.kingpos[color], color^1)){
@@ -459,20 +550,40 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
 
     if (flag == 2)
     { // castle
-        if ((to & 7) == 6)
-        { // to = g file, meaning kingside
+        if (to > board->kingpos[color])
+        {
 
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
-            thread_info->nnue_state.update_feature<true>(board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
-            thread_info->nnue_state.update_feature<false>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            if (IS_DFRC){
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
+                thread_info->nnue_state.update_feature<true>(board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
+                thread_info->nnue_state.update_feature<false>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            }
+
+            else{
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
+                thread_info->nnue_state.update_feature<true>(board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
+                thread_info->nnue_state.update_feature<false>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            }
+
+
         }
         else
         {
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
-            thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
-            thread_info->nnue_state.update_feature<false>(board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
-            thread_info->nnue_state.update_feature<true>(board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            if (IS_DFRC){
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
+                thread_info->nnue_state.update_feature<false>(board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
+                thread_info->nnue_state.update_feature<true>(board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            }
+            else{
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
+                thread_info->nnue_state.update_feature<false>(board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
+                thread_info->nnue_state.update_feature<true>(board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            }
+
         }
     }
 

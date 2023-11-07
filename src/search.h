@@ -563,10 +563,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
                 }
-                if (ispv){
+                R += (cutnode);  //i should make a funny comment here
+                if (ispv && R > 1){
                     R--;
                 }
-                R += (cutnode);  //i should make a funny comment here
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
 

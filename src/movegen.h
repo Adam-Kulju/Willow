@@ -200,21 +200,27 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
         return key;
     }
 
-    if (board->castling[color][0]) // If we have not moved our king or rook, are not in check, and will not castle through check, castling is pseudolegal
-                                   // queenside castling
-    {
-        char x = board->kingpos[color];
-        if (board->board[x - 4] - color == WROOK && !board->board[x - 3] && !board->board[x - 2] && !board->board[x - 1] && !isattacked(board, x - 1, color ^ 1))
-        {
-            list[key].move.move = (x << 8) + x + WEST + WEST, list[key++].move.flags = 0x8;
-        }
+    if (IS_DFRC){
+        //stuff
     }
-    if (board->castling[color][1]) // kingside castling
-    {
-        char x = board->kingpos[color];
-        if (board->board[x + 3] - color == WROOK && !board->board[x + 2] && !board->board[x + 1] && !isattacked(board, x + 1, color ^ 1))
+
+    else{
+        if (board->castling[color][0]) // If we have not moved our king or rook, are not in check, and will not castle through check, castling is pseudolegal
+                                   // queenside castling
         {
-            list[key].move.move = ((board->kingpos[color]) << 8) + x + EAST + EAST, list[key++].move.flags = 0x8;
+            char x = board->kingpos[color];
+            if (board->board[x - 4] - color == WROOK && !board->board[x - 3] && !board->board[x - 2] && !board->board[x - 1] && !isattacked(board, x - 1, color ^ 1))
+            {
+                list[key].move.move = (x << 8) + x + WEST + WEST, list[key++].move.flags = 0x8;
+            }
+        }
+        if (board->castling[color][1]) // kingside castling
+        {
+            char x = board->kingpos[color];
+            if (board->board[x + 3] - color == WROOK && !board->board[x + 2] && !board->board[x + 1] && !isattacked(board, x + 1, color ^ 1))
+            {
+                list[key].move.move = ((board->kingpos[color]) << 8) + x + EAST + EAST, list[key++].move.flags = 0x8;
+            }
         }
     }
     return key;
