@@ -289,7 +289,8 @@ float game(const std::string &filename, ThreadInfo *thread_info)
             exit(0);
         }
 
-        bool isnoisy = (thread_info->currentmove.flags == 0xC || thread_info->currentmove.flags == 0x7 || board.board[thread_info->currentmove.move & 0xFF]);
+        bool isnoisy = (thread_info->currentmove.flags == 0xC || thread_info->currentmove.flags == 0x7 || board.board[thread_info->currentmove.move & 0xFF]) && 
+            !(thread_info->currentmove.flags / 4 == 2);
         bool incheck = isattacked(&board, board.kingpos[color], color ^ 1);
 
         bool legalcheck = false;

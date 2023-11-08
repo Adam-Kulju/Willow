@@ -412,7 +412,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     {
         // First, make sure the move is legal, not skipped by futility pruning or LMP, and that there's no errors making the move.
         selectionsort(list, i, movelen);
-        bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF] || list[i].move.flags == 0x7);
+        bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF] || list[i].move.flags == 0x7) && !(list[i].move.flags / 4 == 2);
         if ((quietsprune && !iscap) || ismatch(excludedmove, list[i].move))
         {
             i++;
@@ -548,25 +548,25 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     R = R / 2;
                     R -= thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 8096;
                 }
-                if (ischeck) // Reduce reduction for checks or moves made in check
-                {
-                    R--;
+                else{
+                    if (ischeck) // Reduce reduction for checks or moves made in check
+                    {
+                        R--;
+                    }
+                    if (list[i].eval > 1000190 && !iscap)
+                    {
+                        R -= 2;
+                    }
+                    if (improving) // reduce reduction if we are improving.
+                    {
+                        R--;
+                    }
+                    if (list[i].eval < 100000 && list[i].eval > -100000){
+                        R -= list[i].eval / 8096;
+                    }
+                    R += (cutnode);  //i should make a funny comment here
                 }
-                if (list[i].eval > 1000190 && !iscap)
-                {
-                    R -= 2;
-                }
-                if (improving) // reduce reduction if we are improving.
-                {
-                    R--;
-                }
-                if (list[i].eval < 100000 && list[i].eval > -100000){
-                    R -= list[i].eval / 8096;
-                }
-                R += (cutnode);  //i should make a funny comment here
-                if (ispv && R > 1){
-                    R--;
-                }
+
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
 
