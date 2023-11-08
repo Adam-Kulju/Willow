@@ -559,6 +559,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     }
                     if (improving) // reduce reduction if we are improving.
                     {
+                        R++;
+                    }
+                    if (!ispv){
                         R--;
                     }
                     if (list[i].eval < 100000 && list[i].eval > -100000){

@@ -554,10 +554,12 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
         {
 
             if (IS_DFRC){
-                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
-                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to - 1] - 2) << 6)) + to - 1 - (((to - 1) >> 4) << 3)];
-                thread_info->nnue_state.update_feature<true>(board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
-                thread_info->nnue_state.update_feature<false>(board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+                int oldpos = to, newpos = to / 16 * 16 + 5;
+
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[oldpos] - 2) << 6)) + oldpos - (((oldpos) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos - (((newpos) >> 4) << 3)];
+                thread_info->nnue_state.update_feature<true>(board2.board[newpos], MAILBOX_TO_STANDARD[newpos]);
+                thread_info->nnue_state.update_feature<false>(board->board[oldpos], MAILBOX_TO_STANDARD[oldpos]);
             }
 
             else{
@@ -572,10 +574,11 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
         else
         {
             if (IS_DFRC){
-                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
-                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to + 1] - 2) << 6)) + to + 1 - (((to + 1) >> 4) << 3)];
-                thread_info->nnue_state.update_feature<false>(board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
-                thread_info->nnue_state.update_feature<true>(board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+                int oldpos = to, newpos = to / 16 * 16 + 3;
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[oldpos] - 2) << 6)) + oldpos - (((oldpos) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos - (((newpos) >> 4) << 3)];
+                thread_info->nnue_state.update_feature<false>(board->board[oldpos], MAILBOX_TO_STANDARD[oldpos]);
+                thread_info->nnue_state.update_feature<true>(board2.board[newpos], MAILBOX_TO_STANDARD[newpos]);
             }
             else{
                 thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 - (((to - 2) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
