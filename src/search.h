@@ -545,7 +545,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
                 if (iscap && !ispv)
                 {
-                    R = R / 2;
+                    R = R / 2 + !improving;
                     R -= thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 8096;
                 }
                 else{
@@ -557,12 +557,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     {
                         R -= 2;
                     }
-                    if (improving) // reduce reduction if we are improving.
-                    {
+                    if (ispv){
                         R--;
-                    }
-                    if (!ispv){
-                        R++;
                     }
                     if (list[i].eval < 100000 && list[i].eval > -100000){
                         R -= list[i].eval / 8096;

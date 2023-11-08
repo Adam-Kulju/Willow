@@ -196,7 +196,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
     srand(std::random_device()());
     struct board_info board;
     struct movelist movelst[MOVESIZE];
-    setfull(&board);
+    setdfrc(&board, rand() % (960 * 960));
     thread_info->nnue_state.reset_nnue(&board);
     calc_pos(&board, WHITE, thread_info);
     int key;
@@ -232,6 +232,8 @@ float game(const std::string &filename, ThreadInfo *thread_info)
 
     while (!game_end && res == 0.5 && key < 900 && !checkdraw1(&board) && !checkdraw2(movelst, &key))
     {
+        char fen[100];
+        export_fen(&board, color, movelst, &key, fen);
 
         struct list list[LISTSIZE];
         int movelen = movegen(&board, list, color, isattacked(&board, board.kingpos[color], color ^ 1));
@@ -268,7 +270,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
         {
             g = -g;
         }
-        if (abs(g) > 1000)
+        if (abs(g) > 5000)
         {
             if (g > 0)
             {
@@ -289,8 +291,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
             exit(0);
         }
 
-        bool isnoisy = (thread_info->currentmove.flags == 0xC || thread_info->currentmove.flags == 0x7 || board.board[thread_info->currentmove.move & 0xFF]) && 
-            !(thread_info->currentmove.flags / 4 == 2);
+        bool isnoisy = (thread_info->currentmove.flags == 0xC || thread_info->currentmove.flags == 0x7 || board.board[thread_info->currentmove.move & 0xFF]) && !(thread_info->currentmove.flags == 8);
         bool incheck = isattacked(&board, board.kingpos[color], color ^ 1);
 
         bool legalcheck = false;
@@ -316,10 +317,8 @@ float game(const std::string &filename, ThreadInfo *thread_info)
         move_add(&board, movelst, &key, thread_info->currentmove, color, isnoisy, thread_info, piecetype);
         bool ischeck = isattacked(&board, board.kingpos[color ^ 1], color);
 
-        if (!(isnoisy || incheck || ischeck))
+        if (!(isnoisy || incheck))
         {
-            char fen[100];
-            export_fen(&board, color, movelst, &key, fen);
             sprintf(fens[fkey++], "%s | %d | ", fen, g);
         }
         color ^= 1;
@@ -351,6 +350,7 @@ void run_game(const std::string &filename, ThreadInfo &thread_info)
 
 int main(int argc, char *argv[])
 {
+    IS_DFRC = true;
     setvbuf(stdin, NULL, _IONBF, 0);
     setvbuf(stdout, NULL, _IONBF, 0);
     MAXDEPTH = 99;

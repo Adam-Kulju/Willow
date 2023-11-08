@@ -206,13 +206,18 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
         {
             char x;
             bool flag = true;
+            if (board->board[board->rookstartpos[color][0]] != WROOK + color){
+                flag = false;
+            }
 
-            for (x = MAX(board->kingpos[color] - 1, color * 0x70 + 3); x > MIN(color * 0x70 + 1, board->rookstartpos[color][0]); x--){ //handle xxxxxRKR, RxxxxxKR, and RKxxxxxR
-                if (board->board[x] && board->board[x] != WKING + color && !(board->board[x] == WROOK + color && board->rookstartpos[color][0] == x)){      
+            if (flag){
+                for (x = MAX(board->kingpos[color] - 1, color * 0x70 + 3); x > MIN(color * 0x70 + 1, board->rookstartpos[color][0]); x--){ //handle xxxxxRKR, RxxxxxKR, and RKxxxxxR
+                    if (board->board[x] && board->board[x] != WKING + color && !(board->board[x] == WROOK + color && board->rookstartpos[color][0] == x)){      
                                                                                 //if you have xxxxxRKR, you want to pretend that the R on the left doesn't exist
                                                                                 //on the other hand, xxRRKxxx can't be ignored
-                    flag = false;
-                    break;
+                        flag = false;
+                        break;
+                    }
                 }
             }
 
@@ -235,11 +240,18 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
             char x;
             bool flag = true;
 
-            for (x = MIN(board->kingpos[color] + 1, color * 0x70 + 5); x < color * 0x70 + 7; x--){ //handle xxxxxRKR, RxxxxxKR, and RKxxxxxR - here we never have to check if the h-file is occupied
-                if (board->board[x] && !(board->board[x] == WROOK + color && board->rookstartpos[color][1] == x)){      //if you have xRKRxxxx, you want to pretend that the R on the right doesn't exist
+            if (board->board[board->rookstartpos[color][1]] != WROOK + color){
+                flag = false;
+            }
+
+            if (flag){
+
+                for (x = MIN(board->kingpos[color] + 1, color * 0x70 + 5); x < color * 0x70 + 7; x++){ //handle xxxxxRKR, RxxxxxKR, and RKxxxxxR - here we never have to check if the h-file is occupied
+                    if (board->board[x] && !(board->board[x] == WROOK + color && board->rookstartpos[color][1] == x)){      //if you have xRKRxxxx, you want to pretend that the R on the right doesn't exist
                                                                                                                     
-                    flag = false;
-                    break;
+                        flag = false;
+                        break;
+                    }
                 }
             }
 
@@ -396,7 +408,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
     {
         list[i].eval = 1000000; // base
 
-        if (isreply && movelst[*key-1].move.move != 0 && board->board[movelst[*key-1].move.move & 0xFF] - 1 < 0)
+        if (isreply && movelst[*key-1].move.move != 0 && movelst[*key-1].piecetype < 0)
         {
             for (int i = 0; i < *key; i++){
                 printf("%x\n", movelst[i].move.move);

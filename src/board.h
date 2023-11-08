@@ -420,7 +420,6 @@ bool isattacked(struct board_info *board, unsigned char pos, bool encolor) // Is
 
 int move(struct board_info *board, struct move move, bool color, ThreadInfo *thread_info) // Perform a move on the board.
 {
-
     if (!move.move)
     {
         if (board->epsquare)
@@ -498,8 +497,8 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
                 board2.board[to] = BLANK;
                 board2.board[from] = BLANK;
 
-                board2.board[to / 16 * 16 + 6] = board2.board[from];
-                board2.board[to / 16 * 16 + 5] = board2.board[to];
+                board2.board[to / 16 * 16 + 6] = board->board[from];
+                board2.board[to / 16 * 16 + 5] = board->board[to];
             }
             else{
                 board2.board[to - 1] = board2.board[to + 1];
@@ -529,7 +528,6 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
     }
 
 
-
     if (board->epsquare)
     {
         thread_info->CURRENTPOS ^= ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it is not.
@@ -538,6 +536,11 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
 
     thread_info->nnue_state.push();
 
+    if (!board->board[from]){
+        printfull(board);
+        printf("%x\n", move.move);
+        exit(0);
+    }
     thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from - ((from >> 4) << 3)]; // xor out the piece to be moved
     thread_info->nnue_state.update_feature<false>(board->board[from], MAILBOX_TO_STANDARD[from]);
 
@@ -555,8 +558,10 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
         thread_info->nnue_state.update_feature<false>(board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare]);
     }
 
-    thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to] - 2) << 6)) + to - ((to >> 4) << 3)]; // xor in the piece that has been moved
-    thread_info->nnue_state.update_feature<true>(board2.board[to], MAILBOX_TO_STANDARD[to]);
+    if (!(IS_DFRC && flag == 2)){
+        thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[to] - 2) << 6)) + to - ((to >> 4) << 3)]; // xor in the piece that has been moved
+        thread_info->nnue_state.update_feature<true>(board2.board[to], MAILBOX_TO_STANDARD[to]);
+    }
 
     if (flag == 2)
     { // castle
@@ -565,6 +570,9 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
 
             if (IS_DFRC){
                 int oldpos = to, newpos = to / 16 * 16 + 5;
+
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos - ((newpos >> 4) << 3)]; // xor in the piece that has been moved
+                thread_info->nnue_state.update_feature<true>(board2.board[newpos], MAILBOX_TO_STANDARD[newpos]);
 
                 thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[oldpos] - 2) << 6)) + oldpos - (((oldpos) >> 4) << 3)]; // xor out the rook on hfile and xor it in on ffile
                 thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos - (((newpos) >> 4) << 3)];
@@ -585,6 +593,10 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
         {
             if (IS_DFRC){
                 int oldpos = to, newpos = to / 16 * 16 + 3;
+
+                thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos - ((newpos >> 4) << 3)]; // xor in the piece that has been moved
+                thread_info->nnue_state.update_feature<true>(board2.board[newpos], MAILBOX_TO_STANDARD[newpos]);
+
                 thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board->board[oldpos] - 2) << 6)) + oldpos - (((oldpos) >> 4) << 3)]; // xor out the rook on afile and xor it in on dfile
                 thread_info->CURRENTPOS ^= ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos - (((newpos) >> 4) << 3)];
                 thread_info->nnue_state.update_feature<false>(board->board[oldpos], MAILBOX_TO_STANDARD[oldpos]);
