@@ -400,8 +400,6 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes an
         setfull(&board);
         setmovelist(movelst, &key, thread_info);
         search_age = 0;
-
-
         setfromfen(&board, movelst, &key, positions[i], &color, 0, thread_info);
 
         printfull(&board);

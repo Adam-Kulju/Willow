@@ -483,8 +483,11 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
         }
     }
 
-    board2.board[to] = board2.board[from];
-    board2.board[from] = BLANK;
+    if (!(IS_DFRC && flag == 2)){
+        board2.board[to] = board2.board[from];
+        board2.board[from] = BLANK;
+    }
+
 
     if (flag == 2)
     { // castle
@@ -492,8 +495,11 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
         if (to > board->kingpos[color])
         { // to = g file, meaning kingside
             if (IS_DFRC){
-                board2.board[to / 16 * 16 + 5] = board2.board[to];
                 board2.board[to] = BLANK;
+                board2.board[from] = BLANK;
+
+                board2.board[to / 16 * 16 + 6] = board2.board[from];
+                board2.board[to / 16 * 16 + 5] = board2.board[to];
             }
             else{
                 board2.board[to - 1] = board2.board[to + 1];
@@ -504,8 +510,12 @@ int move(struct board_info *board, struct move move, bool color, ThreadInfo *thr
         else
         {
             if (IS_DFRC){
-                board2.board[to / 16 * 16 + 3] = board2.board[to];
+                board2.board[from] = BLANK;
                 board2.board[to] = BLANK;
+
+                board2.board[to / 16 * 16 + 2] = board->board[from];               
+                board2.board[to / 16 * 16 + 3] = board->board[to];
+                
             }
             else{
                 board2.board[to + 1] = board2.board[to - 2];

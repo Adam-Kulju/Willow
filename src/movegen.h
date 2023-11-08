@@ -200,7 +200,7 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
         return key;
     }
 
-    /*if (IS_DFRC){
+    if (IS_DFRC){
         if (board->castling[color][0]) // If we have not moved our king or rook, are not in check, and will not castle through check, castling is pseudolegal
                                    // queenside castling
         {
@@ -208,8 +208,9 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
             bool flag = true;
 
             for (x = MAX(board->kingpos[color] - 1, color * 0x70 + 3); x > MIN(color * 0x70 + 1, board->rookstartpos[color][0]); x--){ //handle xxxxxRKR, RxxxxxKR, and RKxxxxxR
-                if (board->board[x] && !(board->board[x] == WROOK + color && board->rookstartpos[color][0] == x)){      //if you have xxxxxRKR, you want to pretend that the R on the left doesn't exist
-                                                                                                                        //on the other hand, xxRRKxxx can't be ignored
+                if (board->board[x] && board->board[x] != WKING + color && !(board->board[x] == WROOK + color && board->rookstartpos[color][0] == x)){      
+                                                                                //if you have xxxxxRKR, you want to pretend that the R on the left doesn't exist
+                                                                                //on the other hand, xxRRKxxx can't be ignored
                     flag = false;
                     break;
                 }
@@ -254,7 +255,7 @@ int movegen(struct board_info *board, struct list *list, bool color, bool inchec
                 list[key].move.move = ((board->kingpos[color]) << 8) + board->rookstartpos[color][1], list[key++].move.flags = 0x8;
             }
         }
-    }*/
+    }
 
     else{
         if (board->castling[color][0]) // If we have not moved our king or rook, are not in check, and will not castle through check, castling is pseudolegal
