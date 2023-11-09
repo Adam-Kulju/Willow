@@ -365,7 +365,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
             thread_info->CURRENTPOS ^= ZOBRISTTABLE[772];
             move_add(&board2, movelst, key, nullmove, color, false, thread_info, -1);
-            int R = 4 + (depthleft / 6) + MIN((evl - beta) / 200, 3);
+            int R = 4 + (depthleft / 4) + MIN((evl - beta) / 150, 4) + improving;
 
             // We call it with a null window, because we don't care about what the score is exactly, we only care if it beats beta or not.
             int nm = -alphabeta(&board2, movelst, key, -beta, -beta + 1, depthleft - R, depth + 1, color ^ 1, !cutnode, false, nullmove, thread_info);
@@ -545,26 +545,25 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
                 if (iscap && !ispv)
                 {
-                    R = R / 2 + !improving;
+                    R = R / 2;
                     R -= thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 8096;
                 }
-                else{
-                    if (ischeck) // Reduce reduction for checks or moves made in check
-                    {
-                        R--;
-                    }
-                    if (list[i].eval > 1000190 && !iscap)
-                    {
-                        R -= 2;
-                    }
-                    if (ispv){
-                        R--;
-                    }
-                    if (list[i].eval < 100000 && list[i].eval > -100000){
-                        R -= list[i].eval / 8096;
-                    }
-                    R += (cutnode);  //i should make a funny comment here
+                if (ischeck) // Reduce reduction for checks or moves made in check
+                {
+                    R--;
                 }
+                if (list[i].eval > 1000190 && !iscap)
+                {
+                    R -= 2;
+                }
+                if (improving) // reduce reduction if we are improving.
+                {
+                    R--;
+                }
+                if (list[i].eval < 100000 && list[i].eval > -100000){
+                    R -= list[i].eval / 8096;
+                }
+                R += (cutnode);  //i should make a funny comment here
 
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
