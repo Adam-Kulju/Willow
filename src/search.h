@@ -365,7 +365,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             }
             thread_info->CURRENTPOS ^= ZOBRISTTABLE[772];
             move_add(&board2, movelst, key, nullmove, color, false, thread_info, -1);
-            int R = 4 + (depthleft / 4) + MIN((evl - beta) / 150, 4) + improving;
+            int R = 4 + (depthleft / 6) + MIN((evl - beta) / 200, 3);
 
             // We call it with a null window, because we don't care about what the score is exactly, we only care if it beats beta or not.
             int nm = -alphabeta(&board2, movelst, key, -beta, -beta + 1, depthleft - R, depth + 1, color ^ 1, !cutnode, false, nullmove, thread_info);
@@ -381,7 +381,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (nm >= beta)
             {
-                return evl;
+                return abs(nm) > 500000 ? 500000 : nm;
             }
         }
     }

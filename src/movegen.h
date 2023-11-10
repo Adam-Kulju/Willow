@@ -435,7 +435,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
         {
             list[i].eval += 5000000 + SEEVALUES[board->board[(list[i].move.move & 0xFF)] >> 1];
         }
-        else if (board->board[list[i].move.move & 0xFF]) // Score captures with MVV-LVA and SEE.
+        else if (board->board[list[i].move.move & 0xFF] && list[i].move.flags != 8) // Score captures with MVV-LVA and SEE.
         {
             list[i].eval = see(board, list[i].move, color, threshold) + thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
         }

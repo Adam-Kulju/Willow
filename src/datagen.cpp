@@ -205,7 +205,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
     char fen[100];
 
     bool color = WHITE;
-    int moves = 8 + (rand() % 2);
+    int moves = 6 + (rand() % 2);
 
     for (int i = 0; i < moves; i++)
     {
@@ -216,7 +216,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
         }
         int piecetype = board.board[mve.move >> 8] - 1;
         move(&board, mve, color, thread_info);
-        move_add(&board, movelst, &key, mve, color, (mve.flags == 0xC || board.board[mve.move & 0xFF]), thread_info, piecetype);
+        move_add(&board, movelst, &key, mve, color, ((mve.flags == 0xC || board.board[mve.move & 0xFF]) && mve.flags != 8), thread_info, piecetype);
         color ^= 1;
     }
 
