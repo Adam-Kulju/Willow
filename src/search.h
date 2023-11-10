@@ -250,7 +250,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
     char type;
     ttentry entry = TT[(thread_info->CURRENTPOS) & (_mask)];
-    if (!singularsearch && thread_info->CURRENTPOS == entry.zobrist_key) // Probe the transposition table.
+    if (!singularsearch && thread_info->CURRENTPOS == entry.zobrist_key && entry.depth >= depthleft / 4) // Probe the transposition table.
     {
         type = entry.type;
         evl = entry.eval;
@@ -381,7 +381,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             if (nm >= beta)
             {
-                return abs(nm) > 500000 ? 500000 : nm;
+                return evl;
             }
         }
     }
