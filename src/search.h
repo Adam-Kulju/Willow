@@ -440,7 +440,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             int futility_move_count = (3 + depthleft * depthleft / (1 + (!improving)));
             // Late Move Pruning (LMP): at high depths, we can just not search quiet moves after a while.
             // They are very unlikely to be unavoidable even if they are good and it saves time.
-            if (newdepth < 6)
+            if (newdepth < 4)
             {
                 if (quiets >= futility_move_count)
                 {
