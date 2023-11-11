@@ -417,7 +417,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
             exit(1);
         }
 
-        if (type > None && ismatch(entry.bestmove, list[i].move)) // TT hit: gets the largest bonus.
+        if (type > UBound && ismatch(entry.bestmove, list[i].move)) // TT hit: gets the largest bonus.
         {
 
             if (entry.bestmove.move == list[i].move.move)
