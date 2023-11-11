@@ -488,7 +488,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (sScore < sBeta)
                 {
                     extension = 1;
-                    if (!ispv && sScore + 20 < sBeta && depth < info.depth)
+                    if (!ispv && sScore + 20 < sBeta)
                     { // Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at or less than 15 (leaves room for a bunch near the root)
                         extension++;
                     }
