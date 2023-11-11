@@ -389,7 +389,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     // Initilalize the list of moves, generate them, and score them.
     struct list list[LISTSIZE];
     bool ismove = false;
-    int betacount = 0;
+    int betacount = 0, quiets = 0;
 
     if ((ispv || cutnode) && type == None && depthleft > 3){
         depthleft--;
@@ -435,13 +435,14 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         if (depth > 0 && !iscap && !ispv)
         {
+            quiets++;
             int newdepth = MAX(depthleft - 1 -  LMRTABLE[depthleft-1][betacount] + improving, 0);
             int futility_move_count = (3 + depthleft * depthleft / (1 + (!improving)));
             // Late Move Pruning (LMP): at high depths, we can just not search quiet moves after a while.
             // They are very unlikely to be unavoidable even if they are good and it saves time.
-            if (newdepth < 4)
+            if (newdepth < 6)
             {
-                if (betacount >= futility_move_count)
+                if (quiets >= futility_move_count)
                 {
                     quietsprune = true;
                 }
@@ -488,7 +489,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (sScore < sBeta)
                 {
                     extension = 1;
-                    if (!ispv && sScore + 20 < sBeta)
+                    if (!ispv && sScore + 20 < sBeta && depth < info.depth)
                     { // Limit explosions for double extensions by only doing them if the depth is less than the depth we're "supposed" to be at or less than 15 (leaves room for a bunch near the root)
                         extension++;
                     }
