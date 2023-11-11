@@ -397,7 +397,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
 
     int lastpiecetype = 0, lastpiecedest = 0;
     bool isreply = false;
-    if (depth > 0 && movelst[*key-1].piecetype != -1 && depth < 90){
+    if (depth > 0 && movelst[*key-1].piecetype != -1){
         isreply = true;
         lastpiecetype = board->board[movelst[*key-1].move.move & 0xFF] - 2;
         lastpiecedest = movelst[*key-1].move.move & 0xFF;
@@ -417,7 +417,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
             exit(1);
         }
 
-        if (type > UBound && ismatch(entry.bestmove, list[i].move)) // TT hit: gets the largest bonus.
+        if (type > None && ismatch(entry.bestmove, list[i].move)) // TT hit: gets the largest bonus.
         {
 
             if (entry.bestmove.move == list[i].move.move)
