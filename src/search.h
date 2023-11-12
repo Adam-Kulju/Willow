@@ -412,7 +412,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     {
         // First, make sure the move is legal, not skipped by futility pruning or LMP, and that there's no errors making the move.
         selectionsort(list, i, movelen);
-        bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF] || list[i].move.flags == 0x7);
+        bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF] || list[i].move.flags == 0x7) && !(list[i].move.flags / 4 == 2);
         if ((quietsprune && !iscap) || ismatch(excludedmove, list[i].move))
         {
             i++;
@@ -563,10 +563,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= list[i].eval / 8096;
                 }
-                /*if (ispv && R > 2){
-                    R--;
-                }*/
                 R += (cutnode);  //i should make a funny comment here
+
             }
             R = MAX(R, 0); // make sure the reduction doesn't go negative!
 
@@ -954,7 +952,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
         if (depth > 6) // Update the aspiration window
         {
             double besttimefraction = (double)info.best_nodes / info.total_nodes;
-            opttime = MIN(maxtime * 0.6 * (1.5 - besttimefraction) * 1.35, maximumtime);
+            opttime = MIN(maxtime * 0.6 * (1.62 - besttimefraction) * 1.48, maximumtime);
             alpha = evl - 12;
             beta = evl + 12;
         }
