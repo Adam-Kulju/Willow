@@ -389,7 +389,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     // Initilalize the list of moves, generate them, and score them.
     struct list list[LISTSIZE];
     bool ismove = false;
-    int betacount = 0, quiets = 0;
+    int betacount = 0;
 
     if ((ispv || cutnode) && type == None && depthleft > 3){
         depthleft--;
@@ -435,14 +435,13 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
         if (depth > 0 && !iscap && !ispv)
         {
-            quiets++;
             int newdepth = MAX(depthleft - 1 -  LMRTABLE[depthleft-1][betacount] + improving, 0);
             int futility_move_count = (3 + depthleft * depthleft / (1 + (!improving)));
             // Late Move Pruning (LMP): at high depths, we can just not search quiet moves after a while.
             // They are very unlikely to be unavoidable even if they are good and it saves time.
             if (newdepth < 4)
             {
-                if (quiets >= futility_move_count)
+                if (betacount >= futility_move_count)
                 {
                     quietsprune = true;
                 }
@@ -953,7 +952,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime, 
         if (depth > 6) // Update the aspiration window
         {
             double besttimefraction = (double)info.best_nodes / info.total_nodes;
-            opttime = MIN(maxtime * 0.6 * (1.5 - besttimefraction) * 1.35, maximumtime);
+            opttime = MIN(maxtime * 0.6 * (1.62 - besttimefraction) * 1.48, maximumtime);
             alpha = evl - 12;
             beta = evl + 12;
         }
