@@ -397,7 +397,7 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
 
     int lastpiecetype = 0, lastpiecedest = 0;
     bool isreply = false;
-    if (depth > 0 && movelst[*key-1].piecetype != -1){
+    if (depth > 0 && movelst[*key-1].piecetype != -1 && depth < 99){
         isreply = true;
         lastpiecetype = board->board[movelst[*key-1].move.move & 0xFF] - 2;
         lastpiecedest = movelst[*key-1].move.move & 0xFF;
