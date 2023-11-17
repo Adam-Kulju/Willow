@@ -408,12 +408,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     bool quietsprune = false;
     int bestscore = -100000;
 
-    while (i < movelen)
+    while (i < movelen && !quietsprune)
     {
         // First, make sure the move is legal, not skipped by futility pruning or LMP, and that there's no errors making the move.
         selectionsort(list, i, movelen);
         bool iscap = (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF] || list[i].move.flags == 0x7) && !(list[i].move.flags / 4 == 2);
-        if ((quietsprune && !iscap) || ismatch(excludedmove, list[i].move))
+        if (ismatch(excludedmove, list[i].move))
         {
             i++;
             continue;
