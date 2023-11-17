@@ -196,7 +196,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
     srand(std::random_device()());
     struct board_info board;
     struct movelist movelst[MOVESIZE];
-    setdfrc(&board, rand() % (960 * 960));
+    setfull(&board);
     thread_info->nnue_state.reset_nnue(&board);
     calc_pos(&board, WHITE, thread_info);
     int key;
@@ -270,7 +270,7 @@ float game(const std::string &filename, ThreadInfo *thread_info)
         {
             g = -g;
         }
-        if (abs(g) > 5000)
+        if (abs(g) > 1000)
         {
             if (g > 0)
             {
@@ -350,7 +350,6 @@ void run_game(const std::string &filename, ThreadInfo &thread_info)
 
 int main(int argc, char *argv[])
 {
-    IS_DFRC = true;
     setvbuf(stdin, NULL, _IONBF, 0);
     setvbuf(stdout, NULL, _IONBF, 0);
     MAXDEPTH = 99;
