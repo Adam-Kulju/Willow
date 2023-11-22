@@ -391,7 +391,7 @@ void selectionsort(struct list *list, int k, int t)
     list[k] = tempmove;
 }
 
-int movescore(struct board_info *board, struct movelist *movelst, int *key, struct list *list, int depth, bool color, char type, int movelen, int threshold, ThreadInfo *thread_info, ttentry entry)
+int movescore(struct board_info *board, struct movelist *movelst, int *key, struct list *list, int depth, bool color, char type, int movelen, int threshold, ThreadInfo *thread_info, ttentry entry, bool score_quiets)
 {
     // Given a list of moves, scores them for move ordering purposes.
 
@@ -408,27 +408,18 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
     {
         list[i].eval = 1000000; // base
 
-        if (isreply && movelst[*key-1].move.move != 0 && movelst[*key-1].piecetype < 0)
+        /*if (isreply && movelst[*key-1].move.move != 0 && movelst[*key-1].piecetype < 0)
         {
             for (int i = 0; i < *key; i++){
                 printf("%x\n", movelst[i].move.move);
             }
             printfull(board);
             exit(1);
-        }
+        }*/
 
         if (type > None && ismatch(entry.bestmove, list[i].move)) // TT hit: gets the largest bonus.
         {
-
-            if (entry.bestmove.move == list[i].move.move)
-            {
-
-                if (entry.bestmove.flags == list[i].move.flags)
-                {
-
-                    list[i].eval += 10000000;
-                }
-            }
+            list[i].eval += 10000000;
         }
 
         else if (list[i].move.flags == 7) // Queen promotions are almost certainly good for us, so order them right below the TT move.
@@ -438,6 +429,10 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key, stru
         else if (board->board[list[i].move.move & 0xFF] && list[i].move.flags != 8) // Score captures with MVV-LVA and SEE.
         {
             list[i].eval = see(board, list[i].move, color, threshold) + thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF];
+        }
+        else if (!score_quiets){
+            i++;
+            continue;
         }
         else if (ismatch(list[i].move, thread_info->KILLERTABLE[depth][0])) // Killer moves
         {
