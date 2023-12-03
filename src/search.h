@@ -531,12 +531,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             int R;
             if (betacount < 1 + ispv || depthleft < 3) // Don't reduce winning captures or near the leaves
             {
-                R = 0;
+                R = 1;
             }
 
             else if (iscap && ispv)
             {
-                R = 0;
+                R = 1;
             }
 
             else
@@ -556,8 +556,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R -= 2;
                 }
-                if (!improving) // reduce reduction if we are improving.
+                if (improving) // reduce reduction if we are improving.
                 {
+                    R--;
+                }
+                if (!ispv){
                     R++;
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
