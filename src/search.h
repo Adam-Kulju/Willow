@@ -546,7 +546,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (iscap && !ispv)
                 {
                     R = R / 2;
-                    R -= thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 8096;
+                    R -= std::clamp(thread_info->CAPHIST[color][list[i].move.move >> 8][list[i].move.move & 0xFF] / 8096, -2, 2);
                 }
                 if (ischeck) // Reduce reduction for checks or moves made in check
                 {
@@ -561,7 +561,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     R--;
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
-                    R -= list[i].eval / 8096;
+                    R -= std::clamp(list[i].eval / 8096, -2, 2);
                 }
                 R += (cutnode);  //i should make a funny comment here
 
