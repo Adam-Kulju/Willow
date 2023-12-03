@@ -499,6 +499,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     thread_info->nnue_state.pop();
                     return sBeta;
                 }
+                else if (ttscore >= beta){
+                    extension = -2 + ispv;
+                }
                 else if (ttscore <= alpha){
                     extension = -1;
                 }
@@ -556,11 +559,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R -= 2;
                 }
-                if (improving) // reduce reduction if we are improving.
+                if (!improving) // reduce reduction if we are improving.
                 {
-                    R--;
-                }
-                if (!ispv){
                     R++;
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
