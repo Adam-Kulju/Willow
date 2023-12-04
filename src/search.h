@@ -499,9 +499,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     thread_info->nnue_state.pop();
                     return sBeta;
                 }
-                else if (ttscore >= beta){
-                    extension = -2 + ispv;
-                }
                 else if (ttscore <= alpha){
                     extension = -1;
                 }
@@ -566,7 +563,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= std::clamp(list[i].eval / 8096, -2, 2);
                 }
-                R += (cutnode);  //i should make a funny comment here
+                if (cutnode){
+                    R += 1 + !iscap;
+                }
 
             }
             R = MAX(R, 1); // make sure the reduction doesn't go negative!
