@@ -556,6 +556,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R -= 2;
                 }
+                if (type > None && ((entry.bestmove.flags == 0xC || board->board[entry.bestmove.move & 0xFF] || entry.bestmove.flags == 0x7) && !(entry.bestmove.flags / 4 == 2))){
+                    R++;
+                }
                 if (!improving) // reduce reduction if we are improving.
                 {
                     R++;
@@ -564,7 +567,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                     R -= std::clamp(list[i].eval / 8096, -2, 2);
                 }
                 if (cutnode){
-                    R += 1 + !iscap;
+                    R ++;
                 }
 
             }
