@@ -556,9 +556,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R -= 2;
                 }
-                if (type > LBound && ((entry.bestmove.flags == 0xC || board->board[entry.bestmove.move & 0xFF] || entry.bestmove.flags == 0x7) && !(entry.bestmove.flags / 4 == 2))){
-                    R++;
-                }
                 if (!improving) // reduce reduction if we are improving.
                 {
                     R++;
