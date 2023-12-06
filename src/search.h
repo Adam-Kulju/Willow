@@ -121,7 +121,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     struct list list[LISTSIZE];
     int listlen = movegen(board, list, color, incheck);
 
-    movescore(board, movelst, key, list, 99, color, type, listlen, -108, thread_info, entry, incheck);
+    movescore(board, movelst, key, list, 99, color, type, listlen, (stand_pat + 60 < alpha ? 1 : -108), thread_info, entry, incheck);
     // score the moves
 
     struct move bestmove = nullmove;
