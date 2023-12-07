@@ -121,7 +121,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     struct list list[LISTSIZE];
     int listlen = movegen(board, list, color, incheck);
 
-    movescore(board, movelst, key, list, 99, color, type, listlen, -108, thread_info, entry, incheck);
+    movescore(board, movelst, key, list, 99, color, type, listlen, (stand_pat + 60 < alpha ? 1 : -108), thread_info, entry, incheck);
     // score the moves
 
     struct move bestmove = nullmove;
@@ -531,12 +531,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             int R;
             if (betacount < 1 + ispv || depthleft < 3) // Don't reduce winning captures or near the leaves
             {
-                R = 0;
+                R = 1;
             }
 
             else if (iscap && ispv)
             {
-                R = 0;
+                R = 1;
             }
 
             else
@@ -556,20 +556,22 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
                 {
                     R -= 2;
                 }
-                if (improving) // reduce reduction if we are improving.
+                if (!improving) // reduce reduction if we are improving.
                 {
-                    R--;
+                    R++;
                 }
                 if (list[i].eval < 100000 && list[i].eval > -100000){
                     R -= std::clamp(list[i].eval / 8096, -2, 2);
                 }
-                R += (cutnode);  //i should make a funny comment here
+                if (cutnode){
+                    R ++;
+                }
 
             }
-            R = MAX(R, 0); // make sure the reduction doesn't go negative!
+            R = MAX(R, 1); // make sure the reduction doesn't go negative!
 
-            int newdepth = depthleft - 1 + extension;
-            if (newdepth - R < 1 && R > 0){
+            int newdepth = depthleft + extension;
+            if (newdepth - R < 1 && R > 1){
                 R = newdepth-1;
             }
 
@@ -588,9 +590,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
 
             // If a search at reduced depth fails high, search at normal depth with null window.
 
-            if (list[i].eval > alpha && R > 0)
+            if (list[i].eval > alpha && R > 1)
             {
-                list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth, depth + 1, color ^ 1, !cutnode, ischeck, nullmove, thread_info);
+                list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth - 1, depth + 1, color ^ 1, !cutnode, ischeck, nullmove, thread_info);
                 if (abs(list[i].eval) == TIMEOUT)
                 {
                     movelst[*key - 1].move = nullmove;
@@ -607,7 +609,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             if (list[i].eval > alpha && ispv)
             {
 
-                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, newdepth, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
+                list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha, newdepth - 1, depth + 1, color ^ 1, false, ischeck, nullmove, thread_info);
                 if (abs(list[i].eval) == TIMEOUT)
                 {
                     movelst[*key - 1].move = nullmove;
