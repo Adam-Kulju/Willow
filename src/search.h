@@ -121,7 +121,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     struct list list[LISTSIZE];
     int listlen = movegen(board, list, color, incheck);
 
-    movescore(board, movelst, key, list, 99, color, type, listlen, (!incheck && stand_pat + 60 < alpha ? (alpha - stand_pat - 60) : -108), thread_info, entry, incheck);
+    movescore(board, movelst, key, list, 99, color, type, listlen, (!incheck && stand_pat + 60 < alpha ? ((alpha - stand_pat - 60) / 2) : -108), thread_info, entry, incheck);
     // score the moves
 
     struct move bestmove = nullmove;
@@ -132,7 +132,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
     {
         selectionsort(list, i, listlen);
 
-        if (!incheck)
+        if (legals)
         {
             if (list[i].eval < 1000200) // Break if we have moved beyond searching winning captures and we are not in check (if we are then we search all moves)
             {
@@ -140,14 +140,16 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
             }
         }
         int piecetype = board->board[list[i].move.move >> 8] - 2;
-
-
         struct board_info board2 = *board;
 
         if (move(&board2, list[i].move, color, thread_info))
         {
             i++;
             continue;
+        }
+
+        if (legals == 0){
+            bestmove = list[i].move;
         }
         legals++;
         move_add(board, movelst, key, list[i].move, color, (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]), thread_info, piecetype);
