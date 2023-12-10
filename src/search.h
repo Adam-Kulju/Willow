@@ -149,6 +149,9 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
             i++;
             continue;
         }
+        if (!legals){
+            bestmove = list[i].move;
+        }
         legals++;
         move_add(board, movelst, key, list[i].move, color, (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]), thread_info, piecetype);
 
