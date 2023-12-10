@@ -364,12 +364,15 @@ void insert(unsigned long long int position, int depthleft, int eval, char type,
             return;
         }
     }
+    if (!(TT[index].zobrist_key == position && !ismatch(TT[index].bestmove, nullmove) && type == UBound)){
+        TT[index].bestmove = bestmove;
+    }
+    
     TT[index].zobrist_key = position;
     TT[index].depth = depthleft;
     TT[index].eval = eval;
     TT[index].type = type;
     TT[index].age = search_age;
-    TT[index].bestmove = bestmove;
 }
 
 char *conv(struct move move, char *temp) // Converts a internally encoded move to a UCI string.

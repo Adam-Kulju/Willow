@@ -149,9 +149,6 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key, int al
             i++;
             continue;
         }
-        if (!legals){
-            bestmove = list[i].move;
-        }
         legals++;
         move_add(board, movelst, key, list[i].move, color, (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]), thread_info, piecetype);
 
@@ -401,7 +398,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
     int i = 0;
     unsigned long long int original_pos = thread_info->CURRENTPOS;
     int movelen = movegen(board, list, color, incheck);
-    movescore(board, movelst, key, list, depth, color, type, movelen, 0, thread_info, entry, true);
+    movescore(board, movelst, key, list, depth, color, (type && !entry.depth) ? None : type, movelen, 0, thread_info, entry, true);
     bool raisedalpha = false;
     if (depth == 0)
     {
@@ -430,10 +427,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key, int 
             continue;
         }
 
-        if (!ismove)
-        {
-            bestmove = list[i].move;
-        }
         ismove = true;
 
         if (depth > 0 && !iscap && !ispv)
