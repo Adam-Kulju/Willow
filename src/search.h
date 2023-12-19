@@ -20,6 +20,31 @@ void updateHistory(int &entry, int score) {
   entry += score - entry * abs(score) / 16384;
 }
 
+bool mustReturn(ThreadInfo *thread_info) {
+  if (thread_info->id == 0 &&
+      !((nodes) & (CHECKTIME))) // return if we have run out of time, either
+                                // alloted to search or overall
+  {
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed =
+        (float)std::chrono::duration_cast<std::chrono::milliseconds>(now -
+                                                                     start_time)
+            .count() /
+        1000;
+
+    if (elapsed > maximumtime ||
+        elapsed > coldturkey) { // you MOVE if you're down to 0.1 seconds!
+        thread_info->stop = true;
+        return true;
+    }
+  }
+  if ((NODES_IID && !((nodes) % (NODES_IID))) || thread_info->stop) {
+    thread_info->stop = true;
+    return true;
+  }
+  return false;
+}
+
 int quiesce(struct board_info *board, struct movelist *movelst, int *key,
             int alpha, int beta, int depth, int depthleft, bool color,
             bool incheck, ThreadInfo *thread_info)
@@ -30,35 +55,16 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
     maxdepth = depth;
   }
   nodes++, thread_info->nodes++;
-  if (depthleft <= 0) // return if we are too deep
+  if (depthleft <= 0 || mustReturn(thread_info)) // return if we are too deep
   {
-    return incheck ? 0 : eval(board, color, thread_info);
+    return eval(board, color, thread_info);
   }
 
-  if (thread_info->id == 0 &&
-      !((nodes) & (CHECKTIME))) // return if we have run out of time, either
-                                // alloted to search or overall
-  {
-    auto end = std::chrono::steady_clock::now();
-    auto rightnow =
-        (float)std::chrono::duration_cast<std::chrono::milliseconds>(end -
-                                                                     start_time)
-            .count() /
-        1000;
-
-    if (rightnow > maximumtime ||
-        rightnow > coldturkey) { // you MOVE if you're down to 0.1 seconds!
-      return TIMEOUT;
-    }
-  }
-  if ((NODES_IID && !((nodes) % (NODES_IID))) || thread_info->stop) {
-    return TIMEOUT;
-  }
   int evl = 0;
   char type;
   struct ttentry entry = TT[(thread_info->CURRENTPOS) & (_mask)];
   if (thread_info->CURRENTPOS == entry.zobrist_key)
-  // Probe the transposition table. If we got an hit we may be able to cut of
+  // Probe the transposition table. If we got an hit we may be able to cut off
   // immediately, if not it may stil be useful for move ordering.
   {
     type = entry.type;
@@ -158,14 +164,6 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
                  color ^ 1, isattacked(board, board->kingpos[color ^ 1], color),
                  thread_info);
 
-    if (abs(list[i].eval) == TIMEOUT) // timeout detection
-    {
-      thread_info->CURRENTPOS = original_pos;
-      thread_info->nnue_state.pop();
-      movelst[*key - 1].move = nullmove;
-      *key = *key - 1;
-      return TIMEOUT;
-    }
     if (list[i].eval > bestscore) // update best move
     {
       bestmove = list[i].move;
@@ -219,22 +217,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     info.depth = depthleft;
   }
 
-  if (thread_info->id == 0 && !((nodes) & (CHECKTIME))) // Timeout detection
-  {
-    auto end = std::chrono::steady_clock::now();
-    auto rightnow =
-        (float)std::chrono::duration_cast<std::chrono::milliseconds>(end -
-                                                                     start_time)
-            .count() /
-        1000;
-    if (rightnow > maximumtime ||
-        rightnow > coldturkey) { // you MOVE if you're down to 0.1 seconds!
-      return TIMEOUT;
-    }
+  if (mustReturn(thread_info)){
+    return eval(board, color, thread_info);
   }
-  if ((NODES_IID && !((nodes) % (NODES_IID))) || thread_info->stop) {
-    return TIMEOUT;
-  }
+
   if (depth > 0) {
     if (checkdraw2(movelst, key) > 0 || checkdraw1(board)) // Draw detection
     {
@@ -341,8 +327,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
   // Reverse Futility Pruning: If our position is so good that we don't need to
   // move to beat beta + some margin, we cut off early.
-  if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 &&
-      depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta) {
+  if (!ispv && !incheck && abs(evl) < 50000 && !singularsearch &&
+      depthleft < 9 && evl - (depthleft * 80) + (improving * 80) >= beta) {
     return evl;
   }
 
@@ -384,9 +370,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
       movelst[*key - 1].move = nullmove;
       *key = *key - 1;
-      if (abs(nm) == TIMEOUT) {
-        return TIMEOUT;
-      }
 
       if (nm >= beta) {
         return evl;
@@ -479,8 +462,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
                                            // search, do singular search.
 
       if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 &&
-          abs(evl) < 50000 && entry.depth >= depthleft - 3 && type != UBound) {
-        int sBeta = ttscore - (depthleft);
+          abs(ttscore) < 50000 && entry.depth >= depthleft - 3 &&
+          type != UBound) {
+        int sBeta = MAX(ttscore - (depthleft), -50000);
         long long unsigned int temp = thread_info->CURRENTPOS;
         thread_info->CURRENTPOS =
             original_pos; // reset hash of the position for the singular search
@@ -529,14 +513,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha,
                                 depthleft - 1 + extension, depth + 1, color ^ 1,
                                 false, ischeck, nullmove, thread_info);
-      if (abs(list[i].eval) == TIMEOUT) {
-        movelst[*key - 1].move = nullmove;
-        *key = *key - 1;
-        thread_info->CURRENTPOS = original_pos;
-        thread_info->nnue_state.pop();
-
-        return TIMEOUT;
-      }
     }
 
     else {
@@ -594,14 +570,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha,
                                 newdepth - R, depth + 1, color ^ 1, true,
                                 ischeck, nullmove, thread_info);
-      if (abs(list[i].eval) == TIMEOUT) {
-        movelst[*key - 1].move = nullmove;
-        *key = *key - 1;
-        thread_info->CURRENTPOS = original_pos;
-        thread_info->nnue_state.pop();
-
-        return TIMEOUT;
-      }
 
       // If a search at reduced depth fails high, search at normal depth with
       // null window.
@@ -610,14 +578,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha,
                                   newdepth - 1, depth + 1, color ^ 1, !cutnode,
                                   ischeck, nullmove, thread_info);
-        if (abs(list[i].eval) == TIMEOUT) {
-          movelst[*key - 1].move = nullmove;
-          *key = *key - 1;
-          thread_info->CURRENTPOS = original_pos;
-          thread_info->nnue_state.pop();
-
-          return TIMEOUT;
-        }
       }
 
       // If that fails high too, search with the full window.
@@ -627,14 +587,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha,
                                   newdepth - 1, depth + 1, color ^ 1, false,
                                   ischeck, nullmove, thread_info);
-        if (abs(list[i].eval) == TIMEOUT) {
-          movelst[*key - 1].move = nullmove;
-          *key = *key - 1;
-          thread_info->CURRENTPOS = original_pos;
-          thread_info->nnue_state.pop();
-
-          return TIMEOUT;
-        }
       }
     }
 
@@ -709,43 +661,42 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         }
 
         for (int a = 0; a < i; a++) {
-            if (!(list[a].move.flags == 0xC ||
-                  board->board[list[a].move.move & 0xFF])) {
+          if (!(list[a].move.flags == 0xC ||
+                board->board[list[a].move.move & 0xFF])) {
 
+            updateHistory(
+                thread_info->HISTORYTABLE[color][(list[a].move.move >> 8)]
+                                         [list[a].move.move & 0xFF],
+                -c);
+            if (isreply) {
               updateHistory(
-                  thread_info->HISTORYTABLE[color][(list[a].move.move >> 8)]
-                                           [list[a].move.move & 0xFF],
-                  -c);
-              if (isreply) {
-                updateHistory(
-                    thread_info->CONTHIST[lastpiecetype][lastsquare]
-                                         [board->board[list[a].move.move >> 8] -
-                                          2][list[a].move.move & 0xFF],
-                    -c);
-              }
-              if (depth > 1 && movelst[*key - 3].piecetype != -1) {
-                updateHistory(
-                    thread_info->CONTHIST[movelst[*key - 3].piecetype]
-                                         [movelst[*key - 3].move.move & 0xFF]
-                                         [board->board[list[a].move.move >> 8] -
-                                          2][list[a].move.move & 0xFF],
-                    -c);
-              }
-              if (depth > 3 && movelst[*key - 5].piecetype != -1) {
-                updateHistory(
-                    thread_info->CONTHIST[movelst[*key - 5].piecetype]
-                                         [movelst[*key - 5].move.move & 0xFF]
-                                         [board->board[list[a].move.move >> 8] -
-                                          2][list[a].move.move & 0xFF],
-                    -c);
-              }
-            } else {
-              updateHistory(
-                  thread_info->CAPHIST[color][(list[a].move.move >> 8)]
-                                      [list[a].move.move & 0xFF],
+                  thread_info->CONTHIST[lastpiecetype][lastsquare]
+                                       [board->board[list[a].move.move >> 8] -
+                                        2][list[a].move.move & 0xFF],
                   -c);
             }
+            if (depth > 1 && movelst[*key - 3].piecetype != -1) {
+              updateHistory(
+                  thread_info->CONTHIST[movelst[*key - 3].piecetype]
+                                       [movelst[*key - 3].move.move & 0xFF]
+                                       [board->board[list[a].move.move >> 8] -
+                                        2][list[a].move.move & 0xFF],
+                  -c);
+            }
+            if (depth > 3 && movelst[*key - 5].piecetype != -1) {
+              updateHistory(
+                  thread_info->CONTHIST[movelst[*key - 5].piecetype]
+                                       [movelst[*key - 5].move.move & 0xFF]
+                                       [board->board[list[a].move.move >> 8] -
+                                        2][list[a].move.move & 0xFF],
+                  -c);
+            }
+          } else {
+            updateHistory(thread_info->CAPHIST[color][(list[a].move.move >> 8)]
+                                              [list[a].move.move & 0xFF],
+                          -c);
           }
+        }
       }
 
       else {
@@ -867,7 +818,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
     int evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color,
                         false, incheck, excludedmove, thread_info);
 
-    while (abs(evl) != TIMEOUT && (evl <= alpha || evl >= beta)) {
+    while (!thread_info->stop && (evl <= alpha || evl >= beta)) {
       ;
       if (evl <=
           alpha) // If we fail low, print, widen the window, and try again.
@@ -889,7 +840,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
         evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color,
                         false, incheck, excludedmove, thread_info);
 
-        if (abs(evl) == TIMEOUT) {
+        if (thread_info->stop) {
           if (thread_info->currentmove.move == 0) {
             thread_info->currentmove = pvmove;
             depth--;
@@ -920,15 +871,14 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
         tempdepth = MAX(tempdepth - 1, depth - 3);
         evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color,
                         false, incheck, excludedmove, thread_info);
-        if (abs(evl) == TIMEOUT) {
+        if (thread_info->stop) {
           thread_info->currentmove = pvmove;
           break;
         }
       }
     }
-    if (abs(evl) ==
-        TIMEOUT) // If we've run out of time and don't have a best move from
-                 // this iteration, use the one from last iteration
+    if (thread_info->stop) // If we've run out of time and don't have a best move from
+                           // this iteration, use the one from last iteration
     {
       if (thread_info->currentmove.move == 0) {
         thread_info->currentmove = pvmove;
