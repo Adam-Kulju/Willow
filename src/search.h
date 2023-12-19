@@ -590,6 +590,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
     }
 
+    if (thread_info->stop){
+      return evl;
+    }
+
     if (depth == 0 && thread_info->id == 0) {
       info.total_nodes += thread_info->nodes - current_nodes;
       if (list[i].eval > bestscore) {
