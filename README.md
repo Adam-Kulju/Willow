@@ -1,4 +1,7 @@
 # Willow
+
+<img src="willow_logo.png" width="300" alt="Willow's logo">
+
 A chess engine written with the goal of being both extremely strong and very aggressive. Currently, it is the strongest mailbox chess engine in the world and clocks in at just under 3400 CCRL Elo.
 
 # Features
@@ -21,8 +24,3 @@ If you want to donate hardware that will go towards testing patches for the engi
 Thank you to all my friends in the OpenBench instance: @cosmobobak, @uwuplant, @crippa1337, @archishou, @Ciekce, @JouanDeag, @GediminasMasaitis, @Alex2262, @lucametehau, @spamdrew128, @lucametehau, @PGG106, @JacquesRW and @dede1751. In addition to providing compute to the instance, allowing Willow to be tested quickly and easily, they have also provided me with so many ideas, as well as inspired me and also simply made my journey through chess programming a fun as well as fulfilling venture.
 
 Special thanks for @Alex2262 for helping me generate data for the NNUE that Willow is trained on.
-
-
-# Logo
-
-<img src="willow_logo.png" width="300" alt="Willow's logo">
