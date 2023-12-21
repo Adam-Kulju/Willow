@@ -20,6 +20,13 @@ void updateHistory(int &entry, int score) {
   entry += score - entry * abs(score) / 16384;
 }
 
+void unmake(movelist *movelst, int *key, ThreadInfo *thread_info, long long unsigned int original_pos){
+      thread_info->CURRENTPOS = original_pos;
+      thread_info->nnue_state.pop();
+      movelst[*key - 1].move = nullmove;
+      *key = *key - 1;
+}
+
 int quiesce(struct board_info *board, struct movelist *movelst, int *key,
             int alpha, int beta, int depth, int depthleft, bool color,
             bool incheck, ThreadInfo *thread_info)
@@ -125,10 +132,9 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
   // score the moves
 
   struct move bestmove = nullmove;
-  int i = 0;
   int legals = 0;
 
-  while (i < listlen) {
+  for (int i = 0; i < listlen; i++) {
     selectionsort(list, i, listlen);
 
     if (!incheck) {
@@ -144,7 +150,6 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
     struct board_info board2 = *board;
 
     if (move(&board2, list[i].move, color, thread_info)) {
-      i++;
       continue;
     }
     legals++;
@@ -158,12 +163,9 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
                  color ^ 1, isattacked(board, board->kingpos[color ^ 1], color),
                  thread_info);
 
+  unmake(movelst, key, thread_info, original_pos);
     if (abs(list[i].eval) == TIMEOUT) // timeout detection
     {
-      thread_info->CURRENTPOS = original_pos;
-      thread_info->nnue_state.pop();
-      movelst[*key - 1].move = nullmove;
-      *key = *key - 1;
       return TIMEOUT;
     }
     if (list[i].eval > bestscore) // update best move
@@ -173,10 +175,6 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
     }
     if (list[i].eval >= beta) // handle fail high
     {
-      thread_info->CURRENTPOS = original_pos;
-      thread_info->nnue_state.pop();
-      movelst[*key - 1].move = nullmove;
-      *key = *key - 1;
       insert(original_pos, 0, list[i].eval, LBound, list[i].move, search_age);
       return list[i].eval;
     }
@@ -184,11 +182,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
     {
       alpha = list[i].eval;
     }
-    movelst[*key - 1].move = nullmove;
-    *key = *key - 1;
-    thread_info->CURRENTPOS = original_pos;
-    thread_info->nnue_state.pop();
-    i++;
+
   }
 
   if (incheck &&
@@ -417,7 +411,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   bool quietsprune = false;
   int bestscore = -100000;
 
-  while (i < movelen && !quietsprune) {
+  for (i = 0; i < movelen && !quietsprune; i++) {
     // First, make sure the move is legal, not skipped by futility pruning or
     // LMP, and that there's no errors making the move.
     selectionsort(list, i, movelen);
@@ -426,14 +420,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
          list[i].move.flags == 0x7) &&
         !(list[i].move.flags / 4 == 2);
     if (ismatch(excludedmove, list[i].move)) {
-      i++;
       continue;
     }
     struct board_info board2 = *board;
     int piecetype = board->board[list[i].move.move >> 8] - 2;
 
     if (move(&board2, list[i].move, color, thread_info)) {
-      i++;
       continue;
     }
     ismove = true;
@@ -468,7 +460,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
                                         (iscap ? -30 * depthleft : -80))) {
       thread_info->CURRENTPOS = original_pos;
       thread_info->nnue_state.pop();
-      i++;
+
       continue;
     }
     bool ischeck = isattacked(&board2, board2.kingpos[color ^ 1], color);
@@ -530,11 +522,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
                                 depthleft - 1 + extension, depth + 1, color ^ 1,
                                 false, ischeck, nullmove, thread_info);
       if (abs(list[i].eval) == TIMEOUT) {
-        movelst[*key - 1].move = nullmove;
-        *key = *key - 1;
-        thread_info->CURRENTPOS = original_pos;
-        thread_info->nnue_state.pop();
-
+        unmake(movelst, key, thread_info, original_pos);
         return TIMEOUT;
       }
     }
@@ -595,10 +583,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
                                 newdepth - R, depth + 1, color ^ 1, true,
                                 ischeck, nullmove, thread_info);
       if (abs(list[i].eval) == TIMEOUT) {
-        movelst[*key - 1].move = nullmove;
-        *key = *key - 1;
-        thread_info->CURRENTPOS = original_pos;
-        thread_info->nnue_state.pop();
+        unmake(movelst, key, thread_info, original_pos);
 
         return TIMEOUT;
       }
@@ -611,10 +596,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
                                   newdepth - 1, depth + 1, color ^ 1, !cutnode,
                                   ischeck, nullmove, thread_info);
         if (abs(list[i].eval) == TIMEOUT) {
-          movelst[*key - 1].move = nullmove;
-          *key = *key - 1;
-          thread_info->CURRENTPOS = original_pos;
-          thread_info->nnue_state.pop();
+          unmake(movelst, key, thread_info, original_pos);
 
           return TIMEOUT;
         }
@@ -628,10 +610,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
                                   newdepth - 1, depth + 1, color ^ 1, false,
                                   ischeck, nullmove, thread_info);
         if (abs(list[i].eval) == TIMEOUT) {
-          movelst[*key - 1].move = nullmove;
-          *key = *key - 1;
-          thread_info->CURRENTPOS = original_pos;
-          thread_info->nnue_state.pop();
+          unmake(movelst, key, thread_info, original_pos);
 
           return TIMEOUT;
         }
@@ -762,15 +741,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         }
       }
 
-      movelst[(*key) - 1].move.flags = 0;
-      *key = *key - 1;
-      thread_info->CURRENTPOS = original_pos;
-      thread_info->nnue_state.pop();
+      unmake(movelst, key, thread_info, original_pos);
       return list[i].eval;
     }
 
-    movelst[*key - 1].move = nullmove;
-    *key = *key - 1;
+    unmake(movelst, key, thread_info, original_pos);
     if (list[i].eval > alpha) {
       if (depth == 0) {
         thread_info->currentmove = list[i].move;
@@ -782,15 +757,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     else if (!betacount && depth == 0) {
       insert(original_pos, depthleft, list[i].eval, 1, list[i].move,
              search_age);
-      thread_info->CURRENTPOS = original_pos;
-      thread_info->nnue_state.pop();
       return list[i].eval;
     }
 
-    thread_info->CURRENTPOS = original_pos;
-    thread_info->nnue_state.pop();
     betacount++;
-    i++;
   }
 
   if (!ismove) // if we have no legal moves, it's either checkmate or stalemate.
