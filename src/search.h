@@ -411,7 +411,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   bool quietsprune = false;
   int bestscore = -100000;
 
-  for (i = 0; i < movelen && !quietsprune; i++) {
+  for (i = 0; i < movelen; i++) {
     // First, make sure the move is legal, not skipped by futility pruning or
     // LMP, and that there's no errors making the move.
     selectionsort(list, i, movelen);
@@ -419,7 +419,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF] ||
          list[i].move.flags == 0x7) &&
         !(list[i].move.flags / 4 == 2);
-    if (ismatch(excludedmove, list[i].move)) {
+    if ((quietsprune && !iscap) || ismatch(excludedmove, list[i].move)) {
       continue;
     }
     struct board_info board2 = *board;
@@ -428,6 +428,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     if (move(&board2, list[i].move, color, thread_info)) {
       continue;
     }
+
     ismove = true;
 
     if (depth > 0 && !iscap && !ispv) {
@@ -447,7 +448,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       // after this one.
       if ((!incheck && newdepth < 10 && list[i].eval < 1000200 &&
            evl + 100 + 150 * (depthleft) < alpha)) {
-        quietsprune = true;
+          quietsprune = true;
       }
     }
 
