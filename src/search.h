@@ -431,7 +431,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     ismove = true;
 
-    if (depth > 0 && !iscap && !ispv) {
+    if (depth > 0 && !iscap && !ispv && bestscore > -50000) {
       int newdepth = MAX(
           depthleft - 1 - LMRTABLE[depthleft - 1][betacount] + improving, 0);
       int futility_move_count =
@@ -439,7 +439,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       // Late Move Pruning (LMP): at high depths, we can just not search quiet
       // moves after a while. They are very unlikely to be unavoidable even if
       // they are good and it saves time.
-      if (newdepth < 4) {
+      if (newdepth < 5) {
         if (betacount >= futility_move_count) {
           quietsprune = true;
         }
@@ -447,7 +447,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       // Futility Pruning: If our position is bad enough, only search captures
       // after this one.
       if ((!incheck && newdepth < 10 && list[i].eval < 1000200 &&
-           evl + 100 + 150 * (depthleft) < alpha)) {
+           evl + 100 + 125 * (depthleft) < alpha)) {
           quietsprune = true;
       }
     }
