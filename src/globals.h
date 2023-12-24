@@ -21,6 +21,7 @@ int attackers[2]; // the number of attackers on king
 int NODES_IID = 0;
 
 bool IS_DFRC = false;
+bool GENERATE = false;
 short int search_age; // search age for TT purposes
 
 short int MAXDEPTH; // The maximum depth of a position (set to 14 for bench and
