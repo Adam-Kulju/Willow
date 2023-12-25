@@ -22,7 +22,7 @@ else
 endif
 
 ifneq (,$(findstring clang,$(shell $(CXX) --version)))
-    ifneq ($(DETECTED_OS), Darwin)
+    ifeq ($(DETECTED_OS), Windows)
         LINKER += -fuse-ld=lld
     endif
 endif
