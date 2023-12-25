@@ -336,7 +336,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   // Reverse Futility Pruning: If our position is so good that we don't need to
   // move to beat beta + some margin, we cut off early.
   if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 &&
-      depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta) {
+      depthleft < 9 && evl - (depthleft * 80) + (improving * 50) >= beta) {
     return evl;
   }
 
@@ -433,17 +433,17 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     if (depth > 0 && !iscap && bestscore > -50000 && !(ispv && GENERATE)) {
       int newdepth = MAX(
-          depthleft - 1 - LMRTABLE[depthleft - 1][betacount] + improving, 1);
+          depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 1);
       int futility_move_count =
           3 + (newdepth * newdepth / (1 + (!improving)));
       // Late Move Pruning (LMP): at high depths, we can just not search quiet
       // moves after a while. They are very unlikely to be unavoidable even if
       // they are good and it saves time.
-      /*if (newdepth < 5) {
+      if (newdepth < 5) {
         if (betacount >= futility_move_count) {
           quietsprune = true;
         }
-      }*/
+      }
       // Futility Pruning: If our position is bad enough, only search captures
       // after this one.
       if ((newdepth < 9 && list[i].eval < 1000200 &&
