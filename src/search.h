@@ -336,7 +336,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   // Reverse Futility Pruning: If our position is so good that we don't need to
   // move to beat beta + some margin, we cut off early.
   if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 &&
-      depthleft < 9 && evl - (depthleft * 80) + (improving * 50) >= beta) {
+      depthleft < 9 && evl - (depthleft * 80) + (improving * 80) >= beta) {
     return evl;
   }
 
@@ -431,7 +431,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     ismove = true;
 
-    if (depth > 0 && !iscap && bestscore > -50000 && !(ispv && GENERATE)) {
+    if (depth > 0 && !iscap && bestscore > -50000 && !(ispv)) {
       int newdepth = MAX(
           depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 1);
       int futility_move_count =
