@@ -431,9 +431,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     ismove = true;
 
-    if (depth > 0 && !iscap && bestscore > -50000 && !(ispv)) {
+    if (depth > 0 && !iscap && bestscore > -50000 && !(ispv && GENERATE)) {
       int newdepth = MAX(
-          depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 1);
+          depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 0);
       int futility_move_count =
           3 + (newdepth * newdepth / (1 + (!improving)));
       // Late Move Pruning (LMP): at high depths, we can just not search quiet
@@ -454,7 +454,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     // SEE pruning: if a quick check shows that we're hanging material, we skip
     // the move.
-    if (!incheck && depth && list[i].eval < 1000200 && bestscore > -50000 &&
+    if (depth && list[i].eval < 1000200 && bestscore > -50000 &&
         depthleft < 9 &&
         !static_exchange_evaluation(board, list[i].move, color,
                                     (depthleft) *
