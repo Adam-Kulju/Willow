@@ -446,8 +446,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
       // Futility Pruning: If our position is bad enough, only search captures
       // after this one.
-      if ((newdepth < 9 && list[i].eval < 1000200 &&
-           evl + 100 + 150 * (newdepth) < alpha)) {
+      if ((newdepth < 10 && list[i].eval < 1000200 &&
+           evl + 100 + 130 * (newdepth) < alpha)) {
           quietsprune = true;
       }
     }
