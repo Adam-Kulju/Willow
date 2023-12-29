@@ -432,8 +432,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     ismove = true;
 
     if (depth > 0 && !iscap && bestscore > -50000 && !(ispv && GENERATE)) {
-      int newdepth = std::clamp(
-          depthleft - LMRTABLE[depthleft][betacount] + improving, 0, depthleft);
+      int newdepth = MAX(
+          depthleft - LMRTABLE[depthleft][betacount] + improving, 0);
       int futility_move_count =
           3 + (depthleft * depthleft / (1 + (!improving)));
       // Late Move Pruning (LMP): at high depths, we can just not search quiet
@@ -446,7 +446,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
       // Futility Pruning: If our position is bad enough, only search captures
       // after this one.
-      if ((newdepth < 9 && list[i].eval < 1000200 &&
+      if ((newdepth < 11 && list[i].eval < 1000200 &&
            evl + 100 + 150 * (newdepth) < alpha)) {
           quietsprune = true;
       }
