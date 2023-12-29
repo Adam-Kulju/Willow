@@ -336,7 +336,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   // Reverse Futility Pruning: If our position is so good that we don't need to
   // move to beat beta + some margin, we cut off early.
   if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 &&
-      depthleft < 9 && evl - (depthleft * 80) + (improving * 80) >= beta) {
+      depthleft < 9 && evl - (depthleft * 80) + (improving * 60) >= beta) {
     return evl;
   }
 
@@ -446,7 +446,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
       // Futility Pruning: If our position is bad enough, only search captures
       // after this one.
-      if ((newdepth < 11 && list[i].eval < 1000200 &&
+      if ((newdepth < 9 && list[i].eval < 1000200 &&
            evl + 100 + 150 * (newdepth) < alpha)) {
           quietsprune = true;
       }
