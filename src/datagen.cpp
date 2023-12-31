@@ -320,7 +320,6 @@ void run_game(const std::string &filename, ThreadInfo &thread_info) {
 }
 
 int main(int argc, char *argv[]) {
-  GENERATE = true;
   setvbuf(stdin, NULL, _IONBF, 0);
   setvbuf(stdout, NULL, _IONBF, 0);
   MAXDEPTH = 99;

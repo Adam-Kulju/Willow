@@ -336,7 +336,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   // Reverse Futility Pruning: If our position is so good that we don't need to
   // move to beat beta + some margin, we cut off early.
   if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 &&
-      depthleft < 9 && evl - (depthleft * 80) + (improving * 80) >= beta) {
+      depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta) {
     return evl;
   }
 
@@ -411,7 +411,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   bool quietsprune = false;
   int bestscore = -100000;
 
-  for (i = 0; i < movelen; i++) {
+  for (i = 0; i < movelen && !quietsprune; i++) {
     // First, make sure the move is legal, not skipped by futility pruning or
     // LMP, and that there's no errors making the move.
     selectionsort(list, i, movelen);
@@ -419,7 +419,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF] ||
          list[i].move.flags == 0x7) &&
         !(list[i].move.flags / 4 == 2);
-    if ((quietsprune && !iscap) || ismatch(excludedmove, list[i].move)) {
+    if (ismatch(excludedmove, list[i].move)) {
       continue;
     }
     struct board_info board2 = *board;
@@ -428,27 +428,26 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     if (move(&board2, list[i].move, color, thread_info)) {
       continue;
     }
-
     ismove = true;
 
-    if (depth > 0 && !iscap && bestscore > -50000 && !(ispv && GENERATE)) {
+    if (depth > 0 && !iscap && !ispv) {
       int newdepth = MAX(
-          depthleft - LMRTABLE[depthleft][betacount] + improving, 0);
+          depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 1);
       int futility_move_count =
           3 + (depthleft * depthleft / (1 + (!improving)));
       // Late Move Pruning (LMP): at high depths, we can just not search quiet
       // moves after a while. They are very unlikely to be unavoidable even if
       // they are good and it saves time.
-      if (depthleft < 5) {
+      if (newdepth < 4) {
         if (betacount >= futility_move_count) {
           quietsprune = true;
         }
       }
       // Futility Pruning: If our position is bad enough, only search captures
       // after this one.
-      if ((newdepth < 10 && list[i].eval < 1000200 &&
-           evl + 100 + (150 * (newdepth)) < alpha)) {
-          quietsprune = true;
+      if ((!incheck && newdepth < 10 && list[i].eval < 1000200 &&
+           evl + 100 + 150 * (depthleft) < alpha)) {
+        quietsprune = true;
       }
     }
 
@@ -544,7 +543,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
 
       else {
-        R = LMRTABLE[depthleft][betacount];
+        R = LMRTABLE[depthleft - 1][betacount];
 
         if (iscap && !ispv) {
           R = R / 2;
