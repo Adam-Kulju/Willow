@@ -432,7 +432,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     if (depth > 0 && !iscap && !ispv) {
       int newdepth = MAX(
-          depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 1);
+          depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 0);
       int futility_move_count =
           3 + (depthleft * depthleft / (1 + (!improving)));
       // Late Move Pruning (LMP): at high depths, we can just not search quiet
