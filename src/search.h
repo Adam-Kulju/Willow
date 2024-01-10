@@ -36,7 +36,13 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
   {
     maxdepth = depth;
   }
-  nodes++, thread_info->nodes++;
+  thread_info->nodes++;
+  if (thread_info->id == 0){
+    nodes++;
+  }
+  else if (thread_info->nodes % 1024 == 0){
+    nodes += 1024;
+  }
   if (depthleft <= 0) // return if we are too deep
   {
     return incheck ? 0 : eval(board, color, thread_info);
@@ -203,13 +209,20 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
               int alpha, int beta, int depthleft, int depth, bool color,
               bool cutnode, bool incheck, struct move excludedmove,
               ThreadInfo *thread_info) {
-  nodes++, thread_info->nodes++;
 
   if (depth == 0 && thread_info->id == 0) {
     maxdepth = 0;
     info.total_nodes = 0;
     info.best_nodes = 0;
     info.depth = depthleft;
+  }
+
+  thread_info->nodes++;
+  if (thread_info->id == 0){
+    nodes++;
+  }
+  else if (thread_info->nodes % 1024 == 0){
+    nodes += 1024;
   }
 
   if (thread_info->id == 0 && !((nodes) & (CHECKTIME))) // Timeout detection
@@ -811,8 +824,6 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
   thread_info->nnue_state.reset_nnue(board);
   // Performs an Iterative Deepening search on the current position.
 
-  nodes = 0;
-
   float opttime = maxtime * 0.6;
   clearHistory(false, thread_info);
   clearKiller(thread_info);
@@ -1005,6 +1016,7 @@ void start_search(struct board_info *board, struct movelist *movelst,
     thread_infos[i] = *thread_info;
     thread_infos[i].id = i + 1;
   }
+  nodes = 0;
   start_time = std::chrono::steady_clock::now();
 
   for (int i = 0; i < numThreads - 1; i++) {
