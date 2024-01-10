@@ -314,8 +314,8 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes
 {
   MAXDEPTH = 14;
   char positions[50][1024] = {
-      {"2r4r/1p4k1/1Pnp4/3Qb1pq/8/4BpPp/5P2/2RR1BK1 w - - 0 42\0"},
       {"2r2k2/8/4P1R1/1p6/8/P4K1N/7b/2B5 b - - 0 55\0"},
+      {"2r4r/1p4k1/1Pnp4/3Qb1pq/8/4BpPp/5P2/2RR1BK1 w - - 0 42\0"},
       {"6k1/5pp1/8/2bKP2P/2P5/p4PNb/B7/8 b - - 1 44\0"},
       {"6r1/5k2/p1b1r2p/1pB1p1p1/1Pp3PP/2P1R1K1/2P2P2/3R4 w - - 1 36\0"},
       {"4rrk1/2p1b1p1/p1p3q1/4p3/2P2n1p/1P1NR2P/PB3PP1/3R1QK1 b - - 2 24\0"},
