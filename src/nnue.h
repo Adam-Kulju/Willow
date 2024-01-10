@@ -24,8 +24,8 @@
 
 class Position;
 
-constexpr size_t INPUT_SIZE = 768;
-constexpr size_t LAYER1_SIZE = 768 * 4;
+constexpr size_t INPUT_SIZE = 768 * 4;
+constexpr size_t LAYER1_SIZE = 768;
 
 constexpr int SCRELU_MIN = 0;
 constexpr int SCRELU_MAX = 255;
@@ -72,6 +72,14 @@ template <size_t HiddenSize> struct alignas(64) Accumulator {
     std::memcpy(white.data(), bias.data(), bias.size_bytes());
     std::memcpy(black.data(), bias.data(), bias.size_bytes());
   }
+  inline void init_color(std::span<const int16_t, HiddenSize> bias, int color) {
+    if (color){
+      std::memcpy(black.data(), bias.data(), bias.size_bytes());
+    }
+    else{
+      std::memcpy(white.data(), bias.data(), bias.size_bytes());
+    }
+  }
 };
 
 constexpr int32_t screlu(int16_t x) {
@@ -106,6 +114,20 @@ public:
     }
   }
 
+  template <bool Activate> inline void update_feature_color(int piece, int square, int color, int bucket) {
+    const auto [white_idx, black_idx] = feature_indices(piece, square);
+
+    int indx = color ? black_idx : white_idx;
+
+    if constexpr (Activate) {
+      add_to_all(color ? m_curr->black : m_curr->white, g_nnue.feature_weights,
+                 (indx + 768*bucket) * LAYER1_SIZE);
+    } else {
+      subtract_from_all(color ? m_curr->black : m_curr->white, g_nnue.feature_weights,
+                 (indx + 768*bucket) * LAYER1_SIZE);
+    }
+  }
+
   [[nodiscard]] int evaluate(int color) const;
 
   std::vector<Accumulator<LAYER1_SIZE>> m_accumulator_stack{};
@@ -137,6 +159,7 @@ public:
                 const std::array<int16_t, LAYER1_SIZE * 2> &weights);
 
   void reset_nnue(struct board_info *board);
+  void reset_nnue_color(struct board_info *board, int color);
 };
 
 INCBIN(nnue, "src/ida.nnue");
@@ -201,14 +224,21 @@ void NNUE_State::reset_nnue(struct board_info *board) {
 
   m_curr->init(g_nnue.feature_bias);
 
-  int wking = board->kingpos[WHITE], bking = board->kingpos[BLACK];
-  wking = wking > 0x17 ? (wking % 16 > 3 ? 3 : 2) : (wking % 16 > 3 ? 1 : 0);
-  bking = bking < 0x60 ? (bking % 16 > 3 ? 3 : 2) : (bking % 16 > 3 ? 1 : 0);
+  for (int square : STANDARD_TO_MAILBOX) {
+    if (board->board[square]) {
+      // printf("%i\n", MAILBOX_TO_STANDARD[square]);
+      update_feature<true>(board->board[square], MAILBOX_TO_STANDARD[square], buckets[WHITE][board->kingpos[WHITE]], buckets[BLACK][board->kingpos[BLACK]]);
+    }
+  }
+}
+
+void NNUE_State::reset_nnue_color(struct board_info *board, int color) {
+  m_curr->init_color(g_nnue.feature_bias, color);
 
   for (int square : STANDARD_TO_MAILBOX) {
     if (board->board[square]) {
       // printf("%i\n", MAILBOX_TO_STANDARD[square]);
-      update_feature<true>(board->board[square], MAILBOX_TO_STANDARD[square], wking, bking);
+      update_feature_color<true>(board->board[square], MAILBOX_TO_STANDARD[square], color, buckets[color][board->kingpos[color]]);
     }
   }
 }
