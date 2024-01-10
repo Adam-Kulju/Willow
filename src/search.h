@@ -133,7 +133,6 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
 
   struct move bestmove = nullmove;
   int legals = 0;
-
   for (int i = 0; i < listlen; i++) {
     selectionsort(list, i, listlen);
 
@@ -312,7 +311,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   } else {
     evl = eval(board, color, thread_info);
   }
-
   thread_info->KILLERTABLE[depth + 1][0] = nullmove;
   movelst[*key - 1].staticeval = evl;
 
@@ -396,7 +394,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   if ((ispv || cutnode) && type == None && depthleft > 3) {
     depthleft--;
   }
-
   int i = 0;
   unsigned long long int original_pos = thread_info->CURRENTPOS;
   int movelen = movegen(board, list, color, incheck);
@@ -759,7 +756,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
              search_age);
       return list[i].eval;
     }
-
     betacount++;
   }
 
@@ -797,13 +793,12 @@ bool verifypv(struct board_info *board, struct move pvmove, bool incheck,
     if (ismatch(pvmove, list[i].move)) {
       unsigned long long int c = thread_info->CURRENTPOS;
       struct board_info board2 = *board;
-      move(&board2, pvmove, color, thread_info);
+      if (move(&board2, pvmove, color, thread_info)){
+        return false;
+      }
       thread_info->nnue_state.pop();
       thread_info->CURRENTPOS = c;
 
-      if (isattacked(&board2, board2.kingpos[color], color ^ 1)) {
-        return false;
-      }
       return true;
     }
   }
@@ -942,6 +937,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
 
       // Print the principal variation, extracted from the TT table, as long as
       // it remains a legal line.
+      int moves = 0;
       while (d > 0) {
         if (TT[thread_info->CURRENTPOS & _mask].zobrist_key !=
             thread_info->CURRENTPOS) {
@@ -956,10 +952,14 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
         char temp[6];
         printf("%s ", conv(tempmove, temp));
         move(&board2, tempmove, c, thread_info);
-        thread_info->nnue_state.pop();
+        moves++;
         c ^= 1;
         d--;
       }
+      for (int i = 0; i < moves; i++){
+        thread_info->nnue_state.pop();
+      }
+      thread_info->CURRENTPOS = op;
       printf("\n");
 
       thread_info->CURRENTPOS = op;

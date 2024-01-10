@@ -185,6 +185,17 @@ void setdfrc(struct board_info *board,
   }
 }
 
+int eval(struct board_info *board, int color, ThreadInfo *thread_info) {
+  int material = 0;
+  for (int i = 1; i < 5; i++) {
+    material +=
+        SEEVALUES[i + 1] * (board->pnbrqcount[0][i] + board->pnbrqcount[1][i]);
+  }
+  material = 700 + material / 32;
+  return thread_info->nnue_state.evaluate(color) * material /
+         1024; // trying to get this material scaling back in order because oops
+}
+
 void setmovelist(
     struct movelist *movelst, int *key,
     ThreadInfo *thread_info) // Sets up the list of moves in the game.
@@ -524,6 +535,16 @@ int move(struct board_info *board, struct move move, bool color,
   if (isattacked(&board2, board2.kingpos[color], color ^ 1)) {
     return 1;
   }
+  thread_info->nnue_state.push();
+
+  int wking = buckets[WHITE][board2.kingpos[WHITE]], bking = buckets[BLACK][board2.kingpos[BLACK]];
+
+  if (board2.kingpos[color] != board->kingpos[color]){  //if we've moved the king, make sure we didn't move it into another bucket!
+    int current_king = color ? bking : wking;
+    if (current_king != buckets[color][board->kingpos[color]]){
+      thread_info->nnue_state.reset_nnue_color(board, color, current_king);
+    }
+  }
 
   if (board->epsquare) {
     thread_info->CURRENTPOS ^=
@@ -531,8 +552,6 @@ int move(struct board_info *board, struct move move, bool color,
                            // is not.
   }
   thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
-
-  thread_info->nnue_state.push();
 
   if (!board->board[from]) {
     printfull(board);
@@ -543,21 +562,21 @@ int move(struct board_info *board, struct move move, bool color,
       ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from -
                    ((from >> 4) << 3)]; // xor out the piece to be moved
   thread_info->nnue_state.update_feature<false>(board->board[from],
-                                                MAILBOX_TO_STANDARD[from]);
+                                                MAILBOX_TO_STANDARD[from], wking, bking);
 
   if (flag != 3) { // handle captures and en passant - this is for normal moves
     if (board->board[to]) {
       thread_info->CURRENTPOS ^=
           ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)];
       thread_info->nnue_state.update_feature<false>(board->board[to],
-                                                    MAILBOX_TO_STANDARD[to]);
+                                                    MAILBOX_TO_STANDARD[to], wking, bking);
     }
   } else { // and this branch handles en passant
     thread_info->CURRENTPOS ^=
         ZOBRISTTABLE[(((board->board[board->epsquare] - 2) << 6)) +
                      board->epsquare - ((board->epsquare >> 4) << 3)];
     thread_info->nnue_state.update_feature<false>(
-        board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare]);
+        board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare], wking, bking);
   }
 
   if (!(IS_DFRC && flag == 2)) {
@@ -565,7 +584,7 @@ int move(struct board_info *board, struct move move, bool color,
         ZOBRISTTABLE[(((board2.board[to] - 2) << 6)) + to -
                      ((to >> 4) << 3)]; // xor in the piece that has been moved
     thread_info->nnue_state.update_feature<true>(board2.board[to],
-                                                 MAILBOX_TO_STANDARD[to]);
+                                                 MAILBOX_TO_STANDARD[to], wking, bking);
   }
 
   if (flag == 2) { // castle
@@ -579,7 +598,7 @@ int move(struct board_info *board, struct move move, bool color,
                          ((newpos >> 4)
                           << 3)]; // xor in the piece that has been moved
         thread_info->nnue_state.update_feature<true>(
-            board2.board[newpos], MAILBOX_TO_STANDARD[newpos]);
+            board2.board[newpos], MAILBOX_TO_STANDARD[newpos], wking, bking);
 
         thread_info->CURRENTPOS ^=
             ZOBRISTTABLE[(((board->board[oldpos] - 2) << 6)) + oldpos -
@@ -589,9 +608,9 @@ int move(struct board_info *board, struct move move, bool color,
             ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos -
                          (((newpos) >> 4) << 3)];
         thread_info->nnue_state.update_feature<true>(
-            board2.board[newpos], MAILBOX_TO_STANDARD[newpos]);
+            board2.board[newpos], MAILBOX_TO_STANDARD[newpos], wking, bking);
         thread_info->nnue_state.update_feature<false>(
-            board->board[oldpos], MAILBOX_TO_STANDARD[oldpos]);
+            board->board[oldpos], MAILBOX_TO_STANDARD[oldpos], wking, bking);
       }
 
       else {
@@ -603,9 +622,9 @@ int move(struct board_info *board, struct move move, bool color,
             ZOBRISTTABLE[(((board2.board[to - 1] - 2) << 6)) + to - 1 -
                          (((to - 1) >> 4) << 3)];
         thread_info->nnue_state.update_feature<true>(
-            board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1]);
+            board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1], wking, bking);
         thread_info->nnue_state.update_feature<false>(
-            board->board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            board->board[to + 1], MAILBOX_TO_STANDARD[to + 1], wking, bking);
       }
 
     } else {
@@ -617,7 +636,7 @@ int move(struct board_info *board, struct move move, bool color,
                          ((newpos >> 4)
                           << 3)]; // xor in the piece that has been moved
         thread_info->nnue_state.update_feature<true>(
-            board2.board[newpos], MAILBOX_TO_STANDARD[newpos]);
+            board2.board[newpos], MAILBOX_TO_STANDARD[newpos], wking, bking);
 
         thread_info->CURRENTPOS ^=
             ZOBRISTTABLE[(((board->board[oldpos] - 2) << 6)) + oldpos -
@@ -627,9 +646,9 @@ int move(struct board_info *board, struct move move, bool color,
             ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos -
                          (((newpos) >> 4) << 3)];
         thread_info->nnue_state.update_feature<false>(
-            board->board[oldpos], MAILBOX_TO_STANDARD[oldpos]);
+            board->board[oldpos], MAILBOX_TO_STANDARD[oldpos], wking, bking);
         thread_info->nnue_state.update_feature<true>(
-            board2.board[newpos], MAILBOX_TO_STANDARD[newpos]);
+            board2.board[newpos], MAILBOX_TO_STANDARD[newpos], wking, bking);
       } else {
         thread_info->CURRENTPOS ^=
             ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 -
@@ -639,9 +658,9 @@ int move(struct board_info *board, struct move move, bool color,
             ZOBRISTTABLE[(((board2.board[to + 1] - 2) << 6)) + to + 1 -
                          (((to + 1) >> 4) << 3)];
         thread_info->nnue_state.update_feature<false>(
-            board->board[to - 2], MAILBOX_TO_STANDARD[to - 2]);
+            board->board[to - 2], MAILBOX_TO_STANDARD[to - 2], wking, bking);
         thread_info->nnue_state.update_feature<true>(
-            board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
+            board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1], wking, bking);
       }
     }
   }
@@ -838,15 +857,6 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos,
   return flag;
 }
 
-int eval(struct board_info *board, int color, ThreadInfo *thread_info) {
-  int material = 0;
-  for (int i = 1; i < 5; i++) {
-    material +=
-        SEEVALUES[i + 1] * (board->pnbrqcount[0][i] + board->pnbrqcount[1][i]);
-  }
-  material = 700 + material / 32;
-  return thread_info->nnue_state.evaluate(color) * material /
-         1024; // trying to get this material scaling back in order because oops
-}
+
 
 #endif
