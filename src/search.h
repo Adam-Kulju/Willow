@@ -312,7 +312,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   } else {
     evl = eval(board, color, thread_info);
   }
-
   thread_info->KILLERTABLE[depth + 1][0] = nullmove;
   movelst[*key - 1].staticeval = evl;
 
@@ -759,7 +758,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
              search_age);
       return list[i].eval;
     }
-
     betacount++;
   }
 

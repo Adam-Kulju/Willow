@@ -524,6 +524,8 @@ int move(struct board_info *board, struct move move, bool color,
   if (isattacked(&board2, board2.kingpos[color], color ^ 1)) {
     return 1;
   }
+  thread_info->nnue_state.push();
+  
   int wking = buckets[WHITE][board2.kingpos[WHITE]], bking = buckets[BLACK][board2.kingpos[BLACK]];
 
   if (board2.kingpos[color] != board->kingpos[color]){  //if we've moved the king, make sure we didn't move it into another bucket!
@@ -539,8 +541,6 @@ int move(struct board_info *board, struct move move, bool color,
                            // is not.
   }
   thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
-
-  thread_info->nnue_state.push();
 
   if (!board->board[from]) {
     printfull(board);
