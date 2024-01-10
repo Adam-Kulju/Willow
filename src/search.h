@@ -133,7 +133,6 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
 
   struct move bestmove = nullmove;
   int legals = 0;
-
   for (int i = 0; i < listlen; i++) {
     selectionsort(list, i, listlen);
 
@@ -395,7 +394,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   if ((ispv || cutnode) && type == None && depthleft > 3) {
     depthleft--;
   }
-
   int i = 0;
   unsigned long long int original_pos = thread_info->CURRENTPOS;
   int movelen = movegen(board, list, color, incheck);

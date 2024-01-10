@@ -185,6 +185,17 @@ void setdfrc(struct board_info *board,
   }
 }
 
+int eval(struct board_info *board, int color, ThreadInfo *thread_info) {
+  int material = 0;
+  for (int i = 1; i < 5; i++) {
+    material +=
+        SEEVALUES[i + 1] * (board->pnbrqcount[0][i] + board->pnbrqcount[1][i]);
+  }
+  material = 700 + material / 32;
+  return thread_info->nnue_state.evaluate(color) * material /
+         1024; // trying to get this material scaling back in order because oops
+}
+
 void setmovelist(
     struct movelist *movelst, int *key,
     ThreadInfo *thread_info) // Sets up the list of moves in the game.
@@ -525,13 +536,13 @@ int move(struct board_info *board, struct move move, bool color,
     return 1;
   }
   thread_info->nnue_state.push();
-  
+
   int wking = buckets[WHITE][board2.kingpos[WHITE]], bking = buckets[BLACK][board2.kingpos[BLACK]];
 
   if (board2.kingpos[color] != board->kingpos[color]){  //if we've moved the king, make sure we didn't move it into another bucket!
     int current_king = color ? bking : wking;
     if (current_king != buckets[color][board->kingpos[color]]){
-      thread_info->nnue_state.reset_nnue_color(board, color);
+      thread_info->nnue_state.reset_nnue_color(board, color, current_king);
     }
   }
 
@@ -846,15 +857,6 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos,
   return flag;
 }
 
-int eval(struct board_info *board, int color, ThreadInfo *thread_info) {
-  int material = 0;
-  for (int i = 1; i < 5; i++) {
-    material +=
-        SEEVALUES[i + 1] * (board->pnbrqcount[0][i] + board->pnbrqcount[1][i]);
-  }
-  material = 700 + material / 32;
-  return thread_info->nnue_state.evaluate(color) * material /
-         1024; // trying to get this material scaling back in order because oops
-}
+
 
 #endif

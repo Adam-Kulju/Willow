@@ -159,7 +159,7 @@ public:
                 const std::array<int16_t, LAYER1_SIZE * 2> &weights);
 
   void reset_nnue(struct board_info *board);
-  void reset_nnue_color(struct board_info *board, int color);
+  void reset_nnue_color(struct board_info *board, int color, int bucket);
 };
 
 INCBIN(nnue, "src/ida.nnue");
@@ -232,13 +232,13 @@ void NNUE_State::reset_nnue(struct board_info *board) {
   }
 }
 
-void NNUE_State::reset_nnue_color(struct board_info *board, int color) {
+void NNUE_State::reset_nnue_color(struct board_info *board, int color, int bucket) {
   m_curr->init_color(g_nnue.feature_bias, color);
 
   for (int square : STANDARD_TO_MAILBOX) {
     if (board->board[square]) {
       // printf("%i\n", MAILBOX_TO_STANDARD[square]);
-      update_feature_color<true>(board->board[square], MAILBOX_TO_STANDARD[square], color, buckets[color][board->kingpos[color]]);
+      update_feature_color<true>(board->board[square], MAILBOX_TO_STANDARD[square], color, bucket);
     }
   }
 }
