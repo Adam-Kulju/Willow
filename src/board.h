@@ -542,7 +542,7 @@ int move(struct board_info *board, struct move move, bool color,
   thread_info->CURRENTPOS ^=
       ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from -
                    ((from >> 4) << 3)]; // xor out the piece to be moved
-  thread_info->nnue_state.update_feature<false>(board->board[from],
+  /*thread_info->nnue_state.update_feature<false>(board->board[from],
                                                 MAILBOX_TO_STANDARD[from]);
 
   if (flag != 3) { // handle captures and en passant - this is for normal moves
@@ -644,7 +644,7 @@ int move(struct board_info *board, struct move move, bool color,
             board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1]);
       }
     }
-  }
+  }*/
 
   *board = board2;
   board->epsquare = 0;

@@ -432,6 +432,12 @@ int main(int argc, char *argv[]) {
   memset(thread_info, 0, sizeof(ThreadInfo));
 
   thread_info->nnue_state.m_accumulator_stack.reserve(MOVESIZE);
+
+  struct board_info board;
+  setfull(&board);
+  thread_info->nnue_state.reset_nnue(&board);
+  printf("%i\n", thread_info->nnue_state.evaluate(WHITE));
+  exit(0);
   if (argc > 1) {
 
     if (!strcmp(argv[1], "bench")) {
