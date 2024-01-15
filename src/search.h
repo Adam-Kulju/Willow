@@ -20,11 +20,12 @@ void updateHistory(int &entry, int score) {
   entry += score - entry * abs(score) / 16384;
 }
 
-void unmake(movelist *movelst, int *key, ThreadInfo *thread_info, long long unsigned int original_pos){
-      thread_info->CURRENTPOS = original_pos;
-      thread_info->nnue_state.pop();
-      movelst[*key - 1].move = nullmove;
-      *key = *key - 1;
+void unmake(movelist *movelst, int *key, ThreadInfo *thread_info,
+            long long unsigned int original_pos) {
+  thread_info->CURRENTPOS = original_pos;
+  thread_info->nnue_state.pop();
+  movelst[*key - 1].move = nullmove;
+  *key = *key - 1;
 }
 
 int quiesce(struct board_info *board, struct movelist *movelst, int *key,
@@ -37,10 +38,9 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
     maxdepth = depth;
   }
   thread_info->nodes++;
-  if (thread_info->id == 0){
+  if (thread_info->id == 0) {
     nodes++;
-  }
-  else if (thread_info->nodes % 1024 == 0){
+  } else if (thread_info->nodes % 1024 == 0) {
     nodes += 1024;
   }
   if (depthleft <= 0) // return if we are too deep
@@ -168,7 +168,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
                  color ^ 1, isattacked(board, board->kingpos[color ^ 1], color),
                  thread_info);
 
-  unmake(movelst, key, thread_info, original_pos);
+    unmake(movelst, key, thread_info, original_pos);
     if (abs(list[i].eval) == TIMEOUT) // timeout detection
     {
       return TIMEOUT;
@@ -187,7 +187,6 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
     {
       alpha = list[i].eval;
     }
-
   }
 
   if (incheck &&
@@ -218,10 +217,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   }
 
   thread_info->nodes++;
-  if (thread_info->id == 0){
+  if (thread_info->id == 0) {
     nodes++;
-  }
-  else if (thread_info->nodes % 1024 == 0){
+  } else if (thread_info->nodes % 1024 == 0) {
     nodes += 1024;
   }
 
@@ -441,8 +439,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     ismove = true;
 
     if (depth > 0 && !iscap && !ispv) {
-      int newdepth = MAX(
-          depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 0);
+      int newdepth =
+          MAX(depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 0);
       int futility_move_count =
           3 + (depthleft * depthleft / (1 + (!improving)));
       // Late Move Pruning (LMP): at high depths, we can just not search quiet
@@ -525,64 +523,44 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     move_add(&board2, movelst, key, list[i].move, color, iscap, thread_info,
              piecetype);
 
-    if (ispv == true && !betacount) // The first move of a PV node gets searched
-                                    // to full depth with a full window.
-    {
-      list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha,
-                                depthleft - 1 + extension, depth + 1, color ^ 1,
-                                false, ischeck, nullmove, thread_info);
-      if (abs(list[i].eval) == TIMEOUT) {
-        unmake(movelst, key, thread_info, original_pos);
-        return TIMEOUT;
-      }
-    }
+    int R = 1, newdepth = depthleft + extension;
+    bool fullsearch = false;
 
-    else {
-      // LMR (Late Move Reductions): search moves sorted later on to a lesser
-      // depth, only increasing the depth if they beat alpha at the reduced
-      // depth.
-      int R;
-      if (betacount < 1 + ispv ||
-          depthleft < 3) // Don't reduce winning captures or near the leaves
+    // LMR (Late Move Reductions): search moves sorted later on to a lesser
+    // depth, only increasing the depth if they beat alpha at the reduced
+    // depth.
+
+    bool do_cutnode = false;
+
+    if (betacount >= 1 + ispv && depthleft >= 3 && !(iscap && ispv)) {
+      R = LMRTABLE[depthleft - 1][betacount];
+
+      if (iscap && !ispv) {
+        R = R / 2;
+        R -= std::clamp(thread_info->CAPHIST[color][list[i].move.move >> 8]
+                                            [list[i].move.move & 0xFF] /
+                            8096,
+                        -2, 2);
+      }
+      if (ischeck) // Reduce reduction for checks or moves made in check
       {
-        R = 1;
+        R--;
       }
-
-      else if (iscap && ispv) {
-        R = 1;
+      if (list[i].eval > 1000190 && !iscap) {
+        R -= 2;
       }
-
-      else {
-        R = LMRTABLE[depthleft - 1][betacount];
-
-        if (iscap && !ispv) {
-          R = R / 2;
-          R -= std::clamp(thread_info->CAPHIST[color][list[i].move.move >> 8]
-                                              [list[i].move.move & 0xFF] /
-                              8096,
-                          -2, 2);
-        }
-        if (ischeck) // Reduce reduction for checks or moves made in check
-        {
-          R--;
-        }
-        if (list[i].eval > 1000190 && !iscap) {
-          R -= 2;
-        }
-        if (!improving) // reduce reduction if we are improving.
-        {
-          R++;
-        }
-        if (list[i].eval < 100000 && list[i].eval > -100000) {
-          R -= std::clamp(list[i].eval / 8096, -2, 2);
-        }
-        if (cutnode) {
-          R++;
-        }
+      if (!improving) // reduce reduction if we are improving.
+      {
+        R++;
+      }
+      if (list[i].eval < 100000 && list[i].eval > -100000) {
+        R -= std::clamp(list[i].eval / 8096, -2, 2);
+      }
+      if (cutnode) {
+        R++;
       }
       R = MAX(R, 1); // make sure the reduction doesn't go negative!
 
-      int newdepth = depthleft + extension;
       if (newdepth - R < 1 && R > 1) {
         R = newdepth - 1;
       }
@@ -597,33 +575,42 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
         return TIMEOUT;
       }
-
-      // If a search at reduced depth fails high, search at normal depth with
-      // null window.
-
       if (list[i].eval > alpha && R > 1) {
-        list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha,
-                                  newdepth - 1, depth + 1, color ^ 1, !cutnode,
-                                  ischeck, nullmove, thread_info);
-        if (abs(list[i].eval) == TIMEOUT) {
-          unmake(movelst, key, thread_info, original_pos);
-
-          return TIMEOUT;
-        }
+        fullsearch = true;
       }
+    }
 
-      // If that fails high too, search with the full window.
+    else {
+      fullsearch = (!ispv) || betacount;
+      do_cutnode = true;
+    }
 
-      if (list[i].eval > alpha && ispv) {
+    // If a search at reduced depth fails high, search at normal depth with
+    // null window.
 
-        list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha,
-                                  newdepth - 1, depth + 1, color ^ 1, false,
-                                  ischeck, nullmove, thread_info);
-        if (abs(list[i].eval) == TIMEOUT) {
-          unmake(movelst, key, thread_info, original_pos);
+    if (fullsearch) {
+      list[i].eval =
+          -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth - 1,
+                     depth + 1, color ^ 1, do_cutnode ? true : !cutnode,
+                     ischeck, nullmove, thread_info);
+      if (abs(list[i].eval) == TIMEOUT) {
+        unmake(movelst, key, thread_info, original_pos);
 
-          return TIMEOUT;
-        }
+        return TIMEOUT;
+      }
+    }
+
+    // If that fails high too, search with the full window.
+
+    if ((list[i].eval > alpha || !betacount) && ispv) {
+
+      list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha,
+                                newdepth - 1, depth + 1, color ^ 1, false,
+                                ischeck, nullmove, thread_info);
+      if (abs(list[i].eval) == TIMEOUT) {
+        unmake(movelst, key, thread_info, original_pos);
+
+        return TIMEOUT;
       }
     }
 
@@ -698,43 +685,42 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         }
 
         for (int a = 0; a < i; a++) {
-            if (!(list[a].move.flags == 0xC ||
-                  board->board[list[a].move.move & 0xFF])) {
+          if (!(list[a].move.flags == 0xC ||
+                board->board[list[a].move.move & 0xFF])) {
 
+            updateHistory(
+                thread_info->HISTORYTABLE[color][(list[a].move.move >> 8)]
+                                         [list[a].move.move & 0xFF],
+                -c);
+            if (isreply) {
               updateHistory(
-                  thread_info->HISTORYTABLE[color][(list[a].move.move >> 8)]
-                                           [list[a].move.move & 0xFF],
-                  -c);
-              if (isreply) {
-                updateHistory(
-                    thread_info->CONTHIST[lastpiecetype][lastsquare]
-                                         [board->board[list[a].move.move >> 8] -
-                                          2][list[a].move.move & 0xFF],
-                    -c);
-              }
-              if (depth > 1 && movelst[*key - 3].piecetype != -1) {
-                updateHistory(
-                    thread_info->CONTHIST[movelst[*key - 3].piecetype]
-                                         [movelst[*key - 3].move.move & 0xFF]
-                                         [board->board[list[a].move.move >> 8] -
-                                          2][list[a].move.move & 0xFF],
-                    -c);
-              }
-              if (depth > 3 && movelst[*key - 5].piecetype != -1) {
-                updateHistory(
-                    thread_info->CONTHIST[movelst[*key - 5].piecetype]
-                                         [movelst[*key - 5].move.move & 0xFF]
-                                         [board->board[list[a].move.move >> 8] -
-                                          2][list[a].move.move & 0xFF],
-                    -c);
-              }
-            } else {
-              updateHistory(
-                  thread_info->CAPHIST[color][(list[a].move.move >> 8)]
-                                      [list[a].move.move & 0xFF],
+                  thread_info->CONTHIST[lastpiecetype][lastsquare]
+                                       [board->board[list[a].move.move >> 8] -
+                                        2][list[a].move.move & 0xFF],
                   -c);
             }
+            if (depth > 1 && movelst[*key - 3].piecetype != -1) {
+              updateHistory(
+                  thread_info->CONTHIST[movelst[*key - 3].piecetype]
+                                       [movelst[*key - 3].move.move & 0xFF]
+                                       [board->board[list[a].move.move >> 8] -
+                                        2][list[a].move.move & 0xFF],
+                  -c);
+            }
+            if (depth > 3 && movelst[*key - 5].piecetype != -1) {
+              updateHistory(
+                  thread_info->CONTHIST[movelst[*key - 5].piecetype]
+                                       [movelst[*key - 5].move.move & 0xFF]
+                                       [board->board[list[a].move.move >> 8] -
+                                        2][list[a].move.move & 0xFF],
+                  -c);
+            }
+          } else {
+            updateHistory(thread_info->CAPHIST[color][(list[a].move.move >> 8)]
+                                              [list[a].move.move & 0xFF],
+                          -c);
           }
+        }
       }
 
       else {
@@ -806,7 +792,7 @@ bool verifypv(struct board_info *board, struct move pvmove, bool incheck,
     if (ismatch(pvmove, list[i].move)) {
       unsigned long long int c = thread_info->CURRENTPOS;
       struct board_info board2 = *board;
-      if (move(&board2, pvmove, color, thread_info)){
+      if (move(&board2, pvmove, color, thread_info)) {
         return false;
       }
       thread_info->nnue_state.pop();
@@ -967,7 +953,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
         c ^= 1;
         d--;
       }
-      for (int i = 0; i < moves; i++){
+      for (int i = 0; i < moves; i++) {
         thread_info->nnue_state.pop();
       }
       thread_info->CURRENTPOS = op;
