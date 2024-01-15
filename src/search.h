@@ -556,9 +556,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       if (list[i].eval < 100000 && list[i].eval > -100000) {
         R -= std::clamp(list[i].eval / 8096, -2, 2);
       }
-      if (cutnode) {
-        R++;
-      }
+      R += cutnode*2;
       R = MAX(R, 1); // make sure the reduction doesn't go negative!
 
       if (newdepth - R < 1 && R > 1) {
