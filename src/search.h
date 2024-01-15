@@ -582,7 +582,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     else {
       fullsearch = (!ispv) || betacount;
-      do_cutnode = true;
     }
 
     // If a search at reduced depth fails high, search at normal depth with
@@ -591,7 +590,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     if (fullsearch) {
       list[i].eval =
           -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth - 1,
-                     depth + 1, color ^ 1, do_cutnode ? true : !cutnode,
+                     depth + 1, color ^ 1, !cutnode,
                      ischeck, nullmove, thread_info);
       if (abs(list[i].eval) == TIMEOUT) {
         unmake(movelst, key, thread_info, original_pos);
