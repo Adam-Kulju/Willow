@@ -49,7 +49,7 @@ perft(int depth, struct board_info *board, bool color, bool first,
        i++) // Loop through all of the moves, skipping illegal ones.
   {
     struct board_info board2 = *board;
-    move(&board2, list[i].move, color, thread_info);
+    move(&board2, list[i].move, color, thread_info, true);
     if (isattacked(&board2, board2.kingpos[color], color ^ 1)) {
       thread_info->nnue_state.pop();
       continue;
@@ -90,7 +90,7 @@ void move_uci(char *command, int i, struct board_info *board,
                                        // 50-move rule draws, so it's important
                                        // to check that the move is a capture.
     int piece_type = board->board[temp.move >> 8] - 1;
-    move(board, temp, *color, thread_info);
+    move(board, temp, *color, thread_info, true);
 
     move_add(board, movelst, key, temp, *color, iscap, thread_info, piece_type);
 

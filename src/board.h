@@ -442,20 +442,114 @@ bool isattacked(
   return false;
 }
 
-int move(struct board_info *board, struct move move, bool color,
-         ThreadInfo *thread_info) // Perform a move on the board.
-{
-  if (!move.move) {
-    if (board->epsquare) {
-      thread_info->CURRENTPOS ^=
-          ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so
-                             // it is not.
-    }
-    thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
-    board->epsquare = 0;
-    __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
-    return 0;
+void update_nnue(board_info *board, board_info board2, struct move move,
+                 ThreadInfo *thread_info, int color) {
+  thread_info->nnue_state.push();
+
+  // takes in a position with: board [no changes from position at start of
+  // search], moved board [en passant square not changed]
+
+  unsigned char from = move.move >> 8, to = move.move & 0xFF,
+                flag = move.flags >> 2;
+
+  if (board->epsquare) {
+    thread_info->CURRENTPOS ^=
+        ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it
+                           // is not.
   }
+  thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
+  thread_info->CURRENTPOS ^=
+      ZOBRISTTABLE[(((board->board[from] - 2) * 64)) +
+                   zobristkeys[from]]; // xor out the piece to be moved
+  if (flag != 3) { // handle captures and en passant - this is for normal moves
+    if (board->board[to]) {
+      thread_info->CURRENTPOS ^=
+          ZOBRISTTABLE[(((board->board[to] - 2) * 64)) + zobristkeys[to]];
+    }
+  } else { // and this branch handles en passant
+    thread_info->CURRENTPOS ^=
+        ZOBRISTTABLE[(((board->board[board->epsquare] - 2) * 64)) +
+                     zobristkeys[board->epsquare]];
+  }
+  thread_info->CURRENTPOS ^=
+      ZOBRISTTABLE[(((board2.board[to] - 2) * 64)) +
+                   zobristkeys[to]]; // xor in the piece that has been moved
+  if (flag == 2) {                   // castle
+    if (to > board->kingpos[color]) {
+      thread_info->CURRENTPOS ^=
+          ZOBRISTTABLE[(((board->board[to + 1] - 2) * 64)) +
+                       zobristkeys[to + 1]]; // xor out the rook on hfile
+                                             // and xor it in on ffile
+      thread_info->CURRENTPOS ^=
+          ZOBRISTTABLE[(((board2.board[to - 1] - 2) * 64)) +
+                       zobristkeys[to - 1]];
+
+    } else {
+      thread_info->CURRENTPOS ^=
+          ZOBRISTTABLE[(((board->board[to - 2] - 2) * 64)) +
+                       zobristkeys[to - 2]]; // xor out the rook on afile
+                                             // and xor it in on dfile
+      thread_info->CURRENTPOS ^=
+          ZOBRISTTABLE[(((board2.board[to + 1] - 2) * 64)) +
+                       zobristkeys[to + 1]];
+    }
+  }
+  if (abs(to - from) == 32 && board2.board[to] == WPAWN + color) {
+    thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
+  }
+
+  int wking = buckets[WHITE][board2.kingpos[WHITE]],
+      bking = buckets[BLACK][board2.kingpos[BLACK]];
+
+  if (board2.kingpos[color] !=
+      board->kingpos[color]) { // if we've moved the king, make sure we didn't
+                               // move it into another bucket!
+    int current_king = color ? bking : wking;
+    if (current_king != buckets[color][board->kingpos[color]]) {
+      thread_info->nnue_state.reset_nnue_color(board, color, current_king);
+    }
+  }
+
+  thread_info->nnue_state.update_feature<false>(
+      board->board[from], MAILBOX_TO_STANDARD[from], wking, bking);
+
+  if (flag != 3) { // handle captures and en passant - this is for normal moves
+    if (board->board[to]) {
+      thread_info->nnue_state.update_feature<false>(
+          board->board[to], MAILBOX_TO_STANDARD[to], wking, bking);
+    }
+  } else { // and this branch handles en passant
+    thread_info->nnue_state.update_feature<false>(
+        board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare],
+        wking, bking);
+  }
+
+   __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
+
+  thread_info->nnue_state.update_feature<true>(
+      board2.board[to], MAILBOX_TO_STANDARD[to], wking, bking);
+
+  if (flag == 2) { // castle
+    if (to > board->kingpos[color]) {
+      thread_info->nnue_state.update_feature<true>(
+          board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1], wking, bking);
+      thread_info->nnue_state.update_feature<false>(
+          board->board[to + 1], MAILBOX_TO_STANDARD[to + 1], wking, bking);
+
+    } else {
+      thread_info->nnue_state.update_feature<false>(
+          board->board[to - 2], MAILBOX_TO_STANDARD[to - 2], wking, bking);
+      thread_info->nnue_state.update_feature<true>(
+          board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1], wking, bking);
+    }
+  }
+  return;
+}
+
+int move(struct board_info *board, struct move move, bool color,
+         ThreadInfo *thread_info, bool update) // Perform a move on the board.
+{
+
   unsigned char from = move.move >> 8,
                 to = move.move & 0xFF; // get the indexes of the move
   unsigned char flag = move.flags >> 2;
@@ -498,181 +592,35 @@ int move(struct board_info *board, struct move move, bool color,
       board2.castling[color][1] = false;
     }
   }
-
-  if (!(IS_DFRC && flag == 2)) {
-    board2.board[to] = board2.board[from];
-    board2.board[from] = BLANK;
-  }
+  board2.board[to] = board2.board[from];
+  board2.board[from] = BLANK;
 
   if (flag == 2) { // castle
 
     if (to > board->kingpos[color]) { // to = g file, meaning kingside
-      if (IS_DFRC) {
-        board2.board[to] = BLANK;
-        board2.board[from] = BLANK;
-
-        board2.board[to / 16 * 16 + 6] = board->board[from];
-        board2.board[to / 16 * 16 + 5] = board->board[to];
-      } else {
-        board2.board[to - 1] = board2.board[to + 1];
-        board2.board[to + 1] = BLANK;
-      }
+      board2.board[to - 1] = board2.board[to + 1];
+      board2.board[to + 1] = BLANK;
 
     } else {
-      if (IS_DFRC) {
-        board2.board[from] = BLANK;
-        board2.board[to] = BLANK;
 
-        board2.board[to / 16 * 16 + 2] = board->board[from];
-        board2.board[to / 16 * 16 + 3] = board->board[to];
-
-      } else {
-        board2.board[to + 1] = board2.board[to - 2];
-        board2.board[to - 2] = BLANK;
-      }
+      board2.board[to + 1] = board2.board[to - 2];
+      board2.board[to - 2] = BLANK;
     }
   }
   if (isattacked(&board2, board2.kingpos[color], color ^ 1)) {
     return 1;
   }
-  thread_info->nnue_state.push();
 
-  int wking = buckets[WHITE][board2.kingpos[WHITE]], bking = buckets[BLACK][board2.kingpos[BLACK]];
-
-  if (board2.kingpos[color] != board->kingpos[color]){  //if we've moved the king, make sure we didn't move it into another bucket!
-    int current_king = color ? bking : wking;
-    if (current_king != buckets[color][board->kingpos[color]]){
-      thread_info->nnue_state.reset_nnue_color(board, color, current_king);
-    }
-  }
-
-  if (board->epsquare) {
-    thread_info->CURRENTPOS ^=
-        ZOBRISTTABLE[773]; // if en passant was possible last move, xor it so it
-                           // is not.
-  }
-  thread_info->CURRENTPOS ^= ZOBRISTTABLE[772]; // xor for turn
-
-  if (!board->board[from]) {
-    printfull(board);
-    printf("%x\n", move.move);
-    exit(0);
-  }
-  thread_info->CURRENTPOS ^=
-      ZOBRISTTABLE[(((board->board[from] - 2) << 6)) + from -
-                   ((from >> 4) << 3)]; // xor out the piece to be moved
-  thread_info->nnue_state.update_feature<false>(board->board[from],
-                                                MAILBOX_TO_STANDARD[from], wking, bking);
-
-  if (flag != 3) { // handle captures and en passant - this is for normal moves
-    if (board->board[to]) {
-      thread_info->CURRENTPOS ^=
-          ZOBRISTTABLE[(((board->board[to] - 2) << 6)) + to - ((to >> 4) << 3)];
-      thread_info->nnue_state.update_feature<false>(board->board[to],
-                                                    MAILBOX_TO_STANDARD[to], wking, bking);
-    }
-  } else { // and this branch handles en passant
-    thread_info->CURRENTPOS ^=
-        ZOBRISTTABLE[(((board->board[board->epsquare] - 2) << 6)) +
-                     board->epsquare - ((board->epsquare >> 4) << 3)];
-    thread_info->nnue_state.update_feature<false>(
-        board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare], wking, bking);
-  }
-
-  if (!(IS_DFRC && flag == 2)) {
-    thread_info->CURRENTPOS ^=
-        ZOBRISTTABLE[(((board2.board[to] - 2) << 6)) + to -
-                     ((to >> 4) << 3)]; // xor in the piece that has been moved
-    thread_info->nnue_state.update_feature<true>(board2.board[to],
-                                                 MAILBOX_TO_STANDARD[to], wking, bking);
-  }
-
-  if (flag == 2) { // castle
-    if (to > board->kingpos[color]) {
-
-      if (IS_DFRC) {
-        int oldpos = to, newpos = to / 16 * 16 + 5;
-
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos -
-                         ((newpos >> 4)
-                          << 3)]; // xor in the piece that has been moved
-        thread_info->nnue_state.update_feature<true>(
-            board2.board[newpos], MAILBOX_TO_STANDARD[newpos], wking, bking);
-
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board->board[oldpos] - 2) << 6)) + oldpos -
-                         (((oldpos) >> 4) << 3)]; // xor out the rook on hfile
-                                                  // and xor it in on ffile
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos -
-                         (((newpos) >> 4) << 3)];
-        thread_info->nnue_state.update_feature<true>(
-            board2.board[newpos], MAILBOX_TO_STANDARD[newpos], wking, bking);
-        thread_info->nnue_state.update_feature<false>(
-            board->board[oldpos], MAILBOX_TO_STANDARD[oldpos], wking, bking);
-      }
-
-      else {
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board->board[to + 1] - 2) << 6)) + to + 1 -
-                         (((to + 1) >> 4) << 3)]; // xor out the rook on hfile
-                                                  // and xor it in on ffile
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board2.board[to - 1] - 2) << 6)) + to - 1 -
-                         (((to - 1) >> 4) << 3)];
-        thread_info->nnue_state.update_feature<true>(
-            board2.board[to - 1], MAILBOX_TO_STANDARD[to - 1], wking, bking);
-        thread_info->nnue_state.update_feature<false>(
-            board->board[to + 1], MAILBOX_TO_STANDARD[to + 1], wking, bking);
-      }
-
-    } else {
-      if (IS_DFRC) {
-        int oldpos = to, newpos = to / 16 * 16 + 3;
-
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos -
-                         ((newpos >> 4)
-                          << 3)]; // xor in the piece that has been moved
-        thread_info->nnue_state.update_feature<true>(
-            board2.board[newpos], MAILBOX_TO_STANDARD[newpos], wking, bking);
-
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board->board[oldpos] - 2) << 6)) + oldpos -
-                         (((oldpos) >> 4) << 3)]; // xor out the rook on afile
-                                                  // and xor it in on dfile
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board2.board[newpos] - 2) << 6)) + newpos -
-                         (((newpos) >> 4) << 3)];
-        thread_info->nnue_state.update_feature<false>(
-            board->board[oldpos], MAILBOX_TO_STANDARD[oldpos], wking, bking);
-        thread_info->nnue_state.update_feature<true>(
-            board2.board[newpos], MAILBOX_TO_STANDARD[newpos], wking, bking);
-      } else {
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board->board[to - 2] - 2) << 6)) + to - 2 -
-                         (((to - 2) >> 4) << 3)]; // xor out the rook on afile
-                                                  // and xor it in on dfile
-        thread_info->CURRENTPOS ^=
-            ZOBRISTTABLE[(((board2.board[to + 1] - 2) << 6)) + to + 1 -
-                         (((to + 1) >> 4) << 3)];
-        thread_info->nnue_state.update_feature<false>(
-            board->board[to - 2], MAILBOX_TO_STANDARD[to - 2], wking, bking);
-        thread_info->nnue_state.update_feature<true>(
-            board2.board[to + 1], MAILBOX_TO_STANDARD[to + 1], wking, bking);
-      }
-    }
+  if (update) {
+    update_nnue(board, board2, move, thread_info, color);
   }
 
   *board = board2;
   board->epsquare = 0;
   if (!flag && abs(to - from) == 32 && board->board[to] == WPAWN + color) {
     board->epsquare = to;
-    thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
   }
   // printfull(board);
-  __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
   return 0;
 }
 
@@ -856,7 +804,5 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos,
 
   return flag;
 }
-
-
 
 #endif
