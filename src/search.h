@@ -417,7 +417,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   }
   struct move bestmove = nullmove;
   bool quietsprune = false;
-  int bestscore = -100000;
+  int bestscore = -100000, score = bestscore;
 
   for (i = 0; i < movelen && !quietsprune; i++) {
     // First, make sure the move is legal, not skipped by futility pruning or
@@ -551,15 +551,15 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
       // Search at a reduced depth with null window
 
-      list[i].eval = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha,
+      score = -alphabeta(&board2, movelst, key, -alpha - 1, -alpha,
                                 newdepth - R, depth + 1, color ^ 1, true,
                                 ischeck, nullmove, thread_info);
-      if (abs(list[i].eval) == TIMEOUT) {
+      if (abs(score) == TIMEOUT) {
         unmake(movelst, key, thread_info, original_pos);
 
         return TIMEOUT;
       }
-      if (list[i].eval > alpha && R > 1) {
+      if (score > alpha && R > 1) {
         fullsearch = true;
       }
     }
@@ -573,11 +573,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     // null window.
 
     if (fullsearch) {
-      list[i].eval =
-          -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth - 1,
+      score =
+          -alphabeta(&board2, movelst, key, -alpha - 1, -alpha, newdepth - 1 + (score > bestscore + 60 + (newdepth * 2)),
                      depth + 1, color ^ 1, !cutnode,
                      ischeck, nullmove, thread_info);
-      if (abs(list[i].eval) == TIMEOUT) {
+      if (abs(score) == TIMEOUT) {
         unmake(movelst, key, thread_info, original_pos);
 
         return TIMEOUT;
@@ -586,12 +586,12 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     // If that fails high too, search with the full window.
 
-    if ((list[i].eval > alpha || !betacount) && ispv) {
+    if ((score > alpha || !betacount) && ispv) {
 
-      list[i].eval = -alphabeta(&board2, movelst, key, -beta, -alpha,
+      score = -alphabeta(&board2, movelst, key, -beta, -alpha,
                                 newdepth - 1, depth + 1, color ^ 1, false,
                                 ischeck, nullmove, thread_info);
-      if (abs(list[i].eval) == TIMEOUT) {
+      if (abs(score) == TIMEOUT) {
         unmake(movelst, key, thread_info, original_pos);
 
         return TIMEOUT;
@@ -600,18 +600,18 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     if (depth == 0 && thread_info->id == 0) {
       info.total_nodes += thread_info->nodes - current_nodes;
-      if (list[i].eval > bestscore) {
+      if (score > bestscore) {
         info.best_nodes = thread_info->nodes - current_nodes;
       }
     }
 
-    if (list[i].eval > bestscore) // update best move
+    if (score > bestscore) // update best move
     {
       bestmove = list[i].move;
-      bestscore = list[i].eval;
+      bestscore = score;
     }
 
-    if (list[i].eval >= beta) // we're failing high.
+    if (score >= beta) // we're failing high.
     {
       if (depth == 0) {
         thread_info->currentmove = list[i].move;
@@ -722,22 +722,22 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
 
       unmake(movelst, key, thread_info, original_pos);
-      return list[i].eval;
+      return score;
     }
 
     unmake(movelst, key, thread_info, original_pos);
-    if (list[i].eval > alpha) {
+    if (score > alpha) {
       if (depth == 0) {
         thread_info->currentmove = list[i].move;
       }
       raisedalpha = true;
-      alpha = list[i].eval;
+      alpha = score;
     }
 
     else if (!betacount && depth == 0) {
-      insert(original_pos, depthleft, list[i].eval, 1, list[i].move,
+      insert(original_pos, depthleft, score, 1, list[i].move,
              search_age);
-      return list[i].eval;
+      return score;
     }
     betacount++;
   }
