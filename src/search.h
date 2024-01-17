@@ -154,7 +154,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
 
     struct board_info board2 = *board;
 
-    if (move(&board2, list[i].move, color, thread_info)) {
+    if (move(&board2, list[i].move, color, thread_info, true)) {
       continue;
     }
     legals++;
@@ -433,7 +433,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     struct board_info board2 = *board;
     int piecetype = board->board[list[i].move.move >> 8] - 2;
 
-    if (move(&board2, list[i].move, color, thread_info)) {
+    if (move(&board2, list[i].move, color, thread_info, false)) {
       continue;
     }
     ismove = true;
@@ -466,13 +466,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         !static_exchange_evaluation(board, list[i].move, color,
                                     (depthleft) *
                                         (iscap ? -30 * depthleft : -80))) {
-      thread_info->CURRENTPOS = original_pos;
-      thread_info->nnue_state.pop();
 
       continue;
     }
     bool ischeck = isattacked(&board2, board2.kingpos[color ^ 1], color);
-
     int extension = 0;
 
     if (depth && depth < info.depth * 2) { // if we're not already in a singular
@@ -481,21 +478,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 &&
           abs(evl) < 50000 && entry.depth >= depthleft - 3 && type != UBound) {
         int sBeta = ttscore - (depthleft);
-        long long unsigned int temp = thread_info->CURRENTPOS;
-        thread_info->CURRENTPOS =
-            original_pos; // reset hash of the position for the singular search
-
-        NNUE_State temp_nnue = thread_info->nnue_state; // disgusting but works
-        thread_info->nnue_state.pop();
-
         int sScore = alphabeta(board, movelst, key, sBeta - 1, sBeta,
                                (depthleft - 1) / 2, depth, color, cutnode,
                                incheck, list[i].move, thread_info);
-
-        thread_info->nnue_state.push();
-        thread_info->nnue_state = temp_nnue;
-
-        thread_info->CURRENTPOS = temp;
 
         if (sScore < sBeta) {
           extension = 1;
@@ -508,8 +493,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
             extension++;
           }
         } else if (sBeta >= beta) {
-          thread_info->CURRENTPOS = original_pos;
-          thread_info->nnue_state.pop();
           return sBeta;
         } else if (ttscore <= alpha) {
           extension = -1;
@@ -518,6 +501,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         extension++;
       }
     }
+    update_nnue(board, board2, list[i].move, thread_info, color);
 
     long int current_nodes = thread_info->nodes;
     move_add(&board2, movelst, key, list[i].move, color, iscap, thread_info,
@@ -556,7 +540,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       if (list[i].eval < 100000 && list[i].eval > -100000) {
         R -= std::clamp(list[i].eval / 8096, -2, 2);
       }
-      R += cutnode*2;
+      if (cutnode) {
+        R += 2;
+      }
       R = MAX(R, 1); // make sure the reduction doesn't go negative!
 
       if (newdepth - R < 1 && R > 1) {
@@ -580,6 +566,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
 
     else {
       fullsearch = (!ispv) || betacount;
+      do_cutnode = true;
     }
 
     // If a search at reduced depth fails high, search at normal depth with
@@ -789,7 +776,7 @@ bool verifypv(struct board_info *board, struct move pvmove, bool incheck,
     if (ismatch(pvmove, list[i].move)) {
       unsigned long long int c = thread_info->CURRENTPOS;
       struct board_info board2 = *board;
-      if (move(&board2, pvmove, color, thread_info)) {
+      if (move(&board2, pvmove, color, thread_info, true)) {
         return false;
       }
       thread_info->nnue_state.pop();
@@ -945,7 +932,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
 
         char temp[6];
         printf("%s ", conv(tempmove, temp));
-        move(&board2, tempmove, c, thread_info);
+        move(&board2, tempmove, c, thread_info, true);
         moves++;
         c ^= 1;
         d--;

@@ -269,9 +269,8 @@ void calc_pos(struct board_info *board, bool color,
                                        // particular position.
 {
   thread_info->CURRENTPOS = 0;
-  int i;
-  for (i = 0; i < 0x80; i++) {
-    if (!(i & 0x88) && board->board[i]) {
+  for (auto i : STANDARD_TO_MAILBOX) {
+    if (board->board[i]) {
       thread_info->CURRENTPOS ^=
           ZOBRISTTABLE[(((board->board[i] - 2) << 6)) + i - ((i >> 4) << 3)];
       // board->board[i]-2<<6: gives us the base value for each piece*64.
@@ -282,6 +281,9 @@ void calc_pos(struct board_info *board, bool color,
   }
   if (color) {
     thread_info->CURRENTPOS ^= ZOBRISTTABLE[772];
+  }
+  if (board->epsquare){
+    thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
   }
 }
 
