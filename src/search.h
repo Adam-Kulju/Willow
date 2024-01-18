@@ -134,7 +134,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
   int listlen = movegen(board, list, color, incheck);
 
   movescore(board, movelst, key, list, 99, color, type, listlen,
-            (stand_pat + 60 < alpha ? 1 : -108), thread_info, entry, incheck);
+            (stand_pat + QsearchFutilityThreshold < alpha ? 1 : -108), thread_info, entry, incheck);
   // score the moves
 
   struct move bestmove = nullmove;
@@ -302,7 +302,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       depth >= 99) // if we're too deep drop into qsearch, adjusting based on
                    // depth if we get a mate score.
   {
-    int b = quiesce(board, movelst, key, alpha, beta, depth, 15, color, incheck,
+    int b = quiesce(board, movelst, key, alpha, beta, depth, MaxQsearchDepth, color, incheck,
                     thread_info);
     if (b == -100000) {
       b += depth;
@@ -345,7 +345,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   // Reverse Futility Pruning: If our position is so good that we don't need to
   // move to beat beta + some margin, we cut off early.
   if (!ispv && !incheck && !singularsearch && abs(evl) < 50000 &&
-      depthleft < 9 && evl - ((depthleft - improving) * 80) >= beta) {
+      depthleft < MaxRfpDepth && evl - ((depthleft - improving) * RfpImprovingBonus) >= beta) {
     return evl;
   }
 
@@ -355,7 +355,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   // opponent an extra move and still beat beta with a reduced search, cut off.
   if (isnull == false && !ispv && !singularsearch && !incheck &&
       evl >= movelst[*key - 1].staticeval &&
-      (evl >= beta + 30 * (depthleft < 4))) {
+      (evl >= beta + NmpThreshold * (depthleft < NmpThresholdDepth))) {
 
     bool ispiecew = false, ispieceb = false;
     for (int i = 1; i < 5; i++) {
@@ -375,7 +375,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
       thread_info->CURRENTPOS ^= ZOBRISTTABLE[772];
       move_add(&board2, movelst, key, nullmove, color, false, thread_info, -1);
-      int R = 4 + (depthleft / 6) + MIN((evl - beta) / 200, 3);
+      int R = NmpBase + (depthleft / NmpDepthDiv) + MIN((evl - beta) / NmpEvalDiv, NmpEvalMax);
 
       // We call it with a null window, because we don't care about what the
       // score is exactly, we only care if it beats beta or not.
@@ -402,7 +402,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   bool ismove = false;
   int betacount = 0;
 
-  if ((ispv || cutnode) && type == None && depthleft > 3) {
+  if ((ispv || cutnode) && type == None && depthleft > IIRMinDepth) {
     depthleft--;
   }
   int i = 0;
@@ -442,19 +442,19 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       int newdepth =
           MAX(depthleft - LMRTABLE[depthleft - 1][betacount] + improving, 0);
       int futility_move_count =
-          3 + (depthleft * depthleft / (1 + (!improving)));
+          LmpBase + (depthleft * depthleft / (1 + (!improving)));
       // Late Move Pruning (LMP): at high depths, we can just not search quiet
       // moves after a while. They are very unlikely to be unavoidable even if
       // they are good and it saves time.
-      if (newdepth < 4) {
+      if (newdepth < LmpDepth) {
         if (betacount >= futility_move_count) {
           quietsprune = true;
         }
       }
       // Futility Pruning: If our position is bad enough, only search captures
       // after this one.
-      if ((!incheck && newdepth < 10 && list[i].eval < 1000200 &&
-           evl + 100 + 150 * (newdepth) < alpha)) {
+      if ((!incheck && newdepth < FpDepth && list[i].eval < 1000200 &&
+           evl + FpMargin1 + FpMargin2 * (newdepth) < alpha)) {
         quietsprune = true;
       }
     }
@@ -462,10 +462,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     // SEE pruning: if a quick check shows that we're hanging material, we skip
     // the move.
     if (depth && list[i].eval < 1000200 && bestscore > -50000 &&
-        depthleft < 9 &&
+        depthleft < SeePruningDepth &&
         !static_exchange_evaluation(board, list[i].move, color,
                                     (depthleft) *
-                                        (iscap ? -30 * depthleft : -80))) {
+                                        (iscap ? -SeePruningNoisyMargin * depthleft : -SeePruningQuietMargin))) {
 
       continue;
     }
@@ -475,16 +475,16 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     if (depth && depth < info.depth * 2) { // if we're not already in a singular
                                            // search, do singular search.
 
-      if (!singularsearch && depthleft >= 7 && list[i].eval == 11000000 &&
+      if (!singularsearch && depthleft >= SeDepth && list[i].eval == 11000000 &&
           abs(evl) < 50000 && entry.depth >= depthleft - 3 && type != UBound) {
-        int sBeta = ttscore - (depthleft);
+        int sBeta = ttscore - (depthleft * SeMargin / 64);
         int sScore = alphabeta(board, movelst, key, sBeta - 1, sBeta,
                                (depthleft - 1) / 2, depth, color, cutnode,
                                incheck, list[i].move, thread_info);
 
         if (sScore < sBeta) {
           extension = 1;
-          if (!ispv && sScore + 20 < sBeta &&
+          if (!ispv && sScore + SeDoubleExtMargin < sBeta &&
               depth <
                   info.depth) { // Limit explosions for double extensions by
                                 // only doing them if the depth is less than the
@@ -520,10 +520,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       R = LMRTABLE[depthleft - 1][betacount];
 
       if (iscap && !ispv) {
-        R = R / 2;
+        R = R * LmrNoisyDiv / 64;
         R -= std::clamp(thread_info->CAPHIST[color][list[i].move.move >> 8]
                                             [list[i].move.move & 0xFF] /
-                            8096,
+                            LmrNoisyHistDiv,
                         -2, 2);
       }
       if (ischeck) // Reduce reduction for checks or moves made in check
@@ -538,7 +538,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         R++;
       }
       if (list[i].eval < 100000 && list[i].eval > -100000) {
-        R -= std::clamp(list[i].eval / 8096, -2, 2);
+        R -= std::clamp(list[i].eval / LmrHistDiv, -2, 2);
       }
       if (cutnode) {
         R += 2;
@@ -625,8 +625,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       betas += betacount + 1;
 
       int c =
-          MIN(300 * (depthleft - 1),
-              2400); // Update history tables, countermoves, and killer moves.
+          MIN(HistBonusMargin * (depthleft - 1),
+              HistBonusMax); // Update history tables, countermoves, and killer moves.
 
       if (!iscap) {
 
@@ -794,7 +794,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
   thread_info->nnue_state.reset_nnue(board);
   // Performs an Iterative Deepening search on the current position.
 
-  float opttime = maxtime * 0.6;
+  float opttime = maxtime * OptTimeRatio / 100;
   clearHistory(false, thread_info);
   clearKiller(thread_info);
   thread_info->currentmove.move = 0;
@@ -805,7 +805,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
   struct move pvmove;
   // printf("%i %s %s\n", *key, movelst[*key-1].fen, movelst[*key-1].move);
   for (depth = 1;; depth++) {
-    int delta = 12; // Aspiration windows: searching with a reduced window
+    int delta = AspStartingWindow; // Aspiration windows: searching with a reduced window
                     // allows us to search less nodes, though it means we have
                     // to research if the score falls outside of those bounds.
 
@@ -863,7 +863,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
         // The reason for this is that fail highs are usually not caused by
         // something really deep in the search, but rather a move early on that
         // had previously been overlooked due to depth conditions.
-        tempdepth = MAX(tempdepth - 1, depth - 3);
+        tempdepth = MAX(tempdepth - 1, depth - MaxAspDepthReduction);
         evl = alphabeta(board, movelst, key, alpha, beta, tempdepth, 0, color,
                         false, incheck, excludedmove, thread_info);
         if (abs(evl) == TIMEOUT) {
@@ -950,9 +950,9 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
     {
       double besttimefraction = (double)info.best_nodes / info.total_nodes;
       opttime =
-          MIN(maxtime * 0.6 * (1.62 - besttimefraction) * 1.48, maximumtime);
-      alpha = evl - 12;
-      beta = evl + 12;
+          MIN(maxtime * OptTimeRatio / 100 * (1.62 - besttimefraction) * 1.48, maximumtime);
+      alpha = evl - AspStartingWindow;
+      beta = evl + AspStartingWindow;
     }
 
     if (depth >= MAXDEPTH ||

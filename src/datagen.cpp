@@ -148,7 +148,7 @@ struct move random_move(struct board_info *board, bool color, bool incheck,
   for (int i = 0; i < movelen; i++) {
     struct board_info board2 = *board;
     long long unsigned int temp = thread_info->CURRENTPOS;
-    move(&board2, list[i].move, color, thread_info);
+    move(&board2, list[i].move, color, thread_info, true);
     // nnue_state.pop();
     thread_info->CURRENTPOS = temp;
     if (!isattacked(&board2, board2.kingpos[color], color ^ 1)) {
@@ -190,7 +190,7 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
       return 0;
     }
     int piecetype = board.board[mve.move >> 8] - 1;
-    move(&board, mve, color, thread_info);
+    move(&board, mve, color, thread_info, true);
     move_add(
         &board, movelst, &key, mve, color,
         ((mve.flags == 0xC || board.board[mve.move & 0xFF]) && mve.flags != 8),
@@ -221,7 +221,7 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
     for (int i = 0; i < movelen; i++) {
       struct board_info board2 = board;
       long long unsigned int temp = thread_info->CURRENTPOS;
-      if (!move(&board2, list[i].move, color, thread_info)) {
+      if (!move(&board2, list[i].move, color, thread_info, true)) {
         legalmovelist[legalmoves] = list[i];
         legalmoves++;
         thread_info->nnue_state.pop();
@@ -288,7 +288,7 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
       exit(0);
     }
     int piecetype = board.board[thread_info->currentmove.move >> 8] - 1;
-    move(&board, thread_info->currentmove, color, thread_info);
+    move(&board, thread_info->currentmove, color, thread_info, true);
     move_add(&board, movelst, &key, thread_info->currentmove, color, isnoisy,
              thread_info, piecetype);
     bool ischeck = isattacked(&board, board.kingpos[color ^ 1], color);

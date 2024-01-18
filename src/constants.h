@@ -1,6 +1,8 @@
 #ifndef __constants__
 #define __constants__
-
+#include <string>
+#include <iostream>
+#include <vector>
 #define WHITE 0
 #define BLACK 1
 #define BLANK 0
@@ -126,9 +128,6 @@ const int listsize = sizeof(struct list);
 const int movesize = sizeof(struct move);
 const int attacknums[4] = {2, 2, 3, 5};
 
-const int SEEVALUES[7] = {0,   100,  450,  450,
-                          650, 1250, 10000}; // move ordering purposes
-
 const int N5NTABLE[10][2] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2},
                              {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4}};
 
@@ -167,4 +166,108 @@ constexpr int zobristkeys[128] = {
   48, 49, 50, 51, 52, 53, 54, 55, 0,0,0,0,0,0,0,0,
   56, 57, 58, 59, 60, 61, 62, 63, 0,0,0,0,0,0,0,0,
 };
+
+
+struct Parameter {
+    std::string name;
+    int &value;
+    int min, max;
+};
+
+std::vector <Parameter> params;
+
+// trick to be able to create options
+struct CreateParam {
+    int _value;
+    CreateParam(std::string name, int value, int min, int max) : _value(value) { params.push_back({ name, _value, min, max }); }
+
+    operator int() const {
+        return _value;
+    }
+};
+
+//#define TUNE_FLAG       //uncomment this line when running SPSA
+
+#ifndef TUNE_FLAG
+
+#define TUNE_PARAM(name, value, min, max) constexpr int name = value;
+
+#else
+
+#define TUNE_PARAM(name, value, min, max) CreateParam name(#name, value, min, max);
+
+#endif
+
+
+// search constants
+TUNE_PARAM(QsearchFutilityThreshold, 60, 30, 100);
+TUNE_PARAM(MaxQsearchDepth, 15, 10, 25);
+TUNE_PARAM(MaxRfpDepth, 9, 6, 12);
+TUNE_PARAM(RfpThreshold, 80, 50, 110);
+TUNE_PARAM(RfpImprovingBonus, 80, 50, 110);
+TUNE_PARAM(NmpThreshold, 30, 0, 60);
+TUNE_PARAM(NmpThresholdDepth, 4, 2, 6);
+TUNE_PARAM(NmpBase, 4, 3, 5);
+TUNE_PARAM(NmpDepthDiv, 6, 3, 8);
+TUNE_PARAM(NmpEvalDiv, 200, 100, 300);
+TUNE_PARAM(NmpEvalMax, 3, 2, 4);
+TUNE_PARAM(IIRMinDepth, 3, 2, 5);
+TUNE_PARAM(LmpDepth, 4, 3, 8);
+TUNE_PARAM(LmpBase, 3, 1, 5);
+TUNE_PARAM(FpDepth, 10, 6, 14);
+TUNE_PARAM(FpMargin1, 100, 50, 200);
+TUNE_PARAM(FpMargin2, 150, 100, 200);
+TUNE_PARAM(SeePruningDepth, 9, 5, 12);
+TUNE_PARAM(SeePruningQuietMargin, 80, 60, 100);
+TUNE_PARAM(SeePruningNoisyMargin, 30, 20, 40);
+TUNE_PARAM(SeDepth, 7, 4, 8);
+TUNE_PARAM(SeMargin, 64, 32, 96);
+TUNE_PARAM(SeDoubleExtMargin, 20, 10, 30);
+TUNE_PARAM(LmrHistDiv, 8096, 6000, 10000);
+TUNE_PARAM(LmrNoisyHistDiv, 8096, 6000, 10000);
+TUNE_PARAM(LmrBase, 0, -2, 10);
+TUNE_PARAM(LmrRatio, 23, 16, 30);
+TUNE_PARAM(LmrNoisyDiv, 32, 24, 40);
+TUNE_PARAM(HistBonusMargin, 300, 250, 500);
+TUNE_PARAM(HistBonusMax, 2400, 1800, 3000);
+TUNE_PARAM(OptTimeRatio, 60, 50, 80);
+TUNE_PARAM(AspStartingWindow, 12, 8, 20);
+TUNE_PARAM(MaxAspDepthReduction, 3, 2, 6);
+TUNE_PARAM(SeeValPawn, 100, 80, 120);
+TUNE_PARAM(SeeValKnight, 450, 400, 500);
+TUNE_PARAM(SeeValBishop, 450, 400, 500);
+TUNE_PARAM(SeeValRook, 650, 600, 700);
+TUNE_PARAM(SeeValQueen, 1250, 1150, 1350);
+
+void print_params_for_ob() {
+    for (auto& param : params) {
+        std::cout << param.name << ", int, " << param.value << ", " << param.min << ", " << param.max << ", " << std::max(0.5, (param.max - param.min) / 20.0) << ", 0.002\n";
+    }
+}
+
+
+int SEEVALUES[7] = {0,   SeeValPawn,  SeeValKnight,  SeeValBishop,
+                    SeeValRook, SeeValQueen, 10000}; // move ordering purposes
+
+
+void change_see_values(std::string name, int value){
+  int key;
+  if (name == "SeeValPawn"){
+    key = 1;
+  }
+  else if (name == "SeeValKnight"){
+    key = 2;
+  }
+  else if (name == "SeeValBishop"){
+    key = 3;
+  }
+  else if (name == "SeeValRook"){
+    key = 4;
+  }
+  else if (name == "SeeValQueen"){
+    key = 5;
+  }
+  SEEVALUES[key] = value;
+
+}
 #endif

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <bits/stdc++.h>
 
 char *getsafe(char *buffer,
               int count) // Gets a number of characters up to count (the size of
@@ -120,6 +121,11 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key,
     // send options
     printf("option name Hash type spin default 32 min 1 max 131072\n");
     printf("option name Threads type spin default 1 min 1 max 1024\n");
+    #ifdef TUNE_FLAG
+    for (auto& param : params){
+      std::cout << "option name " << param.name << " type spin default " << param.value << " min " << param.min << " max " << param.max << "\n";
+    }
+    #endif
 
     printf("uciok\n");
   }
@@ -162,6 +168,47 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key,
   else if (strstr(command, "setoption name Threads value")) {
     thread_num = atoi(&command[29]);
     printf("%i\n", thread_num);
+  }
+
+  else if (strstr(command, "printparams")) {
+    #ifdef TUNE_FLAG
+      print_params_for_ob();
+    #endif
+  }
+  else if (strstr(command, "setoption name")){
+    #ifdef TUNE_FLAG
+      std::string com = command;
+      std::istringstream iss(com);
+      std::string n; iss >> n; iss >> n; iss >> n;
+      
+      for (auto& param : params) {
+                    if (n == param.name) {
+                        std::string temp; iss >> temp;
+                        int newvalue; iss >> newvalue;
+                        param.value = newvalue;
+                        if (n == "LmrBase"){
+                            for (int i = 0; i < 100; i++) // initialize LMR table.
+                              {
+                              for (int n = 0; n < LISTSIZE; n++) {
+                                LMRTABLE[i][n] = (int)round(((float)newvalue / 10) + (log(i + 1) * log(n + 1) / ((float)LmrRatio / 10)));
+                              }
+                              }                       
+                        }
+                        else if (n == "LmrRatio"){
+                            for (int i = 0; i < 100; i++) // initialize LMR table.
+                              {
+                              for (int n = 0; n < LISTSIZE; n++) {
+                                LMRTABLE[i][n] = (int)round(((float)LmrBase / 10) + (log(i + 1) * log(n + 1) / ((float)newvalue / 10)));
+                              }
+                              }                       
+                        }
+                        else if (strstr(n.c_str(), "SeeVal")){
+                          change_see_values(n, newvalue);
+                        }
+                        break;
+                    }
+                }
+    #endif
   }
 
   if (strstr(command, "position startpos")) {
