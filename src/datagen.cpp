@@ -239,6 +239,7 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
 
     thread_info->currentmove = nullmove;
     start_time = std::chrono::steady_clock::now();
+    nodes = 0;
     int g = iid_time(&board, movelst, 5000, &key, color, true, false, nullmove,
                      thread_info);
 
