@@ -494,8 +494,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
           }
         } else if (sBeta >= beta) {
           return sBeta;
-        } else if (ttscore <= alpha) {
+        } else if ((ttscore <= alpha && cutnode)) {
           extension = -1;
+        }
+        else if (ttscore >= beta){
+          extension = -2;
         }
       } else if (ischeck) {
         extension++;
