@@ -41,7 +41,6 @@ bool CENTERBLACK[0x88]; // lookup table for Black's center
 
 struct ThreadInfo {
   struct move KILLERTABLE[100][2]; // Stores killer moves
-  std::vector<struct move> update_hist;
   int HISTORYTABLE[2][0x80][0x80]; // The History table
   int CONTHIST[12][128][12][128];
   int CAPHIST[2][0x80][0x80];
