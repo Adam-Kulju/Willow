@@ -288,11 +288,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key,
       }
 
       int milltime = atoi(&command[k]) - 50;
-      if (movestogo > 2 || movestogo == -1) {
-        maximumtime = (float)milltime / 5000;
-      } else {
-        maximumtime = (float)milltime / 2000;
-      }
+      maximumtime = ((float)milltime / 1000) * HardTimeLimit / 100;
       if (milltime < 1) {
         time = 0.001;
         coldturkey = -0.001;
@@ -429,6 +425,10 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes
     setfull(&board);
     setmovelist(movelst, &key, thread_info);
     search_age = 0;
+    setfull(&board);
+    thread_info->nnue_state.reset_nnue(&board);
+    //printf("%i\n", thread_info->nnue_state.evaluate(WHITE));
+    //exit(0);
     setfromfen(&board, movelst, &key, positions[i], &color, 0, thread_info);
 
     printfull(&board);

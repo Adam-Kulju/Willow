@@ -1,5 +1,4 @@
-#ifndef __search__
-#define __search__
+#pragma once
 
 #include "globals.h"
 #include "movegen.h"
@@ -791,13 +790,13 @@ bool verifypv(struct board_info *board, struct move pvmove, bool incheck,
   return false;
 }
 
-int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
+int iid_time(struct board_info *board, struct movelist *movelst, float timeAlloted,
              int *key, bool color, bool ismove, bool isprint,
              struct move excludedmove, ThreadInfo *thread_info) {
   thread_info->nnue_state.reset_nnue(board);
   // Performs an Iterative Deepening search on the current position.
 
-  float opttime = maxtime * OptTimeRatio / 100;
+  float opttime = timeAlloted * OptTimeRatio / 100;
   clearHistory(false, thread_info);
   clearKiller(thread_info);
   thread_info->currentmove.move = 0;
@@ -953,7 +952,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
     {
       double besttimefraction = (double)info.best_nodes / info.total_nodes;
       opttime =
-          MIN(maxtime * OptTimeRatio / 100 * (1.62 - besttimefraction) * 1.48, maximumtime);
+          MIN(timeAlloted * OptTimeRatio / 100 * ((NodeTmCoeff1 / 100.0f) - besttimefraction) * NodeTmCoeff2 / 100, maximumtime);
       alpha = evl - AspStartingWindow;
       beta = evl + AspStartingWindow;
     }
@@ -974,7 +973,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float maxtime,
 }
 
 void start_search(struct board_info *board, struct movelist *movelst,
-                  float maxtime, int *key, bool color, ThreadInfo *thread_info,
+                  float timeAlloted, int *key, bool color, ThreadInfo *thread_info,
                   int numThreads) {
   thread_info->board = *board;
   memcpy(thread_info->movelst, movelst, sizeof(movelist) * 1000);
@@ -994,10 +993,10 @@ void start_search(struct board_info *board, struct movelist *movelst,
 
   for (int i = 0; i < numThreads - 1; i++) {
     threads.emplace_back(iid_time, &thread_infos[i].board,
-                         thread_infos[i].movelst, maxtime, &thread_infos[i].key,
+                         thread_infos[i].movelst, timeAlloted, &thread_infos[i].key,
                          color, false, false, nullmove, &thread_infos[i]);
   }
-  iid_time(&thread_info->board, thread_info->movelst, maxtime,
+  iid_time(&thread_info->board, thread_info->movelst, timeAlloted,
            &thread_info->key, color, false, true, nullmove, thread_info);
 
   // Stop helper threads
@@ -1013,5 +1012,3 @@ void start_search(struct board_info *board, struct movelist *movelst,
   threads.clear();
   search_age++;
 }
-
-#endif

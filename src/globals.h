@@ -1,5 +1,4 @@
-#ifndef __globals__
-#define __globals__
+#pragma once
 #include "constants.h"
 #include "nnue.h"
 #include <ctype.h>
@@ -437,5 +436,3 @@ void convto(char *mve, struct move *to_move,
     to_move->flags = 0;
   }
 }
-
-#endif

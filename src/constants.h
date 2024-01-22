@@ -1,5 +1,4 @@
-#ifndef __constants__
-#define __constants__
+#pragma once
 #include <string>
 #include <iostream>
 #include <vector>
@@ -238,6 +237,11 @@ TUNE_PARAM(SeeValKnight, 450, 400, 500);
 TUNE_PARAM(SeeValBishop, 450, 400, 500);
 TUNE_PARAM(SeeValRook, 650, 600, 700);
 TUNE_PARAM(SeeValQueen, 1250, 1150, 1350);
+TUNE_PARAM(HardTimeLimit, 20, 10, 50);
+TUNE_PARAM(NodeTmCoeff1, 162, 120, 200);
+TUNE_PARAM(NodeTmCoeff2, 148, 110, 190);
+TUNE_PARAM(MaterialBase, 700, 500, 900);
+TUNE_PARAM(MaterialDiv, 32, 24, 40);
 
 void print_params_for_ob() {
     for (auto& param : params) {
@@ -270,4 +274,3 @@ void change_see_values(std::string name, int value){
   SEEVALUES[key] = value;
 
 }
-#endif
