@@ -1,5 +1,4 @@
-#ifndef __nnue__
-#define __nnue__
+#pragma once
 #include "constants.h"
 #include "globals.h"
 #include "simd.h"
@@ -214,16 +213,8 @@ int32_t
 NNUE_State::screlu_flatten(const std::array<int16_t, LAYER1_SIZE> &us,
                           const std::array<int16_t, LAYER1_SIZE> &them,
                           const std::array<int16_t, LAYER1_SIZE * 2> &weights) {
-  int32_t sum = 0;
-
-  for (size_t i = 0; i < LAYER1_SIZE; ++i) {
-    sum += screlu(us[i]) * weights[i];
-    sum += screlu(them[i]) * weights[LAYER1_SIZE + i];
-  }
-
-  return sum / QA;
   
-  /*auto sum = SIMD::vec_int32_zero();
+  auto sum = SIMD::vec_int32_zero();
 
   for (size_t i = 0; i < LAYER1_SIZE; i += SIMD::REGISTER_SIZE) {
 
@@ -247,7 +238,7 @@ NNUE_State::screlu_flatten(const std::array<int16_t, LAYER1_SIZE> &us,
 
     }
 
-    return SIMD::vec_int32_hadd(sum) / QA;*/
+    return SIMD::vec_int32_hadd(sum) / QA;
 }
 
 void NNUE_State::reset_nnue(struct board_info *board) {
@@ -274,5 +265,3 @@ void NNUE_State::reset_nnue_color(struct board_info *board, int color, int bucke
     }
   }
 }
-
-#endif

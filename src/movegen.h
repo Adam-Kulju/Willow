@@ -1,5 +1,4 @@
-#ifndef __movegen__
-#define __movegen__
+#pragma once
 #include "board.h"
 #include "constants.h"
 
@@ -496,5 +495,3 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key,
   }
   return 0;
 }
-
-#endif

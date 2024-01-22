@@ -1,5 +1,4 @@
-#ifndef __search__
-#define __search__
+#pragma once
 
 #include "globals.h"
 #include "movegen.h"
@@ -953,7 +952,7 @@ int iid_time(struct board_info *board, struct movelist *movelst, float timeAllot
     {
       double besttimefraction = (double)info.best_nodes / info.total_nodes;
       opttime =
-          MIN(timeAlloted * OptTimeRatio / 100 * ((NodeTmCoeff1 / 100) - besttimefraction) * NodeTmCoeff2 / 100, maximumtime);
+          MIN(timeAlloted * OptTimeRatio / 100 * ((NodeTmCoeff1 / 100.0f) - besttimefraction) * NodeTmCoeff2 / 100, maximumtime);
       alpha = evl - AspStartingWindow;
       beta = evl + AspStartingWindow;
     }
@@ -1013,5 +1012,3 @@ void start_search(struct board_info *board, struct movelist *movelst,
   threads.clear();
   search_age++;
 }
-
-#endif

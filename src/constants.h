@@ -1,5 +1,4 @@
-#ifndef __constants__
-#define __constants__
+#pragma once
 #include <string>
 #include <iostream>
 #include <vector>
@@ -275,4 +274,3 @@ void change_see_values(std::string name, int value){
   SEEVALUES[key] = value;
 
 }
-#endif

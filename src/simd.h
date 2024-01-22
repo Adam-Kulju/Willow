@@ -1,5 +1,4 @@
-#ifndef __simd__
-#define __simd__
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -139,7 +138,3 @@ namespace SIMD {
 #endif
     }
 }
-
-
-
-#endif

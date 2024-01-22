@@ -1,5 +1,4 @@
-#ifndef __board__
-#define __board__
+#pragma once
 
 #include "constants.h"
 #include "globals.h"
@@ -804,5 +803,3 @@ int get_cheapest_attacker(struct board_info *board, unsigned int pos,
 
   return flag;
 }
-
-#endif
