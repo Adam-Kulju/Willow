@@ -2,12 +2,15 @@
 #define __nnue__
 #include "constants.h"
 #include "globals.h"
+#include "simd.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <span>
 #include <vector>
+
+using namespace SIMD; 
 #ifdef _MSC_VER
 #define W_MSVC
 #pragma push_macro("_MSC_VER")
@@ -32,10 +35,13 @@ constexpr int SCRELU_MAX = 255;
 
 constexpr int SCALE = 400;
 
-constexpr int QA = 255;
+constexpr int QA = 181;
 constexpr int QB = 64;
 
 constexpr int QAB = QA * QB;
+
+const auto SCRELU_MIN_VEC = SIMD::get_int16_vec(SCRELU_MIN);
+const auto QA_VEC        = SIMD::get_int16_vec(QA);
 
 constexpr int STANDARD_TO_MAILBOX[64] = {
     0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,  0x10, 0x11, 0x12,
@@ -84,7 +90,7 @@ template <size_t HiddenSize> struct alignas(64) Accumulator {
 
 constexpr int32_t screlu(int16_t x) {
   const auto clipped =
-      std::clamp(static_cast<int32_t>(x), SCRELU_MIN, SCRELU_MAX);
+      std::clamp(static_cast<int32_t>(x), SCRELU_MIN, QA);
   return clipped * clipped;
 }
 
@@ -208,14 +214,32 @@ int32_t
 NNUE_State::screlu_flatten(const std::array<int16_t, LAYER1_SIZE> &us,
                           const std::array<int16_t, LAYER1_SIZE> &them,
                           const std::array<int16_t, LAYER1_SIZE * 2> &weights) {
-  int32_t sum = 0;
 
-  for (size_t i = 0; i < LAYER1_SIZE; ++i) {
-    sum += screlu(us[i]) * weights[i];
-    sum += screlu(them[i]) * weights[LAYER1_SIZE + i];
-  }
+  auto sum = SIMD::vec_int32_zero();
 
-  return sum / QA;
+  for (size_t i = 0; i < LAYER1_SIZE; i += SIMD::REGISTER_SIZE) {
+
+        auto weights_us = SIMD::int16_load(&us[i]);
+        weights_us      = SIMD::vec_int16_clamp(weights_us, SCRELU_MIN_VEC, QA_VEC);
+        weights_us      = SIMD::vec_int16_multiply(weights_us, weights_us);
+
+        auto out_weight_1 = SIMD::int16_load(&weights[i]);
+        auto our_product  = SIMD::vec_int16_madd_int32(weights_us, out_weight_1);
+
+        sum = SIMD::vec_int32_add(sum, our_product);
+
+        auto weights_them = SIMD::int16_load(&them[i]);
+        weights_them      = SIMD::vec_int16_clamp(weights_them, SCRELU_MIN_VEC, QA_VEC);
+        weights_them      = SIMD::vec_int16_multiply(weights_them, weights_them);
+
+        auto out_weight_2 = SIMD::int16_load(&weights[LAYER1_SIZE + i]);
+        auto them_product  = SIMD::vec_int16_madd_int32(weights_them, out_weight_2);
+
+        sum = SIMD::vec_int32_add(sum, them_product);
+
+    }
+
+    return SIMD::vec_int32_hadd(sum) / QA;
 }
 
 void NNUE_State::reset_nnue(struct board_info *board) {
