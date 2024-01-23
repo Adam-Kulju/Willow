@@ -215,6 +215,22 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     info.depth = depthleft;
   }
 
+   if (depthleft <= 0 ||
+      depth >= 99) // if we're too deep drop into qsearch, adjusting based on
+                   // depth if we get a mate score.
+  {
+    int b = quiesce(board, movelst, key, alpha, beta, depth, MaxQsearchDepth, color, incheck,
+                    thread_info);
+    if (b == -100000) {
+      b += depth;
+    }
+    if (b == 100000) {
+      b -= depth;
+    }
+    return b;
+  }
+  
+
   thread_info->nodes++;
   if (thread_info->id == 0) {
     nodes++;
@@ -297,20 +313,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     }
   }
 
-  if (depthleft <= 0 ||
-      depth >= 99) // if we're too deep drop into qsearch, adjusting based on
-                   // depth if we get a mate score.
-  {
-    int b = quiesce(board, movelst, key, alpha, beta, depth, MaxQsearchDepth, color, incheck,
-                    thread_info);
-    if (b == -100000) {
-      b += depth;
-    }
-    if (b == 100000) {
-      b -= depth;
-    }
-    return b;
-  }
   if (incheck) // we cannot evaluate the position when in check, because there
                // may be no good move to get out. Otherwise, the evaluation of a
                // position is very useful for pruning.
