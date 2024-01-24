@@ -59,7 +59,7 @@ namespace SIMD {
     }
 
     auto inline vec_int16_clamp(auto vec, auto min_vec, auto max_vec) {
-#if defined(__AXV512F__)
+#if defined(__AVX512F__)
         vec = _mm512_max_epi16(vec, min_vec);
         vec = _mm512_min_epi16(vec, max_vec);
         return vec;
