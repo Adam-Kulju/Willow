@@ -13,9 +13,8 @@ namespace SIMD {
     };
 #if defined(__AVX512F__)
     #include <immintrin.h>
-    constexpr Arch ARCH = Arch::AVX2;
-    constexpr size_t REGISTER_SIZE = 32
-    ;     
+    constexpr Arch ARCH = Arch::AVX512;
+    constexpr size_t REGISTER_SIZE = 32;     
 #elif defined(__AVX2__)
     #include <immintrin.h>
     constexpr Arch ARCH = Arch::AVX2;
