@@ -221,7 +221,7 @@ TUNE_PARAM(SeePruningQuietMargin, 78, 60, 100);
 TUNE_PARAM(SeePruningNoisyMargin, 30, 20, 40);
 TUNE_PARAM(SeDepth, 7, 4, 8);
 TUNE_PARAM(SeMargin, 70, 32, 96);
-TUNE_PARAM(SeDoubleExtMargin, 20, 10, 30);
+TUNE_PARAM(SeDoubleExtMargin, 5, 1, 30);
 TUNE_PARAM(LmrHistDiv, 8288, 6000, 10000);
 TUNE_PARAM(LmrNoisyHistDiv, 7874, 6000, 10000);
 TUNE_PARAM(LmrBase, 0, -2, 10);

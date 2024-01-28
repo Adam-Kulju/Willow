@@ -480,7 +480,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
           abs(evl) < 50000 && entry.depth >= depthleft - 3 && type != UBound) {
         int sBeta = ttscore - (depthleft * SeMargin / 64);
         int sScore = alphabeta(board, movelst, key, sBeta - 1, sBeta,
-                               (depthleft - 1) / 2, depth, color, cutnode,
+                               (depthleft) / 2, depth, color, cutnode,
                                incheck, list[i].move, thread_info);
 
         if (sScore < sBeta) {
@@ -489,8 +489,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
               depth <
                   info.depth) { // Limit explosions for double extensions by
                                 // only doing them if the depth is less than the
-                                // depth we're "supposed" to be at or less than
-                                // 15 (leaves room for a bunch near the root)
+                                // depth we're "supposed" to be at
             extension++;
           }
         } else if (sBeta >= beta) {
