@@ -137,7 +137,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key,
     clearHistory(true, thread_info);
     setfull(board);
     setmovelist(movelst, key, thread_info);
-    search_age = 0;
+    thread_info->search_age = 0;
   }
 
   if (!strcmp(command, "quit")) {
@@ -423,7 +423,7 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes
     clearHistory(true, thread_info);
     setfull(&board);
     setmovelist(movelst, &key, thread_info);
-    search_age = 0;
+    thread_info->search_age = 0;
     setfull(&board);
     thread_info->nnue_state.reset_nnue(&board);
     //printf("%i\n", thread_info->nnue_state.evaluate(WHITE));

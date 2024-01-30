@@ -179,7 +179,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
     }
     if (list[i].eval >= beta) // handle fail high
     {
-      insert(original_pos, 0, list[i].eval, LBound, list[i].move, search_age);
+      insert(original_pos, 0, list[i].eval, LBound, list[i].move, thread_info->search_age);
       return list[i].eval;
     }
     if (list[i].eval > alpha) // update alpha
@@ -196,9 +196,9 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
   }
   if (falpha != alpha) // Insert entry into the transposition table
   {
-    insert(original_pos, 0, bestscore, Exact, bestmove, search_age);
+    insert(original_pos, 0, bestscore, Exact, bestmove, thread_info->search_age);
   } else {
-    insert(original_pos, 0, bestscore, UBound, bestmove, search_age);
+    insert(original_pos, 0, bestscore, UBound, bestmove, thread_info->search_age);
   }
   return bestscore;
 }
@@ -397,9 +397,10 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
     }
   }
+  struct list list[LISTSIZE];
+  int movelen = movegen(board, list, color, incheck);
 
   // Initilalize the list of moves, generate them, and score them.
-  struct list list[LISTSIZE];
   bool ismove = false;
   int betacount = 0;
 
@@ -408,7 +409,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   }
   int i = 0;
   unsigned long long int original_pos = thread_info->CURRENTPOS;
-  int movelen = movegen(board, list, color, incheck);
+  
   movescore(board, movelst, key, list, depth, color,
             (type && !entry.depth) ? None : type, movelen, 0, thread_info,
             entry, true);
@@ -622,8 +623,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
       bestmove = list[i].move;
       if (!singularsearch) {
-        insert(original_pos, depthleft, bestscore, LBound, bestmove,
-               search_age);
+        insert(original_pos, depthleft, bestscore, LBound, bestmove, thread_info->search_age);
       }
       total++;
       betas += betacount + 1;
@@ -739,8 +739,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     }
 
     else if (!betacount && depth == 0) {
-      insert(original_pos, depthleft, score, 1, list[i].move,
-             search_age);
+      insert(original_pos, depthleft, score, UBound, list[i].move, thread_info->search_age);
       return score;
     }
     betacount++;
@@ -760,9 +759,9 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   if (!singularsearch) {
     if (raisedalpha) // Insert move into TT table
     {
-      insert(original_pos, depthleft, alpha, Exact, bestmove, search_age);
+      insert(original_pos, depthleft, alpha, Exact, bestmove, thread_info->search_age);
     } else {
-      insert(original_pos, depthleft, bestscore, UBound, bestmove, search_age);
+      insert(original_pos, depthleft, bestscore, UBound, bestmove, thread_info->search_age);
     }
   }
 
@@ -1012,5 +1011,5 @@ void start_search(struct board_info *board, struct movelist *movelst,
   }
 
   threads.clear();
-  search_age++;
+  thread_info->search_age++;
 }
