@@ -19,8 +19,7 @@ int attackers[2]; // the number of attackers on king
 
 int NODES_IID = 0;
 
-bool IS_DFRC = false;
-short int search_age; // search age for TT purposes
+bool IS_DFRC = false; // search age for TT purposes
 
 short int MAXDEPTH; // The maximum depth of a position (set to 14 for bench and
                     // 99 normally)
@@ -52,6 +51,7 @@ struct ThreadInfo {
   int key;
   bool stop;
   long int nodes;
+  short int search_age;
 };
 
 std::vector<std::thread> threads;
@@ -343,8 +343,7 @@ bool ismatch(struct move move1,
 }
 
 void insert(unsigned long long int position, int depthleft, int eval, char type,
-            struct move bestmove,
-            int search_age) // Inserts an entry into the transposition table.
+            struct move bestmove, short int search_age) // Inserts an entry into the transposition table.
 {
   int index = (position) & (_mask);
 

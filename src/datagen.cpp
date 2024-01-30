@@ -167,7 +167,7 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
   clearTT();
   clearHistory(true, thread_info);
   clearKiller(thread_info);
-  search_age = 0;
+  thread_info->search_age = 0;
   srand(std::random_device()());
   struct board_info board;
   struct movelist movelst[MOVESIZE];
