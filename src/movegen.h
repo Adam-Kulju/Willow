@@ -2,6 +2,10 @@
 #include "board.h"
 #include "constants.h"
 
+bool isnoisy(board_info *board, struct move move){
+  return (move.flags == 0xC || move.flags == 0x7 || board->board[move.move & 0xFF]);
+}
+
 void pawnmoves(struct board_info *board, struct list *list, int *key,
                unsigned char pos, bool color) {
 

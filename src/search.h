@@ -159,7 +159,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
     legals++;
     move_add(
         board, movelst, key, list[i].move, color,
-        (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF]),
+        isnoisy(board, list[i].move),
         thread_info, piecetype);
 
     list[i].eval =
@@ -399,6 +399,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   }
   struct list list[LISTSIZE];
   int movelen = movegen(board, list, color, incheck);
+  unsigned long long int original_pos = thread_info->CURRENTPOS;
 
   // Initilalize the list of moves, generate them, and score them.
   bool ismove = false;
@@ -408,7 +409,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     depthleft--;
   }
   int i = 0;
-  unsigned long long int original_pos = thread_info->CURRENTPOS;
   
   movescore(board, movelst, key, list, depth, color,
             (type && !entry.depth) ? None : type, movelen, 0, thread_info,
@@ -425,10 +425,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     // First, make sure the move is legal, not skipped by futility pruning or
     // LMP, and that there's no errors making the move.
     selectionsort(list, i, movelen);
-    bool iscap =
-        (list[i].move.flags == 0xC || board->board[list[i].move.move & 0xFF] ||
-         list[i].move.flags == 0x7) &&
-        !(list[i].move.flags / 4 == 2);
+    bool iscap = isnoisy(board, list[i].move);
     if (ismatch(excludedmove, list[i].move)) {
       continue;
     }
@@ -673,8 +670,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
         }
 
         for (int a = 0; a < i; a++) {
-          if (!(list[a].move.flags == 0xC ||
-                board->board[list[a].move.move & 0xFF])) {
+          if (!isnoisy(board, list[a].move)) {
 
             updateHistory(
                 thread_info->HISTORYTABLE[color][(list[a].move.move >> 8)]
@@ -716,8 +712,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
                                           [list[i].move.move & 0xFF],
                       c);
         for (int a = 0; a < i; a++) {
-          if ((list[a].move.flags == 0xC ||
-               board->board[list[a].move.move & 0xFF])) {
+          if (isnoisy(board, list[a].move)) {
             updateHistory(thread_info->CAPHIST[color][(list[a].move.move >> 8)]
                                               [list[a].move.move & 0xFF],
                           -c);
