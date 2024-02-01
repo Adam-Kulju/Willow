@@ -404,6 +404,46 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   int movelen = movegen(board, list, color, incheck);
   unsigned long long int original_pos = thread_info->CURRENTPOS;
 
+  int pBeta = beta + 200;
+  if (!ispv && !singularsearch && !incheck && depthleft >= 5 &&
+      abs(beta) < 50000 &&
+      !(type && entry.depth >= depthleft - 3 && entry.eval < pBeta)) {
+    movescore(
+        board, movelst, key, list, depth, color,
+        (type && isnoisy(board, entry.bestmove) &&
+         static_exchange_evaluation(board, entry.bestmove, color, 1)),
+        movelen, 1, thread_info, entry, false);
+
+    for (int i = 0; i < movelen; i++) {
+      selectionsort(list, i, movelen);
+      if (list[i].eval < 1000200) {
+        break;
+      }
+
+      board_info board2 = *board;
+      if (move(&board2, list[i].move, color, thread_info, true)) {
+        continue;
+      }
+
+      move_add(board, movelst, key, list[i].move, color,
+               isnoisy(board, list[i].move), thread_info,
+               board->board[list[i].move.move >> 8] - 2);
+      bool ischeck = isattacked(&board2, board2.kingpos[color ^ 1], color);
+      int score = -quiesce(&board2, movelst, key, -pBeta, -pBeta + 1, depth + 1,
+                           MaxQsearchDepth, color ^ 1, ischeck, thread_info);
+      if (score >= pBeta) {
+        score = -alphabeta(&board2, movelst, key, -pBeta, -pBeta + 1,
+                           depthleft - 4, depth + 1, color ^ 1, !cutnode,
+                           ischeck, nullmove, thread_info);
+      }
+
+      unmake(movelst, key, thread_info, original_pos);
+      if (score >= pBeta) {
+        return score;
+      }
+    }
+  }
+
   // Initilalize the list of moves, generate them, and score them.
   bool ismove = false;
   int betacount = 0;
