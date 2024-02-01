@@ -9,7 +9,7 @@
 #include <span>
 #include <vector>
 
-using namespace SIMD; 
+using namespace SIMD;
 #ifdef _MSC_VER
 #define W_MSVC
 #pragma push_macro("_MSC_VER")
@@ -40,7 +40,7 @@ constexpr int QB = 64;
 constexpr int QAB = QA * QB;
 
 const auto SCRELU_MIN_VEC = SIMD::get_int16_vec(SCRELU_MIN);
-const auto QA_VEC        = SIMD::get_int16_vec(QA);
+const auto QA_VEC = SIMD::get_int16_vec(QA);
 
 constexpr int STANDARD_TO_MAILBOX[64] = {
     0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,  0x10, 0x11, 0x12,
@@ -78,18 +78,16 @@ template <size_t HiddenSize> struct alignas(64) Accumulator {
     std::memcpy(black.data(), bias.data(), bias.size_bytes());
   }
   inline void init_color(std::span<const int16_t, HiddenSize> bias, int color) {
-    if (color){
+    if (color) {
       std::memcpy(black.data(), bias.data(), bias.size_bytes());
-    }
-    else{
+    } else {
       std::memcpy(white.data(), bias.data(), bias.size_bytes());
     }
   }
 };
 
 constexpr int32_t screlu(int16_t x) {
-  const auto clipped =
-      std::clamp(static_cast<int32_t>(x), SCRELU_MIN, QA);
+  const auto clipped = std::clamp(static_cast<int32_t>(x), SCRELU_MIN, QA);
   return clipped * clipped;
 }
 
@@ -103,33 +101,38 @@ public:
 
   void pop();
 
-  template <bool Activate> inline void update_feature(int piece, int square, int wkbucket, int bkbucket) {
+  template <bool Activate>
+  inline void update_feature(int piece, int square, int wkbucket,
+                             int bkbucket) {
     const auto [white_idx, black_idx] = feature_indices(piece, square);
 
     if constexpr (Activate) {
       add_to_all(m_curr->white, g_nnue.feature_weights,
-                 (white_idx + 768*wkbucket) * LAYER1_SIZE);
+                 (white_idx + 768 * wkbucket) * LAYER1_SIZE);
       add_to_all(m_curr->black, g_nnue.feature_weights,
-                 (black_idx + 768*bkbucket) * LAYER1_SIZE);
+                 (black_idx + 768 * bkbucket) * LAYER1_SIZE);
     } else {
       subtract_from_all(m_curr->white, g_nnue.feature_weights,
-                        (white_idx + 768*wkbucket) * LAYER1_SIZE);
+                        (white_idx + 768 * wkbucket) * LAYER1_SIZE);
       subtract_from_all(m_curr->black, g_nnue.feature_weights,
-                        (black_idx + 768*bkbucket) * LAYER1_SIZE);
+                        (black_idx + 768 * bkbucket) * LAYER1_SIZE);
     }
   }
 
-  template <bool Activate> inline void update_feature_color(int piece, int square, int color, int bucket) {
+  template <bool Activate>
+  inline void update_feature_color(int piece, int square, int color,
+                                   int bucket) {
     const auto [white_idx, black_idx] = feature_indices(piece, square);
 
     int indx = color ? black_idx : white_idx;
 
     if constexpr (Activate) {
       add_to_all(color ? m_curr->black : m_curr->white, g_nnue.feature_weights,
-                 (indx + 768*bucket) * LAYER1_SIZE);
+                 (indx + 768 * bucket) * LAYER1_SIZE);
     } else {
-      subtract_from_all(color ? m_curr->black : m_curr->white, g_nnue.feature_weights,
-                 (indx + 768*bucket) * LAYER1_SIZE);
+      subtract_from_all(color ? m_curr->black : m_curr->white,
+                        g_nnue.feature_weights,
+                        (indx + 768 * bucket) * LAYER1_SIZE);
     }
   }
 
@@ -160,8 +163,8 @@ public:
 
   static int32_t
   screlu_flatten(const std::array<int16_t, LAYER1_SIZE> &us,
-                const std::array<int16_t, LAYER1_SIZE> &them,
-                const std::array<int16_t, LAYER1_SIZE * 2> &weights);
+                 const std::array<int16_t, LAYER1_SIZE> &them,
+                 const std::array<int16_t, LAYER1_SIZE * 2> &weights);
 
   void reset_nnue(struct board_info *board);
   void reset_nnue_color(struct board_info *board, int color, int bucket);
@@ -209,36 +212,50 @@ std::pair<size_t, size_t> NNUE_State::feature_indices(int piece, int sq) {
   return {whiteIdx, blackIdx};
 }
 
-int32_t
-NNUE_State::screlu_flatten(const std::array<int16_t, LAYER1_SIZE> &us,
-                          const std::array<int16_t, LAYER1_SIZE> &them,
-                          const std::array<int16_t, LAYER1_SIZE * 2> &weights) {
-  
+int32_t NNUE_State::screlu_flatten(
+    const std::array<int16_t, LAYER1_SIZE> &us,
+    const std::array<int16_t, LAYER1_SIZE> &them,
+    const std::array<int16_t, LAYER1_SIZE * 2> &weights) {
+
+#if defined(__AVX512F__) || defined(__AVX2__)
+
   auto sum = SIMD::vec_int32_zero();
 
   for (size_t i = 0; i < LAYER1_SIZE; i += SIMD::REGISTER_SIZE) {
 
-        auto weights_us = SIMD::int16_load(&us[i]);
-        weights_us      = SIMD::vec_int16_clamp(weights_us, SCRELU_MIN_VEC, QA_VEC);
-        weights_us      = SIMD::vec_int16_multiply(weights_us, weights_us);
+    auto weights_us = SIMD::int16_load(&us[i]);
+    weights_us = SIMD::vec_int16_clamp(weights_us, SCRELU_MIN_VEC, QA_VEC);
+    weights_us = SIMD::vec_int16_multiply(weights_us, weights_us);
 
-        auto out_weight_1 = SIMD::int16_load(&weights[i]);
-        auto our_product  = SIMD::vec_int16_madd_int32(weights_us, out_weight_1);
+    auto out_weight_1 = SIMD::int16_load(&weights[i]);
+    auto our_product = SIMD::vec_int16_madd_int32(weights_us, out_weight_1);
 
-        sum = SIMD::vec_int32_add(sum, our_product);
+    sum = SIMD::vec_int32_add(sum, our_product);
 
-        auto weights_them = SIMD::int16_load(&them[i]);
-        weights_them      = SIMD::vec_int16_clamp(weights_them, SCRELU_MIN_VEC, QA_VEC);
-        weights_them      = SIMD::vec_int16_multiply(weights_them, weights_them);
+    auto weights_them = SIMD::int16_load(&them[i]);
+    weights_them = SIMD::vec_int16_clamp(weights_them, SCRELU_MIN_VEC, QA_VEC);
+    weights_them = SIMD::vec_int16_multiply(weights_them, weights_them);
 
-        auto out_weight_2 = SIMD::int16_load(&weights[LAYER1_SIZE + i]);
-        auto them_product  = SIMD::vec_int16_madd_int32(weights_them, out_weight_2);
+    auto out_weight_2 = SIMD::int16_load(&weights[LAYER1_SIZE + i]);
+    auto them_product = SIMD::vec_int16_madd_int32(weights_them, out_weight_2);
 
-        sum = SIMD::vec_int32_add(sum, them_product);
+    sum = SIMD::vec_int32_add(sum, them_product);
+  }
 
-    }
+  return SIMD::vec_int32_hadd(sum) / QA;
 
-    return SIMD::vec_int32_hadd(sum) / QA;
+#else
+
+  int32_t sum = 0;
+
+  for (size_t i = 0; i < LAYER1_SIZE; ++i) {
+    sum += screlu(us[i]) * weights[i];
+    sum += screlu(them[i]) * weights[LAYER1_SIZE + i];
+  }
+
+  return sum / QA;
+
+#endif
 }
 
 void NNUE_State::reset_nnue(struct board_info *board) {
@@ -250,18 +267,22 @@ void NNUE_State::reset_nnue(struct board_info *board) {
   for (int square : STANDARD_TO_MAILBOX) {
     if (board->board[square]) {
       // printf("%i\n", MAILBOX_TO_STANDARD[square]);
-      update_feature<true>(board->board[square], MAILBOX_TO_STANDARD[square], buckets[WHITE][board->kingpos[WHITE]], buckets[BLACK][board->kingpos[BLACK]]);
+      update_feature<true>(board->board[square], MAILBOX_TO_STANDARD[square],
+                           buckets[WHITE][board->kingpos[WHITE]],
+                           buckets[BLACK][board->kingpos[BLACK]]);
     }
   }
 }
 
-void NNUE_State::reset_nnue_color(struct board_info *board, int color, int bucket) {
+void NNUE_State::reset_nnue_color(struct board_info *board, int color,
+                                  int bucket) {
   m_curr->init_color(g_nnue.feature_bias, color);
 
   for (int square : STANDARD_TO_MAILBOX) {
     if (board->board[square]) {
       // printf("%i\n", MAILBOX_TO_STANDARD[square]);
-      update_feature_color<true>(board->board[square], MAILBOX_TO_STANDARD[square], color, bucket);
+      update_feature_color<true>(board->board[square],
+                                 MAILBOX_TO_STANDARD[square], color, bucket);
     }
   }
 }
