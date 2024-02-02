@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sstream>
 
 char *getsafe(char *buffer,
               int count) // Gets a number of characters up to count (the size of
