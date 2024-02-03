@@ -75,6 +75,11 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
   {
     type = entry.type;
     evl = entry.eval;
+    if (evl > 50000) {
+      evl -= depth;
+    } else if (evl < -50000) {
+      evl += depth;
+    }
   } else {
     type = None;
     evl = 0;
@@ -285,6 +290,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   {
     type = entry.type;
     evl = entry.eval;
+    if (evl > 50000) {
+      evl -= depth;
+    } else if (evl < -50000) {
+      evl += depth;
+    }
   } else {
     type = None;
     evl = -1024;
@@ -403,7 +413,6 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   struct list list[LISTSIZE];
   int movelen = movegen(board, list, color, incheck);
   unsigned long long int original_pos = thread_info->CURRENTPOS;
-
   // Initilalize the list of moves, generate them, and score them.
   bool ismove = false;
   int betacount = 0;
@@ -623,6 +632,11 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
       }
       bestmove = list[i].move;
       if (!singularsearch) {
+        if (bestscore > 50000) {
+          bestscore -= depth;
+        } else if (bestscore < -50000) {
+          bestscore += depth;
+        }
         insert(original_pos, depthleft, bestscore, LBound, bestmove,
                thread_info->search_age);
       }
@@ -757,9 +771,14 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     }
   }
   if (!singularsearch) {
+    if (bestscore > 50000) {
+      bestscore -= depth;
+    } else if (bestscore < -50000) {
+      bestscore += depth;
+    }
     if (raisedalpha) // Insert move into TT table
     {
-      insert(original_pos, depthleft, alpha, Exact, bestmove,
+      insert(original_pos, depthleft, bestscore, Exact, bestmove,
              thread_info->search_age);
     } else {
       insert(original_pos, depthleft, bestscore, UBound, bestmove,
