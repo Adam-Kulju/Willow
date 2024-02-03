@@ -185,7 +185,7 @@ struct CreateParam {
     }
 };
 
-//#define TUNE_FLAG       //uncomment this line when running SPSA
+#define TUNE_FLAG       //uncomment this line when running SPSA
 
 #ifndef TUNE_FLAG
 
