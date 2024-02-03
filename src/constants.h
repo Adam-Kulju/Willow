@@ -243,7 +243,7 @@ TUNE_PARAM(NodeTmCoeff2, 148, 110, 190);
 TUNE_PARAM(MaterialBase, 700, 500, 900);
 TUNE_PARAM(MaterialDiv, 32, 24, 40);
 TUNE_PARAM(MinProbcutDepth, 5, 2, 8);
-TUNE_PARAM(ProbcutMargin, 200, 100, 300);
+TUNE_PARAM(ProbcutMargin, 220, 100, 300);
 TUNE_PARAM(ProbcutReduction, 4, 2, 6);
 
 void print_params_for_ob() {
