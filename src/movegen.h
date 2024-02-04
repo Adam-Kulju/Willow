@@ -2,8 +2,9 @@
 #include "board.h"
 #include "constants.h"
 
-bool isnoisy(board_info *board, struct move move){
-  return (move.flags == 0xC || move.flags == 0x7 || board->board[move.move & 0xFF]);
+bool isnoisy(board_info *board, struct move move) {
+  return (move.flags == 0xC || move.flags == 0x7 ||
+          board->board[move.move & 0xFF]);
 }
 
 void pawnmoves(struct board_info *board, struct list *list, int *key,
@@ -181,122 +182,29 @@ int movegen(struct board_info *board, struct list *list, bool color,
     return key;
   }
 
-  if (IS_DFRC) {
-    if (board->castling[color]
-                       [0]) // If we have not moved our king or rook, are not in
-                            // check, and will not castle through check,
-                            // castling is pseudolegal queenside castling
-    {
-      char x;
-      bool flag = true;
-      if (board->board[board->rookstartpos[color][0]] != WROOK + color) {
-        flag = false;
-      }
-
-      if (flag) {
-        for (x = MAX(board->kingpos[color] - 1, color * 0x70 + 3);
-             x > MIN(color * 0x70 + 1, board->rookstartpos[color][0]);
-             x--) { // handle xxxxxRKR, RxxxxxKR, and RKxxxxxR
-          if (board->board[x] && board->board[x] != WKING + color &&
-              !(board->board[x] == WROOK + color &&
-                board->rookstartpos[color][0] == x)) {
-            // if you have xxxxxRKR, you want to pretend that the R on the left
-            // doesn't exist on the other hand, xxRRKxxx can't be ignored
-            flag = false;
-            break;
-          }
-        }
-      }
-
-      if (flag) {
-        for (x = board->kingpos[color] - 1; x > color * 0x70 + 2;
-             x--) { // next, make sure we're not traveling through check. we
-                    // don't need to handle RK----R- or R-K--R-- as both have no
-                    // intermediate squares
-          if (isattacked(board, x, color ^ 1)) {
-            flag = false;
-            break;
-          }
-        }
-      }
-      if (flag) {
-        list[key].move.move =
-            ((board->kingpos[color]) << 8) + board->rookstartpos[color][0],
-        list[key++].move.flags = 0x8;
-      }
+  if (board->castling[color]
+                     [0]) // If we have not moved our king or rook, are not in
+                          // check, and will not castle through check,
+                          // castling is pseudolegal queenside castling
+  {
+    char x = board->kingpos[color];
+    if (board->board[x - 4] - color == WROOK && !board->board[x - 3] &&
+        !board->board[x - 2] && !board->board[x - 1] &&
+        !isattacked(board, x - 1, color ^ 1)) {
+      list[key].move.move = (x << 8) + x + WEST + WEST,
+      list[key++].move.flags = 0x8;
     }
-
-    if (board->castling[color][1])
-    // kingside castling
-    {
-      char x;
-      bool flag = true;
-
-      if (board->board[board->rookstartpos[color][1]] != WROOK + color) {
-        flag = false;
-      }
-
-      if (flag) {
-
-        for (x = MIN(board->kingpos[color] + 1, color * 0x70 + 5);
-             x < color * 0x70 + 7;
-             x++) { // handle xxxxxRKR, RxxxxxKR, and RKxxxxxR - here we never
-                    // have to check if the h-file is occupied
-          if (board->board[x] &&
-              !(board->board[x] == WROOK + color &&
-                board->rookstartpos[color][1] ==
-                    x)) { // if you have xRKRxxxx, you want to pretend that the
-                          // R on the right doesn't exist
-
-            flag = false;
-            break;
-          }
-        }
-      }
-
-      if (flag) {
-        for (x = board->kingpos[color] + 1; x < color * 0x70 + 6;
-             x++) { // next, make sure we're not traveling through check. we
-                    // don't need to handle RK----R- or R-K--R-- as both have no
-                    // intermediate squares
-          if (isattacked(board, x, color ^ 1)) {
-            flag = false;
-            break;
-          }
-        }
-      }
-      if (flag) {
-        list[key].move.move =
-            ((board->kingpos[color]) << 8) + board->rookstartpos[color][1],
-        list[key++].move.flags = 0x8;
-      }
+  }
+  if (board->castling[color][1]) // kingside castling
+  {
+    char x = board->kingpos[color];
+    if (board->board[x + 3] - color == WROOK && !board->board[x + 2] &&
+        !board->board[x + 1] && !isattacked(board, x + 1, color ^ 1)) {
+      list[key].move.move = ((board->kingpos[color]) << 8) + x + EAST + EAST,
+      list[key++].move.flags = 0x8;
     }
   }
 
-  else {
-    if (board->castling[color]
-                       [0]) // If we have not moved our king or rook, are not in
-                            // check, and will not castle through check,
-                            // castling is pseudolegal queenside castling
-    {
-      char x = board->kingpos[color];
-      if (board->board[x - 4] - color == WROOK && !board->board[x - 3] &&
-          !board->board[x - 2] && !board->board[x - 1] &&
-          !isattacked(board, x - 1, color ^ 1)) {
-        list[key].move.move = (x << 8) + x + WEST + WEST,
-        list[key++].move.flags = 0x8;
-      }
-    }
-    if (board->castling[color][1]) // kingside castling
-    {
-      char x = board->kingpos[color];
-      if (board->board[x + 3] - color == WROOK && !board->board[x + 2] &&
-          !board->board[x + 1] && !isattacked(board, x + 1, color ^ 1)) {
-        list[key].move.move = ((board->kingpos[color]) << 8) + x + EAST + EAST,
-        list[key++].move.flags = 0x8;
-      }
-    }
-  }
   return key;
 }
 
@@ -431,16 +339,6 @@ int movescore(struct board_info *board, struct movelist *movelst, int *key,
   int i = 0;
   while (i < movelen) {
     list[i].eval = 1000000; // base
-
-    /*if (isreply && movelst[*key-1].move.move != 0 && movelst[*key-1].piecetype
-    < 0)
-    {
-        for (int i = 0; i < *key; i++){
-            printf("%x\n", movelst[i].move.move);
-        }
-        printfull(board);
-        exit(1);
-    }*/
 
     if (type > None && ismatch(entry.bestmove,
                                list[i].move)) // TT hit: gets the largest bonus.

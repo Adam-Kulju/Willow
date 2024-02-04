@@ -1,3 +1,9 @@
+// Several features of my NNUE inference code are based off other engines
+// (modified to work with buckets and mailbox board rep) :
+// Altair(https://github.com/Alex2262/AltairChessEngine) and Midnight
+// (https://github.com/archishou/MidnightChessEngine). Ciekce also deserves
+// recognition although his engine's inference is by now radically different.
+
 #pragma once
 #include "constants.h"
 #include "globals.h"
@@ -176,14 +182,11 @@ const NNUE_Params &g_nnue = *reinterpret_cast<const NNUE_Params *>(g_nnueData);
 void NNUE_State::push() {
   m_accumulator_stack.push_back(*m_curr);
   m_curr = &m_accumulator_stack.back();
-  // printf("makemove - %i\n", nnue_state.evaluate(WHITE));
 }
 
 void NNUE_State::pop() {
   m_accumulator_stack.pop_back();
   m_curr = &m_accumulator_stack.back();
-  // printf("unmakemove - %i\n", nnue_state.evaluate(WHITE));
-  // exit(0);
 }
 
 int NNUE_State::evaluate(int color) const {

@@ -1,9 +1,13 @@
 #pragma once
-#include <string>
 #include <iostream>
+#include <string>
 #include <vector>
+
+// Color indentifiers
 #define WHITE 0
 #define BLACK 1
+
+// Piece indentifiers - use piece & 1 to get color of a particular square
 #define BLANK 0
 #define WPAWN 2
 #define BPAWN 3
@@ -17,9 +21,8 @@
 #define BQUEEN 11
 #define WKING 12
 #define BKING 13
-// all we have to do is (board[i] & 1) to see if the color is white or black -
-// if that is 1 then it's black if not then it's white
 
+// Directions
 #define NORTH 16
 #define SOUTH -16
 #define EAST 1
@@ -36,25 +39,22 @@
 #define ENE 18
 #define NNW 31
 #define NNE 33
-#define PAWN 1
-#define KNIGHT 2
-#define BISHOP 3
-#define ROOK 4
-#define QUEEN 5
-#define KING 6
 
+// Structure sizes
 #define LISTSIZE 216
 #define MOVESIZE 10000
+
+// RNG variables
 #define NN 312
 #define MM 156
 #define MATRIX_A 0xB5026F5AA96619E9ULL
 #define UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
 #define LM 0x7FFFFFFFULL         /* Least significant 31 bits */
-// #define TTSIZE 1 << 20
-// #define _mask (1 << 20) - 1
+
+// Timeout detection
 #define CHECKTIME (1 << 10) - 1
 #define TIMEOUT 111111
-#define TEMPO 5
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 const int VALUES[5] = {75, 299, 297, 409, 819};   // Material middlegame
@@ -91,10 +91,9 @@ struct board_info {
   unsigned char epsquare;   // stores ep square
 };
 
-struct movelist // A in game move representation
+struct movelist // An in game move representation
 {
-  struct move move; // The move that was just played
-  // char fen[65];
+  struct move move;           // The move that was just played
   long long unsigned int fen; // The resulting zobrist key for the board
   char halfmoves;             // Halfmoves
   int staticeval;             // Static evaluation of the position at that time
@@ -122,70 +121,56 @@ struct ttentry // Transposition table entry
 const struct move nullmove = {0, 0};
 const struct ttentry nullTT = {0, 0, {0, 0}, 0, 0, 0};
 
-const int boardsize = sizeof(struct board_info);
-const int listsize = sizeof(struct list);
-const int movesize = sizeof(struct move);
-const int attacknums[4] = {2, 2, 3, 5};
-
-const int N5NTABLE[10][2] = {{0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2},
-                             {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4}};
-
 enum EntryType { None = 0, UBound = 1, LBound = 2, Exact = 3 };
 
 constexpr int buckets[2][0x80] = {
-  {
-    0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
-    0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-  },
-  {
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,
-    0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,
-    0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,       
-  }
-};
+    {
+        0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+        1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0,
+        0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2,
+        2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 3, 3,
+        0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0,
+        0, 0, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0,
+    },
+    {
+        2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3,
+        3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0,
+        0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2,
+        2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 3, 3,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    }};
 
 constexpr int zobristkeys[128] = {
-  0, 1, 2, 3, 4, 5, 6, 7, 0,0,0,0,0,0,0,0,
-  8, 9, 10, 11, 12, 13, 14, 15, 0,0,0,0,0,0,0,0,
-  16, 17, 18, 19, 20, 21, 22, 23, 0,0,0,0,0,0,0,0,
-  24, 25, 26, 27, 28, 29, 30, 31, 0,0,0,0,0,0,0,0,
-  32, 33, 34, 35, 36, 37, 38, 39, 0,0,0,0,0,0,0,0,
-  40, 41, 42, 43, 44, 45, 46, 47, 0,0,0,0,0,0,0,0,
-  48, 49, 50, 51, 52, 53, 54, 55, 0,0,0,0,0,0,0,0,
-  56, 57, 58, 59, 60, 61, 62, 63, 0,0,0,0,0,0,0,0,
+    0,  1,  2,  3,  4,  5,  6,  7,  0,  0,  0,  0,  0,  0,  0,  0,  8,  9,  10,
+    11, 12, 13, 14, 15, 0,  0,  0,  0,  0,  0,  0,  0,  16, 17, 18, 19, 20, 21,
+    22, 23, 0,  0,  0,  0,  0,  0,  0,  0,  24, 25, 26, 27, 28, 29, 30, 31, 0,
+    0,  0,  0,  0,  0,  0,  0,  32, 33, 34, 35, 36, 37, 38, 39, 0,  0,  0,  0,
+    0,  0,  0,  0,  40, 41, 42, 43, 44, 45, 46, 47, 0,  0,  0,  0,  0,  0,  0,
+    0,  48, 49, 50, 51, 52, 53, 54, 55, 0,  0,  0,  0,  0,  0,  0,  0,  56, 57,
+    58, 59, 60, 61, 62, 63, 0,  0,  0,  0,  0,  0,  0,  0,
 };
-
 
 struct Parameter {
-    std::string name;
-    int &value;
-    int min, max;
+  std::string name;
+  int &value;
+  int min, max;
 };
 
-std::vector <Parameter> params;
+std::vector<Parameter> params;
 
-// trick to be able to create options
+// SPSA parameter code is based off Clover
+// (https://github.com/lucametehau/CloverEngine)
 struct CreateParam {
-    int _value;
-    CreateParam(std::string name, int value, int min, int max) : _value(value) { params.push_back({ name, _value, min, max }); }
+  int _value;
+  CreateParam(std::string name, int value, int min, int max) : _value(value) {
+    params.push_back({name, _value, min, max});
+  }
 
-    operator int() const {
-        return _value;
-    }
+  operator int() const { return _value; }
 };
 
-#define TUNE_FLAG       //uncomment this line when running SPSA
+//#define TUNE_FLAG       //uncomment this line when running SPSA
 
 #ifndef TUNE_FLAG
 
@@ -193,10 +178,10 @@ struct CreateParam {
 
 #else
 
-#define TUNE_PARAM(name, value, min, max) CreateParam name(#name, value, min, max);
+#define TUNE_PARAM(name, value, min, max)                                      \
+  CreateParam name(#name, value, min, max);
 
 #endif
-
 
 // search constants
 TUNE_PARAM(QsearchFutilityThreshold, 61, 30, 100);
@@ -244,33 +229,28 @@ TUNE_PARAM(MaterialBase, 700, 500, 900);
 TUNE_PARAM(MaterialDiv, 32, 24, 40);
 
 void print_params_for_ob() {
-    for (auto& param : params) {
-        std::cout << param.name << ", int, " << param.value << ", " << param.min << ", " << param.max << ", " << std::max(0.5, (param.max - param.min) / 20.0) << ", 0.002\n";
-    }
+  for (auto &param : params) {
+    std::cout << param.name << ", int, " << param.value << ", " << param.min
+              << ", " << param.max << ", "
+              << std::max(0.5, (param.max - param.min) / 20.0) << ", 0.002\n";
+  }
 }
 
-
-int SEEVALUES[7] = {0,   SeeValPawn,  SeeValKnight,  SeeValBishop,
+int SEEVALUES[7] = {0,          SeeValPawn,  SeeValKnight, SeeValBishop,
                     SeeValRook, SeeValQueen, 10000}; // move ordering purposes
 
-
-void change_see_values(std::string name, int value){
+void change_see_values(std::string name, int value) {
   int key;
-  if (name == "SeeValPawn"){
+  if (name == "SeeValPawn") {
     key = 1;
-  }
-  else if (name == "SeeValKnight"){
+  } else if (name == "SeeValKnight") {
     key = 2;
-  }
-  else if (name == "SeeValBishop"){
+  } else if (name == "SeeValBishop") {
     key = 3;
-  }
-  else if (name == "SeeValRook"){
+  } else if (name == "SeeValRook") {
     key = 4;
-  }
-  else if (name == "SeeValQueen"){
+  } else if (name == "SeeValQueen") {
     key = 5;
   }
   SEEVALUES[key] = value;
-
 }

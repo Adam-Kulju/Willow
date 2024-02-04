@@ -3,11 +3,11 @@
 #include "globals.h"
 #include "movegen.h"
 #include "search.h"
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sstream>
 
 char *getsafe(char *buffer,
               int count) // Gets a number of characters up to count (the size of
@@ -50,7 +50,7 @@ perft(int depth, struct board_info *board, bool color, bool first,
        i++) // Loop through all of the moves, skipping illegal ones.
   {
     struct board_info board2 = *board;
-    move(&board2, list[i].move, color, thread_info, true);
+    move_piece(&board2, list[i].move, color, thread_info, true);
     if (isattacked(&board2, board2.kingpos[color], color ^ 1)) {
       thread_info->nnue_state.pop();
       continue;
@@ -91,7 +91,7 @@ void move_uci(char *command, int i, struct board_info *board,
                                        // 50-move rule draws, so it's important
                                        // to check that the move is a capture.
     int piece_type = board->board[temp.move >> 8] - 1;
-    move(board, temp, *color, thread_info, true);
+    move_piece(board, temp, *color, thread_info, true);
 
     move_add(board, movelst, key, temp, *color, iscap, thread_info, piece_type);
 
@@ -121,11 +121,13 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key,
     // send options
     printf("option name Hash type spin default 32 min 1 max 131072\n");
     printf("option name Threads type spin default 1 min 1 max 1024\n");
-    #ifdef TUNE_FLAG
-    for (auto& param : params){
-      std::cout << "option name " << param.name << " type spin default " << param.value << " min " << param.min << " max " << param.max << "\n";
+#ifdef TUNE_FLAG
+    for (auto &param : params) {
+      std::cout << "option name " << param.name << " type spin default "
+                << param.value << " min " << param.min << " max " << param.max
+                << "\n";
     }
-    #endif
+#endif
 
     printf("uciok\n");
   }
@@ -171,44 +173,50 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key,
   }
 
   else if (strstr(command, "printparams")) {
-    #ifdef TUNE_FLAG
-      print_params_for_ob();
-    #endif
-  }
-  else if (strstr(command, "setoption name")){
-    #ifdef TUNE_FLAG
-      std::string com = command;
-      std::istringstream iss(com);
-      std::string n; iss >> n; iss >> n; iss >> n;
-      
-      for (auto& param : params) {
-                    if (n == param.name) {
-                        std::string temp; iss >> temp;
-                        int newvalue; iss >> newvalue;
-                        param.value = newvalue;
-                        if (n == "LmrBase"){
-                            for (int i = 0; i < 100; i++) // initialize LMR table.
-                              {
-                              for (int n = 0; n < LISTSIZE; n++) {
-                                LMRTABLE[i][n] = (int)round(((float)newvalue / 10) + (log(i + 1) * log(n + 1) / ((float)LmrRatio / 10)));
-                              }
-                              }                       
-                        }
-                        else if (n == "LmrRatio"){
-                            for (int i = 0; i < 100; i++) // initialize LMR table.
-                              {
-                              for (int n = 0; n < LISTSIZE; n++) {
-                                LMRTABLE[i][n] = (int)round(((float)LmrBase / 10) + (log(i + 1) * log(n + 1) / ((float)newvalue / 10)));
-                              }
-                              }                       
-                        }
-                        else if (strstr(n.c_str(), "SeeVal")){
-                          change_see_values(n, newvalue);
-                        }
-                        break;
-                    }
-                }
-    #endif
+#ifdef TUNE_FLAG
+    print_params_for_ob();
+#endif
+  } else if (strstr(command, "setoption name")) {
+#ifdef TUNE_FLAG
+    std::string com = command;
+    std::istringstream iss(com);
+    std::string n;
+    iss >> n;
+    iss >> n;
+    iss >> n;
+
+    for (auto &param : params) {
+      if (n == param.name) {
+        std::string temp;
+        iss >> temp;
+        int newvalue;
+        iss >> newvalue;
+        param.value = newvalue;
+        if (n == "LmrBase") {
+          for (int i = 0; i < 100; i++) // initialize LMR table.
+          {
+            for (int n = 0; n < LISTSIZE; n++) {
+              LMRTABLE[i][n] =
+                  (int)round(((float)newvalue / 10) + (log(i + 1) * log(n + 1) /
+                                                       ((float)LmrRatio / 10)));
+            }
+          }
+        } else if (n == "LmrRatio") {
+          for (int i = 0; i < 100; i++) // initialize LMR table.
+          {
+            for (int n = 0; n < LISTSIZE; n++) {
+              LMRTABLE[i][n] =
+                  (int)round(((float)LmrBase / 10) + (log(i + 1) * log(n + 1) /
+                                                      ((float)newvalue / 10)));
+            }
+          }
+        } else if (strstr(n.c_str(), "SeeVal")) {
+          change_see_values(n, newvalue);
+        }
+        break;
+      }
+    }
+#endif
   }
 
   if (strstr(command, "position startpos")) {
@@ -355,7 +363,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key,
 int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes
                                    // and nodes per second.
 {
-  MAXDEPTH = 14;
+  ITERATIVEDEEPENINGDEPTH = 14;
   char positions[50][1024] = {
       {"2r2k2/8/4P1R1/1p6/8/P4K1N/7b/2B5 b - - 0 55\0"},
       {"2r4r/1p4k1/1Pnp4/3Qb1pq/8/4BpPp/5P2/2RR1BK1 w - - 0 42\0"},
@@ -427,16 +435,11 @@ int bench(ThreadInfo *thread_info) // Benchmarks Willow, printing total nodes
     thread_info->search_age = 0;
     setfull(&board);
     thread_info->nnue_state.reset_nnue(&board);
-    //printf("%i\n", thread_info->nnue_state.evaluate(WHITE));
-    //exit(0);
     setfromfen(&board, movelst, &key, positions[i], &color, 0, thread_info);
 
     printfull(&board);
     maximumtime = 100000;
     start_search(&board, movelst, 1000000, &key, color, thread_info, 1);
-    // start_time = std::chrono::steady_clock::now();
-    // iid_time(&board, movelst, 1000000, &key, color, false, true, nullmove,
-    // thread_info);
     t += nodes;
   }
   printf("Bench: %lu nodes %i nps\n", t,
@@ -464,7 +467,6 @@ int init() // sets up I/O and all the global variables/lookup tables
 
   setvbuf(stdin, NULL, _IONBF, 0);
   setvbuf(stdout, NULL, _IONBF, 0);
-  MAXDEPTH = 99;
   initglobals();
   unsigned long long init[4] = {0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
   init_by_array64(init, 4);

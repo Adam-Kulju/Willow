@@ -5,7 +5,7 @@
 #include "nnue.h"
 #include <stdio.h>
 
-void printfull(struct board_info *board) // Prints the board
+void printfull(board_info *board) // Prints the board.
 {
   int i = 0x70;
   while (i >= 0) {
@@ -62,8 +62,7 @@ void printfull(struct board_info *board) // Prints the board
   }
   printf("+---+---+---+---+---+---+---+---+\n\n");
 }
-void setfull(
-    struct board_info *board) // Sets up the board for the start of the game.
+void setfull(board_info *board) // Sets up the board for the start of the game.
 {
   char brd[0x80] = {
       WROOK,   WKNIGHT, WBISHOP, WQUEEN, WKING, WBISHOP, WKNIGHT, WROOK,  0,
@@ -95,96 +94,7 @@ void setfull(
   board->epsquare = 0; // en passant square
 }
 
-void setdfrc(struct board_info *board,
-             int indexNumber) { // sets up a board given a particular DFRC key.
-  int indexes[2] = {indexNumber % 960, indexNumber / 960};
-  char brd[0x80] = {
-      0,     0,     0,     0,     0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, WPAWN, WPAWN, WPAWN, WPAWN,
-      WPAWN, WPAWN, WPAWN, WPAWN, 0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, BPAWN, BPAWN, BPAWN, BPAWN,
-      BPAWN, BPAWN, BPAWN, BPAWN, 0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, 0,     0,     0,     0,
-      0,     0,     0,     0,     0, 0, 0,     0,
-  };
-  memcpy(board->board, brd, 0x80);
-  char count[2][5] = {{8, 2, 2, 2, 1}, {8, 2, 2, 2, 1}};
-  memcpy(board->pnbrqcount, count, 10);
-  board->castling[0][0] = true, board->castling[0][1] = true,
-  board->castling[1][0] = true, board->castling[1][1] = true;
-  board->epsquare = 0;
-
-  for (int color = WHITE; color <= BLACK; color++) {
-    int rank_base = 0x70 * color;
-
-    int index = indexes[color],
-        remainder = indexes[color] %
-                    4; // Step 1: given an index N, divide it by 4 and take the
-                       // remainder N1; use that to place the LSB.
-    index /= 4;
-    board->board[rank_base + 1 + remainder * 2] =
-        WBISHOP +
-        color; //(0, 1, 2, 3) remainders correspond to (b1, d1, f1, h1)
-
-    remainder = index % 4, index /= 4; // Step 2: repeat step 1 to get the DSB
-                                       // positions (0 = a1, 1 = c1 etc)
-    board->board[rank_base + remainder * 2] = WBISHOP + color;
-
-    remainder = index % 6,
-    index /=
-        6; // Step 3: divide N by 6 and take the remainder N3; this is the queen
-           // position, where 0 = first available square, 1 = second, etc.
-    int empty_squares = 0, piece_index;
-    for (piece_index = rank_base; piece_index < rank_base + 8; piece_index++) {
-      if (!board->board[piece_index]) {
-        empty_squares++;
-        if (empty_squares > remainder) {
-          break;
-        }
-      }
-    }
-    board->board[piece_index] = WQUEEN + color;
-
-    empty_squares = 0; // Step 4: place the knights in the same way as the
-                       // queen, but by looking up the N5N table.
-    bool placed = false;
-    for (piece_index = rank_base; piece_index < rank_base + 8; piece_index++) {
-      if (!board->board[piece_index]) {
-        empty_squares++;
-        if ((empty_squares > N5NTABLE[index][0] && !placed) ||
-            empty_squares > N5NTABLE[index][1]) {
-          board->board[piece_index] = WKNIGHT + color;
-          placed = true;
-          if (empty_squares > N5NTABLE[index][1]) {
-            break;
-          }
-        }
-      }
-    }
-
-    empty_squares = 0;
-    for (piece_index = rank_base; piece_index < rank_base + 8; piece_index++) {
-      if (!board->board[piece_index]) {
-        empty_squares++;
-        if (empty_squares % 2) {
-          board->board[piece_index] = WROOK + color;
-          board->rookstartpos[color][(empty_squares - 1) / 2] = piece_index;
-        } else {
-          board->board[piece_index] = WKING + color;
-          board->kingpos[color] = piece_index;
-        }
-      }
-    }
-  }
-}
-
-int eval(struct board_info *board, int color, ThreadInfo *thread_info) {
+int eval(board_info *board, int color, ThreadInfo *thread_info) {
   int material = 0;
   for (int i = 1; i < 5; i++) {
     material +=
@@ -196,7 +106,7 @@ int eval(struct board_info *board, int color, ThreadInfo *thread_info) {
 }
 
 void setmovelist(
-    struct movelist *movelst, int *key,
+    movelist *movelst, int *key,
     ThreadInfo *thread_info) // Sets up the list of moves in the game.
 {
 
@@ -209,10 +119,9 @@ void setmovelist(
   return;
 }
 
-void setfromfen(
-    struct board_info *board, struct movelist *movelst, int *key,
-    char *fenstring, bool *color, int start,
-    ThreadInfo *thread_info) // Given an FEN, sets up the board to it.
+void setfromfen(board_info *board, movelist *movelst, int *key, char *fenstring,
+                bool *color, int start,
+                ThreadInfo *thread_info) // Sets up a board to a given FEN.
 {
   int i = 7, n = 0;
   int fenkey = start;
@@ -382,7 +291,7 @@ void setfromfen(
 }
 
 bool isattacked(
-    struct board_info *board, unsigned char pos,
+    board_info *board, unsigned char pos,
     bool encolor) // Is a particular square attacked by an enemy piece?
 {
   // pawns
@@ -441,12 +350,11 @@ bool isattacked(
   return false;
 }
 
-void update_nnue(board_info *board, board_info board2, struct move move,
-                 ThreadInfo *thread_info, int color) {
+void update_nnue(board_info *board, board_info board2, move move,
+                 ThreadInfo *thread_info,
+                 int color) { // Efficiently updates the NNUE state of the
+                              // position when doing a move.
   thread_info->nnue_state.push();
-
-  // takes in a position with: board [no changes from position at start of
-  // search], moved board [en passant square not changed]
 
   unsigned char from = move.move >> 8, to = move.move & 0xFF,
                 flag = move.flags >> 2;
@@ -460,12 +368,14 @@ void update_nnue(board_info *board, board_info board2, struct move move,
   thread_info->CURRENTPOS ^=
       ZOBRISTTABLE[(((board->board[from] - 2) * 64)) +
                    zobristkeys[from]]; // xor out the piece to be moved
-  if (flag != 3) { // handle captures and en passant - this is for normal moves
-    if (board->board[to]) {
+
+  if (flag != 3) {
+    if (board->board[to]) { // remove the hash of the piece captured
       thread_info->CURRENTPOS ^=
           ZOBRISTTABLE[(((board->board[to] - 2) * 64)) + zobristkeys[to]];
     }
-  } else { // and this branch handles en passant
+  } else { // with en passant, the piece captured is on a different square than
+           // the one you end up on.
     thread_info->CURRENTPOS ^=
         ZOBRISTTABLE[(((board->board[board->epsquare] - 2) * 64)) +
                      zobristkeys[board->epsquare]];
@@ -473,7 +383,8 @@ void update_nnue(board_info *board, board_info board2, struct move move,
   thread_info->CURRENTPOS ^=
       ZOBRISTTABLE[(((board2.board[to] - 2) * 64)) +
                    zobristkeys[to]]; // xor in the piece that has been moved
-  if (flag == 2) {                   // castle
+
+  if (flag == 2) { // handle castling
     if (to > board->kingpos[color]) {
       thread_info->CURRENTPOS ^=
           ZOBRISTTABLE[(((board->board[to + 1] - 2) * 64)) +
@@ -493,7 +404,8 @@ void update_nnue(board_info *board, board_info board2, struct move move,
                        zobristkeys[to + 1]];
     }
   }
-  if (abs(to - from) == 32 && board2.board[to] == WPAWN + color) {
+  if (abs(to - from) == 32 &&
+      board2.board[to] == WPAWN + color) { // handle EP rights
     thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
   }
 
@@ -502,28 +414,39 @@ void update_nnue(board_info *board, board_info board2, struct move move,
 
   if (board2.kingpos[color] !=
       board->kingpos[color]) { // if we've moved the king, make sure we didn't
-                               // move it into another bucket!
+                               // move it into another bucket. If we did, reset
+                               // the accumulator for that color.
     int current_king = color ? bking : wking;
     if (current_king != buckets[color][board->kingpos[color]]) {
       thread_info->nnue_state.reset_nnue_color(board, color, current_king);
     }
   }
 
-  thread_info->nnue_state.update_feature<false>(
+  thread_info->nnue_state.update_feature<
+      false>( // Similarly to updating the Zobrist key, we subtract the piece on
+              // its original square, subtract any capture victims,
+              //  add the piece back on its new square, and handle castling.
       board->board[from], MAILBOX_TO_STANDARD[from], wking, bking);
 
-  if (flag != 3) { // handle captures and en passant - this is for normal moves
+  if (flag != 3) { // handle captures and en passant
     if (board->board[to]) {
       thread_info->nnue_state.update_feature<false>(
           board->board[to], MAILBOX_TO_STANDARD[to], wking, bking);
     }
-  } else { // and this branch handles en passant
+  } else {
     thread_info->nnue_state.update_feature<false>(
         board->board[board->epsquare], MAILBOX_TO_STANDARD[board->epsquare],
         wking, bking);
   }
 
-   __builtin_prefetch(&TT[(thread_info->CURRENTPOS) & (_mask)]);
+  __builtin_prefetch(
+      &TT[(thread_info->CURRENTPOS) &
+          (_mask)]); // Prefetch the Zobrist hash so that it'll be ready when we
+                     // need it from the TT. We do it in the middle of NNUE
+                     // updating because doing it too far before we need it will
+                     // just result in it falling out of the cache, and doing it
+                     // too late will result in the memory not being ready yet
+                     // when we need it.
 
   thread_info->nnue_state.update_feature<true>(
       board2.board[to], MAILBOX_TO_STANDARD[to], wking, bking);
@@ -545,8 +468,9 @@ void update_nnue(board_info *board, board_info board2, struct move move,
   return;
 }
 
-int move(struct board_info *board, struct move move, bool color,
-         ThreadInfo *thread_info, bool update) // Perform a move on the board.
+int move_piece(board_info *board, move move, bool color,
+               ThreadInfo *thread_info,
+               bool update) // Perform a move on the board.
 {
 
   unsigned char from = move.move >> 8,
@@ -559,9 +483,9 @@ int move(struct board_info *board, struct move move, bool color,
     exit(0);
   }
 
-  struct board_info board2 = *board;
+  board_info board2 = *board;
 
-  if (flag != 3) { // handle captures and en passant - this is for normal moves
+  if (flag != 3) { // handle captures and en passant
     if (board2.board[to]) {
       board2.pnbrqcount[color ^ 1][((board2.board[to] >> 1) - 1)]--;
     }
@@ -582,7 +506,8 @@ int move(struct board_info *board, struct move move, bool color,
     board2.kingpos[color] = to;
   }
 
-  if (board2.board[from] == WROOK + color) { // handle rook moves
+  if (board2.board[from] ==
+      WROOK + color) { // handle rook moves and the castling rights resulting
 
     if (from == board->rookstartpos[color][0]) { // turn off queenside castling
       board2.castling[color][0] = false;
@@ -606,7 +531,9 @@ int move(struct board_info *board, struct move move, bool color,
       board2.board[to - 2] = BLANK;
     }
   }
-  if (isattacked(&board2, board2.kingpos[color], color ^ 1)) {
+  if (isattacked(&board2, board2.kingpos[color],
+                 color ^ 1)) { // Verify that the move played doesn't leave our
+                               // king in check.
     return 1;
   }
 
@@ -616,15 +543,17 @@ int move(struct board_info *board, struct move move, bool color,
 
   *board = board2;
   board->epsquare = 0;
-  if (!flag && abs(to - from) == 32 && board->board[to] == WPAWN + color) {
+  if (!flag && abs(to - from) == 32 &&
+      board->board[to] == WPAWN + color) { // If we just moved our pawn two
+                                           // spaces, set the en passant square.
     board->epsquare = to;
   }
   // printfull(board);
   return 0;
 }
 
-void move_add(struct board_info *board, struct movelist *movelst, int *key,
-              struct move mve, bool color, bool iscap, ThreadInfo *thread_info,
+void move_add(board_info *board, movelist *movelst, int *key, move mve,
+              bool color, bool iscap, ThreadInfo *thread_info,
               int piecetype) // Add a move to the list of moves in the game.
 {
   int k = *key;
@@ -644,60 +573,7 @@ void move_add(struct board_info *board, struct movelist *movelst, int *key,
   *key = k + 1;
 }
 
-char isattacked_mv(struct board_info *board, unsigned char pos, bool encolor)
-// Same as above, but ignores kings. Slight speed boost for eval purposes.
-{
-  char flag = 0;
-  // pawns
-  if (!encolor) {
-    if ((!((pos + SW) & 0x88) && board->board[pos + SW] == WPAWN) ||
-        (!((pos + SE) & 0x88) && board->board[pos + SE] == WPAWN)) {
-      return 2;
-    }
-  } else {
-    if ((!((pos + NE) & 0x88) && board->board[pos + NE] == BPAWN) ||
-        (!((pos + NW) & 0x88) && board->board[pos + NW] == BPAWN)) {
-      return 2;
-    }
-  }
-  // knights, kings, and sliders
-  unsigned char d, f;
-  for (f = 0; f < 8; f++) {
-    d = pos + vector[0][f];
-
-    if (!(d & 0x88) && board->board[d] - encolor == WKNIGHT) {
-      return 2;
-    }
-
-    char vec = vector[4][f];
-    d = pos + vec;
-
-    if ((d & 0x88)) {
-      continue;
-    }
-
-    if (board->board[d] - encolor == WKING) {
-      flag = 1;
-      continue;
-    }
-    do {
-      if (board->board[d]) {
-        if ((board->board[d] & 1) == encolor &&
-            (board->board[d] - encolor == WQUEEN ||
-             (((f & 1) && board->board[d] - encolor == WROOK) ||
-              (!(f & 1) && board->board[d] - encolor == WBISHOP)))) {
-          return 2;
-        }
-        break;
-      }
-      d += vec;
-    } while (!(d & 0x88));
-  }
-
-  return flag;
-}
-
-bool checkdraw1(struct board_info *board) // checks for material draws.
+bool checkdraw1(board_info *board) // checks for material draws.
 {
   if (board->pnbrqcount[0][0] || board->pnbrqcount[0][3] ||
       board->pnbrqcount[0][4] || board->pnbrqcount[1][0] ||
@@ -716,7 +592,7 @@ bool checkdraw1(struct board_info *board) // checks for material draws.
   }
   return true;
 }
-int checkdraw2(struct movelist *movelst,
+int checkdraw2(movelist *movelst,
                int *key) // checks for repetition draws.
 {
   if (movelst[*key - 1].halfmoves > 99) {
@@ -735,12 +611,17 @@ int checkdraw2(struct movelist *movelst,
   return rep;
 }
 
-int get_cheapest_attacker(struct board_info *board, unsigned int pos,
-                          unsigned int *attacker,
-                          bool encolor) { // returns 0 - 6 from blank to king
+int get_cheapest_attacker(
+    board_info *board, unsigned int pos, unsigned int *attacker,
+    bool
+        encolor) { // Gets the cheapest attacker of a particular square. Returns
+                   // 1-6 from pawn to king, or 10 if no attacks are found.
   char flag = 10;
-  *attacker = 0;
-  // pawns
+  *attacker = 0; // This variable saves the square where the attacker stands.
+  // This function's logic is very similar to the isattacked() function above,
+  // except that when we find an enemy attacker, instead of returning, we verify
+  // that it's the new cheapest attacker.
+  //  pawns
   if (!encolor) {
     if (!((pos + SW) & 0x88) && board->board[pos + SW] == WPAWN) {
       *attacker = pos + SW; // immediately return because we're not hitting

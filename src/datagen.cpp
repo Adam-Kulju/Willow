@@ -14,9 +14,12 @@
 #include <time.h>
 
 long int num_fens = 0;
+int num_threads, id;
+clock_t start = clock();
 
 char *export_fen(struct board_info *board, bool color, struct movelist *movelst,
-                 int *key, char *fen) {
+                 int *key, char *fen) { // From an internal board state, print
+                                        // an FEN for datagen purposes.
   int pos = 0x70;
   int fenkey = 0;
   while (pos >= 0) {
@@ -140,7 +143,7 @@ char *export_fen(struct board_info *board, bool color, struct movelist *movelst,
 }
 
 struct move random_move(struct board_info *board, bool color, bool incheck,
-                        ThreadInfo *thread_info) {
+                        ThreadInfo *thread_info) { // Get a random legal move
   struct list list[LISTSIZE];
   int movelen = movegen(board, list, color, incheck);
   struct list legalmovelist[LISTSIZE];
@@ -148,8 +151,7 @@ struct move random_move(struct board_info *board, bool color, bool incheck,
   for (int i = 0; i < movelen; i++) {
     struct board_info board2 = *board;
     long long unsigned int temp = thread_info->CURRENTPOS;
-    move(&board2, list[i].move, color, thread_info, true);
-    // nnue_state.pop();
+    move_piece(&board2, list[i].move, color, thread_info, true);
     thread_info->CURRENTPOS = temp;
     if (!isattacked(&board2, board2.kingpos[color], color ^ 1)) {
       legalmovelist[legalmoves] = list[i];
@@ -163,8 +165,11 @@ struct move random_move(struct board_info *board, bool color, bool incheck,
   return legalmovelist[randIndex].move;
 }
 
-float game(const std::string &filename, ThreadInfo *thread_info) {
-  clearTT();
+float game(const std::string &filename,
+           ThreadInfo *thread_info) { // Plays a game, copying all "good" FENs
+                                      // to a file.
+
+  clearTT(); // Reset all variables for a new game
   clearHistory(true, thread_info);
   clearKiller(thread_info);
   thread_info->search_age = 0;
@@ -182,15 +187,17 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
   bool color = WHITE;
   int moves = 6 + (rand() % 2);
 
-  for (int i = 0; i < moves; i++) {
+  for (int i = 0; i < moves;
+       i++) { // Perform 6-7 random moves to increase the scope of the data
     struct move mve = random_move(
         &board, color, isattacked(&board, board.kingpos[color], color ^ 1),
         thread_info);
-    if (ismatch(mve, nullmove)) {
+    if (ismatch(mve, nullmove)) { // if we bump into a mate while doing the
+                                  // random moves, just return immediately
       return 0;
     }
     int piecetype = board.board[mve.move >> 8] - 1;
-    move(&board, mve, color, thread_info, true);
+    move_piece(&board, mve, color, thread_info, true);
     move_add(
         &board, movelst, &key, mve, color,
         ((mve.flags == 0xC || board.board[mve.move & 0xFF]) && mve.flags != 8),
@@ -217,36 +224,33 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
     int movelen = movegen(&board, list, color,
                           isattacked(&board, board.kingpos[color], color ^ 1));
     struct list legalmovelist[LISTSIZE];
-    int legalmoves = 0;
+    int legalmoves = 0; // Confirm that we're not in checkmate, stalemate, that
+                        // the position isn't already a draw, etc.
     for (int i = 0; i < movelen; i++) {
       struct board_info board2 = board;
       long long unsigned int temp = thread_info->CURRENTPOS;
-      if (!move(&board2, list[i].move, color, thread_info, true)) {
+      if (!move_piece(&board2, list[i].move, color, thread_info, true)) {
         legalmovelist[legalmoves] = list[i];
         legalmoves++;
         thread_info->nnue_state.pop();
       }
-      // nnue_state.pop();
       thread_info->CURRENTPOS = temp;
     }
     if (!legalmoves) {
       break;
     }
 
-    if (movelst[2].move.move == 0) {
-      exit(0);
-    }
-
     thread_info->currentmove = nullmove;
     start_time = std::chrono::steady_clock::now();
     nodes = 0;
-    int g = iid_time(&board, movelst, 5000, &key, color, true, false, nullmove,
+    int g = iid_time(&board, movelst, 5000, &key, color, true, false,
+                     nullmove, // Perform the search on fixed nodes
                      thread_info);
 
     if (color) {
       g = -g;
     }
-    if (abs(g) > 1000) {
+    if (abs(g) > 1000) { // If one side is completely winning, break
       if (g > 0) {
         res = 1;
       } else {
@@ -270,7 +274,8 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
     bool incheck = isattacked(&board, board.kingpos[color], color ^ 1);
 
     bool legalcheck = false;
-    for (int i = 0; i < legalmoves; i++) {
+    for (int i = 0; i < legalmoves;
+         i++) { // Verify that the move recommended by the search is legal
       if (ismatch(legalmovelist[i].move, thread_info->currentmove)) {
         legalcheck = true;
         break;
@@ -288,24 +293,30 @@ float game(const std::string &filename, ThreadInfo *thread_info) {
                    thread_info);
       exit(0);
     }
+
     int piecetype = board.board[thread_info->currentmove.move >> 8] - 1;
-    move(&board, thread_info->currentmove, color, thread_info, true);
+    move_piece(&board, thread_info->currentmove, color, thread_info, true);
     move_add(&board, movelst, &key, thread_info->currentmove, color, isnoisy,
              thread_info, piecetype);
     bool ischeck = isattacked(&board, board.kingpos[color ^ 1], color);
 
-    if (!(isnoisy || incheck)) {
+    if (!(isnoisy ||
+          incheck)) { // If the best move isn't a noisy move and we're not in
+                      // check, add the position to the ones to write to a file
       sprintf(fens[fkey++], "%s | %d | ", fen, g);
+      num_fens++;
+      if (num_fens % 1000 == 0 && id == 0) {
+        long int total_fens = num_fens * num_threads; // Approximation
+        printf("~%li positions written\n", total_fens);
+        printf("Approximate speed: %i pos/s\n\n",
+               (int)(total_fens / ((clock() - start) / (float)CLOCKS_PER_SEC)));
+      }
     }
     color ^= 1;
   }
   char result[8];
   sprintf(result, "%.1f", res);
-  for (int i = 0; i < fkey; i++) {
-    num_fens++;
-    if (num_fens % 100000 == 0) {
-      printf("%li fens written to file %s\n", num_fens, filename.c_str());
-    }
+  for (int i = 0; i < fkey; i++) { // Write all data to the output file
     fr << fens[i] << result << "\n";
   }
   fr.close();
@@ -323,7 +334,7 @@ void run_game(const std::string &filename, ThreadInfo &thread_info) {
 int main(int argc, char *argv[]) {
   setvbuf(stdin, NULL, _IONBF, 0);
   setvbuf(stdout, NULL, _IONBF, 0);
-  MAXDEPTH = 99;
+  MAXSEARCHDEPTH = 99;
   initglobals();
   unsigned long long init[4] = {0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL};
   init_by_array64(init, 4);
@@ -340,5 +351,7 @@ int main(int argc, char *argv[]) {
   TTSIZE = 1 << size;
   _mask = TTSIZE - 1;
   maximumtime = 1000, coldturkey = 1000;
+  num_threads = atoi(argv[2]);
+  id = atoi(argv[1] + 4);
   run_game(argv[1], *thread_info);
 }

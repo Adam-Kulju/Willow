@@ -19,11 +19,10 @@ int attackers[2]; // the number of attackers on king
 
 int NODES_IID = 0;
 
-bool IS_DFRC = false; // search age for TT purposes
-
-short int MAXDEPTH; // The maximum depth of a position (set to 14 for bench and
-                    // 99 normally)
-
+short int MAXSEARCHDEPTH = 99; // The maximum depth of a position (99)
+short int ITERATIVEDEEPENINGDEPTH =
+    99; // the maximum depth of an iterative deepening search (14 for bench, 99
+        // in regular search)
 unsigned long int nodes;  // self explanatory
 long int totals;          // total number of nodes spent on a search
 int betas, total;         // move ordering trackers
@@ -39,24 +38,23 @@ bool CENTERBLACK[0x88]; // lookup table for Black's center
 
 struct ThreadInfo {
   struct move KILLERTABLE[100][2]; // Stores killer moves
-  int HISTORYTABLE[2][0x80][0x80]; // The History table
+  int HISTORYTABLE[2][0x80][0x80]; // Other tables for move ordering
   int CONTHIST[12][128][12][128];
   int CAPHIST[2][0x80][0x80];
-  unsigned long long int CURRENTPOS;
+  unsigned long long int CURRENTPOS; // Zobrist keys and NNUE states
   NNUE_State nnue_state{};
-  struct move currentmove; // The engine's current best move at root
-  int id;
-  struct board_info board;
-  struct movelist movelst[MOVESIZE];
-  int key;
-  bool stop;
-  long int nodes;
-  short int search_age;
+  struct move currentmove;           // The engine's current best move at root
+  int id;                            // Thread ID
+  struct board_info board;           // board
+  struct movelist movelst[MOVESIZE]; // game state
+  int key;                           // game state key
+  bool stop;                         // does our thread need to stop?
+  long int nodes;                    // nodes searched so far by this thread
+  short int search_age;              // search age (used for tt ordering)
 };
 
 std::vector<std::thread> threads;
 std::vector<ThreadInfo> thread_infos;
-// ThreadInfo thread_info;
 
 static unsigned long long mt[NN];
 static int mti = NN + 1;
@@ -81,43 +79,12 @@ void initglobals() // Initialize all our global variable stuff.
   TTSIZE = 1 << size;
   _mask = TTSIZE - 1;
 
-  for (unsigned char i = 0; i < 0x80; i++) {
-    if (i & 0x88) {
-      i += 7;
-      continue;
-    }
-    for (unsigned char n = 0; n < 8; n++) {
-      if (!((i + vector[4][n]) &
-            0x88)) { // set king attacks. this will give us a value of 2 for
-                     // side (i.e. rook checks) and 1 for diagonals
-        KINGZONES[0][i][i + vector[4][n]] = (n & 1) + 1;
-        KINGZONES[1][i][i + vector[4][n]] = (n & 1) + 1;
-      }
-    }
-    if (i + 33 < 0x80) {
-      KINGZONES[0][i][i + 31] = 3, KINGZONES[0][i][i + 32] = 3,
-                          KINGZONES[0][i][i + 33] =
-                              3; // and 3 for advanced squares
-    }
-    if (i - 33 > 0x0) {
-      KINGZONES[1][i][i - 31] = 3, KINGZONES[1][i][i - 32] = 3,
-                          KINGZONES[1][i][i - 33] = 3;
-    }
-
-    if ((i & 7) > 1 && (i & 7) < 6 && (i >> 4) > 0 &&
-        (i >> 4) < 7) // set center squares
-    {
-      if ((i >> 4) >= 4) {
-        CENTERBLACK[i] = true;
-      } else {
-        CENTERWHITE[i] = true;
-      }
-    }
-  }
   for (int i = 0; i < 100; i++) // initialize LMR table.
   {
     for (int n = 0; n < LISTSIZE; n++) {
-      LMRTABLE[i][n] = (int)round(((float)LmrBase / 10) + (log(i + 1) * log(n + 1) / ((float)LmrRatio / 10)));
+      LMRTABLE[i][n] =
+          (int)round(((float)LmrBase / 10) +
+                     (log(i + 1) * log(n + 1) / ((float)LmrRatio / 10)));
     }
   }
   coldturkey = 1000000;
@@ -281,7 +248,7 @@ void calc_pos(struct board_info *board, bool color,
   if (color) {
     thread_info->CURRENTPOS ^= ZOBRISTTABLE[772];
   }
-  if (board->epsquare){
+  if (board->epsquare) {
     thread_info->CURRENTPOS ^= ZOBRISTTABLE[773];
   }
 }
@@ -342,8 +309,10 @@ bool ismatch(struct move move1,
   return false;
 }
 
-void insert(unsigned long long int position, int depthleft, int eval, char type,
-            struct move bestmove, short int search_age) // Inserts an entry into the transposition table.
+void insert(
+    unsigned long long int position, int depthleft, int eval, char type,
+    struct move bestmove,
+    short int search_age) // Inserts an entry into the transposition table.
 {
   int index = (position) & (_mask);
 
@@ -408,10 +377,11 @@ void convto(char *mve, struct move *to_move,
                      to = ((atoi(&mve[3]) - 1) << 4) + (mve[2] - 97);
 
   to_move->move = (from << 8) + to;
-  if ((board->board[from] >> 1) == KING && abs(from - to) == 2) {
+  if ((board->board[from] == WKING || board->board[from] == BKING) &&
+      abs(from - to) == 2) {
     to_move->flags = 8;
-  } else if (board->board[from] >> 1 == PAWN && (from & 7) != (to & 7) &&
-             !board->board[to]) {
+  } else if ((board->board[from] == WPAWN || board->board[from] == BPAWN) &&
+             (from & 7) != (to & 7) && !board->board[to]) {
     to_move->flags = 0xC;
   } else if (isalpha(mve[4])) {
     switch (toupper(mve[4])) {

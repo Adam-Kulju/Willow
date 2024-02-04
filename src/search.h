@@ -15,11 +15,12 @@ struct nodeinfo {
 
 struct nodeinfo info;
 
-void updateHistory(int &entry, int score) {
+void updateHistory(int &entry, int score) { // Update history score
   entry += score - entry * abs(score) / 16384;
 }
 
-void unmake(movelist *movelst, int *key, ThreadInfo *thread_info,
+void unmake(movelist *movelst, int *key,
+            ThreadInfo *thread_info, // Unmake a move
             long long unsigned int original_pos) {
   thread_info->CURRENTPOS = original_pos;
   thread_info->nnue_state.pop();
@@ -32,7 +33,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
             bool incheck, ThreadInfo *thread_info)
 // Performs a quiescence search on the given position.
 {
-  if (depth > maxdepth || depth >= 99) // update seldepth
+  if (depth > maxdepth || depth >= MAXSEARCHDEPTH) // update seldepth
   {
     maxdepth = depth;
   }
@@ -137,7 +138,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
   struct list list[LISTSIZE];
   int listlen = movegen(board, list, color, incheck);
 
-  movescore(board, movelst, key, list, 99, color, type, listlen,
+  movescore(board, movelst, key, list, MAXSEARCHDEPTH, color, type, listlen,
             (stand_pat + QsearchFutilityThreshold < alpha ? 1 : -108),
             thread_info, entry, incheck);
   // score the moves
@@ -159,7 +160,7 @@ int quiesce(struct board_info *board, struct movelist *movelst, int *key,
 
     struct board_info board2 = *board;
 
-    if (move(&board2, list[i].move, color, thread_info, true)) {
+    if (move_piece(&board2, list[i].move, color, thread_info, true)) {
       continue;
     }
     legals++;
@@ -223,8 +224,8 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
   }
 
   if (depthleft <= 0 ||
-      depth >= 99) // if we're too deep drop into qsearch, adjusting based on
-                   // depth if we get a mate score.
+      depth >= MAXFLOAT) // if we're too deep drop into qsearch, adjusting based
+                         // on depth if we get a mate score.
   {
     int b = quiesce(board, movelst, key, alpha, beta, depth, MaxQsearchDepth,
                     color, incheck, thread_info);
@@ -444,7 +445,7 @@ int alphabeta(struct board_info *board, struct movelist *movelst, int *key,
     struct board_info board2 = *board;
     int piecetype = board->board[list[i].move.move >> 8] - 2;
 
-    if (move(&board2, list[i].move, color, thread_info, false)) {
+    if (move_piece(&board2, list[i].move, color, thread_info, false)) {
       continue;
     }
     ismove = true;
@@ -800,7 +801,7 @@ bool verifypv(struct board_info *board, struct move pvmove, bool incheck,
     if (ismatch(pvmove, list[i].move)) {
       unsigned long long int c = thread_info->CURRENTPOS;
       struct board_info board2 = *board;
-      if (move(&board2, pvmove, color, thread_info, true)) {
+      if (move_piece(&board2, pvmove, color, thread_info, true)) {
         return false;
       }
       thread_info->nnue_state.pop();
@@ -958,7 +959,7 @@ int iid_time(struct board_info *board, struct movelist *movelst,
 
         char temp[6];
         printf("%s ", conv(tempmove, temp));
-        move(&board2, tempmove, c, thread_info, true);
+        move_piece(&board2, tempmove, c, thread_info, true);
         moves++;
         c ^= 1;
         d--;
@@ -983,7 +984,7 @@ int iid_time(struct board_info *board, struct movelist *movelst,
       beta = evl + AspStartingWindow;
     }
 
-    if (depth >= MAXDEPTH ||
+    if (depth >= ITERATIVEDEEPENINGDEPTH ||
         ((float)rightnow / 1000 > opttime &&
          thread_info->id == 0)) // If we've hit the soft cap for time, finish
                                 // after the iteration.
