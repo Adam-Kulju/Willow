@@ -116,7 +116,7 @@ int com_uci(struct board_info *board, struct movelist *movelst, int *key,
   }
 
   if (!strcmp(command, "uci")) {
-    printf("id name Willow 3.1\n");
+    printf("id name Willow 4.0\n");
     printf("id author Adam Kulju\n");
     // send options
     printf("option name Hash type spin default 32 min 1 max 131072\n");
